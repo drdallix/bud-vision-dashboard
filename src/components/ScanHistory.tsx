@@ -46,7 +46,7 @@ const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
       const matchesSearch = strain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           strain.effects.some(effect => effect.toLowerCase().includes(searchTerm.toLowerCase())) ||
                           strain.flavors.some(flavor => flavor.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesType = filter Type === 'all' || strain.type === filterType;
+      const matchesType = filterType === 'all' || strain.type === filterType;
       return matchesSearch && matchesType;
     })
     .sort((a, b) => {
