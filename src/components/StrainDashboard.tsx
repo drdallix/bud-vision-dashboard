@@ -3,7 +3,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { FileSearch, Zap, Leaf, Heart } from 'lucide-react';
+import { FileSearch, Zap, Leaf, Heart, Beaker } from 'lucide-react';
+
+interface Terpene {
+  name: string;
+  percentage: number;
+  effects: string;
+}
 
 interface Strain {
   id: string;
@@ -13,6 +19,7 @@ interface Strain {
   cbd: number;
   effects: string[];
   flavors: string[];
+  terpenes?: Terpene[];
   medicalUses: string[];
   description: string;
   imageUrl: string;
@@ -101,7 +108,7 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
       </Card>
 
       {/* Details Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         {/* Effects */}
         <Card>
           <CardHeader>
@@ -139,6 +146,35 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
                 </Badge>
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Terpenes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Beaker className="h-5 w-5 text-blue-500" />
+              Terpenes
+            </CardTitle>
+            <CardDescription>Active compounds and their effects</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {strain.terpenes && strain.terpenes.length > 0 ? (
+              <div className="space-y-3">
+                {strain.terpenes.map((terpene, index) => (
+                  <div key={index} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{terpene.name}</span>
+                      <span className="text-xs font-bold">{terpene.percentage}%</span>
+                    </div>
+                    <Progress value={terpene.percentage} max={3} className="h-1" />
+                    <p className="text-xs text-muted-foreground">{terpene.effects}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Terpene data not available</p>
+            )}
           </CardContent>
         </Card>
 

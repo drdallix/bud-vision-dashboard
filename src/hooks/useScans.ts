@@ -1,8 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+
+interface Terpene {
+  name: string;
+  percentage: number;
+  effects: string;
+}
 
 interface Strain {
   id: string;
@@ -12,6 +17,7 @@ interface Strain {
   cbd: number;
   effects: string[];
   flavors: string[];
+  terpenes?: Terpene[];
   medicalUses: string[];
   description: string;
   imageUrl: string;
@@ -29,6 +35,7 @@ type DatabaseScan = {
   cbd: number | null;
   effects: string[] | null;
   flavors: string[] | null;
+  terpenes?: Terpene[] | null;
   medical_uses: string[] | null;
   description: string | null;
   image_url: string | null;
@@ -57,6 +64,7 @@ export const useScans = () => {
       cbd: Number(scan.cbd) || 0,
       effects: scan.effects || [],
       flavors: scan.flavors || [],
+      terpenes: scan.terpenes || [],
       medicalUses: scan.medical_uses || [],
       description: scan.description || '',
       imageUrl: scan.image_url || '/placeholder.svg',
@@ -116,6 +124,7 @@ export const useScans = () => {
           cbd: strain.cbd,
           effects: strain.effects,
           flavors: strain.flavors,
+          terpenes: strain.terpenes || [],
           medical_uses: strain.medicalUses,
           description: strain.description,
           image_url: strain.imageUrl,

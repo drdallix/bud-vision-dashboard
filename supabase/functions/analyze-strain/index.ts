@@ -60,6 +60,7 @@ serve(async (req) => {
             - Realistic THC/CBD ranges for the strain type
             - Appropriate effects based on Indica/Sativa/Hybrid classification
             - Common flavors for the identified or similar strains
+            - Detailed terpene profiles with percentages
             - Relevant medical uses based on cannabinoid profile
             - Detailed strain description with background information
             
@@ -69,6 +70,7 @@ serve(async (req) => {
             - Hybrid strains: balanced effects combining both, THC 16-26%, variable CBD
             - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
             - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
+            - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory), Terpinolene (piney), Humulene (appetite suppressant)
             - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
             
             Return a JSON object with this exact structure:
@@ -79,6 +81,10 @@ serve(async (req) => {
               "cbd": number (0-25, realistic for strain type), 
               "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
               "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
+              "terpenes": [
+                {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
+                ...
+              ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
               "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
               "description": "detailed description with strain background, effects, and usage notes",
               "confidence": number (0-100, based on visible package information clarity)
@@ -91,7 +97,7 @@ serve(async (req) => {
             content: [
               {
                 type: 'text',
-                text: 'Please analyze this cannabis package image and identify the strain with all the requested details. Use your cannabis knowledge to fill in any missing information intelligently.'
+                text: 'Please analyze this cannabis package image and identify the strain with all the requested details including detailed terpene profiles. Use your cannabis knowledge to fill in any missing information intelligently.'
               },
               {
                 type: 'image_url',
@@ -102,7 +108,7 @@ serve(async (req) => {
             ]
           }
         ],
-        max_tokens: 1000,
+        max_tokens: 1500,
         temperature: 0.3
       }),
     });
@@ -129,7 +135,7 @@ serve(async (req) => {
       }
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
-      // Enhanced fallback with cannabis knowledge
+      // Enhanced fallback with cannabis knowledge including terpenes
       strainData = {
         name: "Mystery Hybrid",
         type: "Hybrid",
@@ -137,6 +143,11 @@ serve(async (req) => {
         cbd: 2,
         effects: ["Relaxed", "Happy", "Euphoric", "Creative"],
         flavors: ["Earthy", "Sweet", "Pine"],
+        terpenes: [
+          {"name": "Myrcene", "percentage": 1.2, "effects": "Sedating and relaxing"},
+          {"name": "Limonene", "percentage": 0.8, "effects": "Uplifting and stress-relieving"},
+          {"name": "Pinene", "percentage": 0.6, "effects": "Alertness and memory retention"}
+        ],
         medicalUses: ["Pain Relief", "Stress Relief", "Anxiety", "Insomnia"],
         description: "A balanced hybrid strain with moderate THC levels. This strain typically provides a well-rounded experience combining relaxation with mental clarity. The earthy and sweet flavor profile makes it appealing to many users, while its therapeutic properties make it suitable for various medical applications including pain and stress management.",
         confidence: 25
@@ -151,6 +162,10 @@ serve(async (req) => {
       cbd: Math.min(Math.max(Number(strainData.cbd) || 1, 0), 25),
       effects: Array.isArray(strainData.effects) ? strainData.effects.slice(0, 8) : ["Relaxed", "Happy", "Euphoric"],
       flavors: Array.isArray(strainData.flavors) ? strainData.flavors.slice(0, 6) : ["Earthy", "Sweet"],
+      terpenes: Array.isArray(strainData.terpenes) ? strainData.terpenes.slice(0, 6) : [
+        {"name": "Myrcene", "percentage": 1.0, "effects": "Relaxing and sedating"},
+        {"name": "Limonene", "percentage": 0.7, "effects": "Mood elevation and stress relief"}
+      ],
       medicalUses: Array.isArray(strainData.medicalUses) ? strainData.medicalUses.slice(0, 6) : ["Pain Relief", "Stress Relief"],
       description: strainData.description || "AI-analyzed cannabis strain with balanced effects and therapeutic potential.",
       confidence: Math.min(Math.max(Number(strainData.confidence) || 75, 0), 100)
@@ -192,6 +207,7 @@ serve(async (req) => {
           cbd: 2,
           effects: ["Relaxed", "Happy"],
           flavors: ["Earthy"],
+          terpenes: [{"name": "Myrcene", "percentage": 1.0, "effects": "Relaxing"}],
           medicalUses: ["Consult Professional"],
           description: "Image analysis failed. Please try again with a clearer image of the cannabis package.",
           confidence: 0

@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Database, History, Download, Upload, Scan, FileSearch, LogIn } from 'lucide-react';
+import { Camera, Database, History, Download, Upload, Scan, FileSearch, LogIn, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,14 @@ import ScanHistory from '@/components/ScanHistory';
 import DataManager from '@/components/DataManager';
 import UserNav from '@/components/UserNav';
 import ShopMenu from '@/components/ShopMenu';
+import CannabisSommelier from '@/components/CannabisSommelier';
+import InstallBanner from '@/components/InstallBanner';
+
+interface Terpene {
+  name: string;
+  percentage: number;
+  effects: string;
+}
 
 interface Strain {
   id: string;
@@ -22,6 +31,7 @@ interface Strain {
   cbd: number;
   effects: string[];
   flavors: string[];
+  terpenes?: Terpene[];
   medicalUses: string[];
   description: string;
   imageUrl: string;
@@ -35,6 +45,19 @@ const Index = () => {
   const [isScanning, setIsScanning] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const { scans, loading: scansLoading, addScan } = useScans();
+
+  // Register service worker for PWA
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    }
+  }, []);
 
   const handleScanComplete = async (strain: Strain) => {
     setCurrentStrain(strain);
@@ -60,7 +83,12 @@ const Index = () => {
 
   // Show shop menu for non-authenticated users
   if (!user) {
-    return <ShopMenu />;
+    return (
+      <>
+        <ShopMenu />
+        <InstallBanner />
+      </>
+    );
   }
 
   return (
@@ -73,7 +101,7 @@ const Index = () => {
               Cannabis Strain Identifier
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Scan cannabis packages to identify strains and explore comprehensive information about their effects, flavors, and medical uses.
+              Scan cannabis packages to identify strains and explore comprehensive information about their effects, flavors, terpenes, and medical uses.
             </p>
           </div>
           <UserNav />
@@ -81,7 +109,7 @@ const Index = () => {
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:mx-auto">
+          <TabsList className="grid w-full grid-cols-5 lg:w-fit lg:mx-auto">
             <TabsTrigger value="scanner" className="flex items-center gap-2">
               <Scan className="h-4 w-4" />
               Scanner
@@ -89,6 +117,10 @@ const Index = () => {
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <FileSearch className="h-4 w-4" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="sommelier" className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Sommelier
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
@@ -110,6 +142,10 @@ const Index = () => {
 
           <TabsContent value="dashboard" className="space-y-6">
             <StrainDashboard strain={currentStrain} />
+          </TabsContent>
+
+          <TabsContent value="sommelier" className="space-y-6">
+            <CannabisSommelier />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
@@ -177,6 +213,8 @@ const Index = () => {
           </div>
         )}
       </div>
+      
+      <InstallBanner />
     </div>
   );
 };
