@@ -19,21 +19,23 @@ interface Strain {
   confidence: number;
 }
 
-interface DatabaseScan {
+// Use the actual database return type from Supabase
+type DatabaseScan = {
   id: string;
   user_id: string;
   strain_name: string;
-  strain_type: 'Indica' | 'Sativa' | 'Hybrid';
-  thc: number;
-  cbd: number;
-  effects: string[];
-  flavors: string[];
-  medical_uses: string[];
-  description: string;
-  image_url: string;
-  confidence: number;
+  strain_type: string; // This comes as string from database
+  thc: number | null;
+  cbd: number | null;
+  effects: string[] | null;
+  flavors: string[] | null;
+  medical_uses: string[] | null;
+  description: string | null;
+  image_url: string | null;
+  confidence: number | null;
   scanned_at: string;
-}
+  created_at: string;
+};
 
 export const useScans = () => {
   const [scans, setScans] = useState<Strain[]>([]);
@@ -41,20 +43,27 @@ export const useScans = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => ({
-    id: scan.id,
-    name: scan.strain_name,
-    type: scan.strain_type,
-    thc: Number(scan.thc),
-    cbd: Number(scan.cbd),
-    effects: scan.effects || [],
-    flavors: scan.flavors || [],
-    medicalUses: scan.medical_uses || [],
-    description: scan.description || '',
-    imageUrl: scan.image_url || '/placeholder.svg',
-    scannedAt: scan.scanned_at,
-    confidence: scan.confidence || 0,
-  });
+  const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
+    // Type guard to ensure strain_type is valid
+    const validStrainType = (type: string): type is 'Indica' | 'Sativa' | 'Hybrid' => {
+      return ['Indica', 'Sativa', 'Hybrid'].includes(type);
+    };
+
+    return {
+      id: scan.id,
+      name: scan.strain_name,
+      type: validStrainType(scan.strain_type) ? scan.strain_type : 'Hybrid',
+      thc: Number(scan.thc) || 0,
+      cbd: Number(scan.cbd) || 0,
+      effects: scan.effects || [],
+      flavors: scan.flavors || [],
+      medicalUses: scan.medical_uses || [],
+      description: scan.description || '',
+      imageUrl: scan.image_url || '/placeholder.svg',
+      scannedAt: scan.scanned_at,
+      confidence: scan.confidence || 0,
+    };
+  };
 
   const fetchScans = async () => {
     if (!user) {
