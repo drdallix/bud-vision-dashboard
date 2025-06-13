@@ -3,7 +3,8 @@ import { useState, useRef } from 'react';
 import { Camera, Upload, Scan } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Strain {
   id: string;
@@ -26,57 +27,52 @@ interface CameraScannerProps {
   setIsScanning: (scanning: boolean) => void;
 }
 
-// Mock strain database for demo
-const mockStrains: Omit<Strain, 'id' | 'scannedAt' | 'imageUrl'>[] = [
-  {
-    name: "Blue Dream",
-    type: "Hybrid",
-    thc: 21,
-    cbd: 2,
-    effects: ["Euphoric", "Relaxed", "Creative", "Happy"],
-    flavors: ["Blueberry", "Sweet", "Berry"],
-    medicalUses: ["Depression", "Chronic Pain", "Nausea"],
-    description: "A sativa-dominant hybrid combining the relaxing effects of Blueberry indica with the cerebral stimulation of Haze sativa.",
-    confidence: 94
-  },
-  {
-    name: "OG Kush",
-    type: "Hybrid",
-    thc: 25,
-    cbd: 1,
-    effects: ["Relaxed", "Happy", "Euphoric", "Uplifted"],
-    flavors: ["Earthy", "Pine", "Woody"],
-    medicalUses: ["Stress", "Depression", "Pain"],
-    description: "A legendary strain with a unique terpene profile that boasts a complex aroma with notes of fuel, skunk, and spice.",
-    confidence: 89
-  },
-  {
-    name: "Purple Haze",
-    type: "Sativa",
-    thc: 19,
-    cbd: 1,
-    effects: ["Creative", "Energetic", "Euphoric", "Happy"],
-    flavors: ["Sweet", "Berry", "Grape"],
-    medicalUses: ["Depression", "Fatigue", "Stress"],
-    description: "Made famous by Jimi Hendrix, this sativa delivers a dreamy burst of euphoria that brings veteran consumers back to their psychedelic heyday.",
-    confidence: 91
-  }
-];
-
 const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScannerProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  const simulateStrainIdentification = () => {
-    const randomStrain = mockStrains[Math.floor(Math.random() * mockStrains.length)];
-    const strain: Strain = {
-      ...randomStrain,
-      id: Date.now().toString(),
-      scannedAt: new Date().toISOString(),
-      imageUrl: selectedImage || '/placeholder.svg'
-    };
-    
-    return strain;
+  const analyzeStrainWithAI = async (imageData: string) => {
+    try {
+      console.log('Calling AI strain analysis...');
+      
+      const { data, error } = await supabase.functions.invoke('analyze-strain', {
+        body: { imageData }
+      });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      console.log('AI analysis result:', data);
+
+      // Handle both success and error responses from the edge function
+      if (data.error) {
+        console.error('Edge function returned error:', data.error);
+        // Use fallback data if provided
+        if (data.fallbackStrain) {
+          return data.fallbackStrain;
+        }
+        throw new Error(data.error);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error calling strain analysis:', error);
+      // Return fallback strain data to prevent app from breaking
+      return {
+        name: "Analysis Failed",
+        type: "Hybrid" as const,
+        thc: 15,
+        cbd: 2,
+        effects: ["Unknown"],
+        flavors: ["Unknown"],
+        medicalUses: ["Consult Professional"],
+        description: "AI analysis failed. Please try again with a clearer image of the cannabis package.",
+        confidence: 0
+      };
+    }
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,17 +88,53 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
   };
 
   const handleScan = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage) {
+      toast({
+        title: "No image selected",
+        description: "Please select an image first.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsScanning(true);
     
-    // Simulate AI processing time
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    const identifiedStrain = simulateStrainIdentification();
-    setIsScanning(false);
-    onScanComplete(identifiedStrain);
-    setSelectedImage(null);
+    try {
+      toast({
+        title: "Analyzing image...",
+        description: "AI is analyzing your cannabis package image.",
+      });
+
+      const aiResult = await analyzeStrainWithAI(selectedImage);
+      
+      const identifiedStrain: Strain = {
+        ...aiResult,
+        id: Date.now().toString(),
+        scannedAt: new Date().toISOString(),
+        imageUrl: selectedImage
+      };
+      
+      console.log('Final strain data:', identifiedStrain);
+      
+      setIsScanning(false);
+      onScanComplete(identifiedStrain);
+      setSelectedImage(null);
+      
+      toast({
+        title: "Analysis complete!",
+        description: `Identified: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`,
+      });
+      
+    } catch (error) {
+      console.error('Scan error:', error);
+      setIsScanning(false);
+      
+      toast({
+        title: "Analysis failed",
+        description: "Unable to analyze the image. Please try again with a clearer photo.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCameraCapture = () => {
@@ -115,10 +147,10 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             <Camera className="h-6 w-6 text-primary" />
-            Package Scanner
+            AI Package Scanner
           </CardTitle>
           <CardDescription>
-            Take a photo of your cannabis package or upload an existing image to identify the strain
+            Take a photo of your cannabis package or upload an existing image. AI will analyze it to identify the strain and extract detailed information.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -143,8 +175,8 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
               <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
                 <div className="text-center text-white space-y-2">
                   <Scan className="h-8 w-8 animate-spin mx-auto" />
-                  <p className="font-medium">Analyzing package...</p>
-                  <p className="text-sm opacity-80">AI is identifying the strain</p>
+                  <p className="font-medium">AI Analyzing Package...</p>
+                  <p className="text-sm opacity-80">Reading labels and identifying strain</p>
                 </div>
               </div>
             )}
@@ -178,7 +210,7 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
               disabled={!selectedImage || isScanning}
             >
               <Scan className="h-4 w-4 mr-2" />
-              {isScanning ? 'Scanning...' : 'Identify Strain'}
+              {isScanning ? 'Analyzing...' : 'Analyze with AI'}
             </Button>
           </div>
 
@@ -193,11 +225,12 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
 
           {/* Instructions */}
           <div className="bg-accent/50 rounded-lg p-4 space-y-2">
-            <h4 className="font-medium text-accent-foreground">Scanning Tips:</h4>
+            <h4 className="font-medium text-accent-foreground">AI Analysis Tips:</h4>
             <ul className="text-sm text-accent-foreground/80 space-y-1">
               <li>• Ensure good lighting and clear package visibility</li>
-              <li>• Focus on strain name, THC/CBD percentages, and packaging details</li>
-              <li>• Hold camera steady for best results</li>
+              <li>• Make sure strain name and THC/CBD percentages are readable</li>
+              <li>• Include the entire package label in the photo</li>
+              <li>• AI works best with high-resolution, clear images</li>
               <li>• Multiple angles can improve identification accuracy</li>
             </ul>
           </div>
