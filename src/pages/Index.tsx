@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, Database, History, Download, Upload, Scan, FileSearch, LogIn } from 'lucide-react';
@@ -13,6 +12,7 @@ import StrainDashboard from '@/components/StrainDashboard';
 import ScanHistory from '@/components/ScanHistory';
 import DataManager from '@/components/DataManager';
 import UserNav from '@/components/UserNav';
+import ShopMenu from '@/components/ShopMenu';
 
 interface Strain {
   id: string;
@@ -58,75 +58,9 @@ const Index = () => {
     );
   }
 
+  // Show shop menu for non-authenticated users
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent mb-4">
-              Cannabis Strain Identifier
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-              Scan cannabis packages to identify strains and explore comprehensive information about their effects, flavors, and medical uses.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button asChild size="lg">
-                <Link to="/auth">
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign In / Sign Up
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* Features Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Scan className="h-5 w-5 text-primary" />
-                  Smart Scanner
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Use AI-powered image recognition to identify cannabis strains from package photos.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <History className="h-5 w-5 text-primary" />
-                  Scan History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Keep track of all your identified strains with detailed information and effects.
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5 text-primary" />
-                  Cloud Sync
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Your scan history is automatically synced across all your devices.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
+    return <ShopMenu />;
   }
 
   return (

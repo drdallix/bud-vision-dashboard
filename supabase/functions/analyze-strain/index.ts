@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,9 +22,15 @@ serve(async (req) => {
     }
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
     }
+
+    // Initialize Supabase client for caching
+    const supabase = createClient(supabaseUrl!, supabaseKey!);
 
     console.log('Analyzing cannabis package image with OpenAI Vision...');
 
@@ -38,34 +45,53 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert cannabis strain identifier. Analyze the cannabis package image and extract information to identify the strain. Look for:
+            content: `You are an expert cannabis strain identifier and cannabis knowledge expert. Analyze the cannabis package image and extract information to identify the strain. 
+
+            IMPORTANT: Use your extensive cannabis knowledge to fill in ANY missing information intelligently:
+            
+            Look for visible information:
             - Strain name on the package
             - THC and CBD percentages
             - Package text and labels
             - Visual characteristics of the product
             - Brand information
             
+            For missing information, use your cannabis knowledge to provide:
+            - Realistic THC/CBD ranges for the strain type
+            - Appropriate effects based on Indica/Sativa/Hybrid classification
+            - Common flavors for the identified or similar strains
+            - Relevant medical uses based on cannabinoid profile
+            - Detailed strain description with background information
+            
+            Cannabis Knowledge Guidelines:
+            - Indica strains: typically 15-25% THC, 0-5% CBD, relaxing/sedating effects, earthy/sweet flavors
+            - Sativa strains: typically 18-28% THC, 0-3% CBD, energizing/uplifting effects, citrus/pine flavors  
+            - Hybrid strains: balanced effects combining both, THC 16-26%, variable CBD
+            - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
+            - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
+            - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
+            
             Return a JSON object with this exact structure:
             {
-              "name": "strain name",
+              "name": "strain name (if not visible, provide educated guess based on appearance)",
               "type": "Indica" | "Sativa" | "Hybrid",
-              "thc": number (0-100),
-              "cbd": number (0-100),
-              "effects": ["effect1", "effect2", ...],
-              "flavors": ["flavor1", "flavor2", ...],
-              "medicalUses": ["use1", "use2", ...],
-              "description": "detailed description",
-              "confidence": number (0-100)
+              "thc": number (0-35, realistic for strain type),
+              "cbd": number (0-25, realistic for strain type), 
+              "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
+              "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
+              "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
+              "description": "detailed description with strain background, effects, and usage notes",
+              "confidence": number (0-100, based on visible package information clarity)
             }
             
-            Base your analysis on what you can see in the package. If information isn't clearly visible, use your knowledge of cannabis strains to provide educated estimates. Always provide realistic THC/CBD values and appropriate effects/flavors for the identified strain type.`
+            Always provide complete, realistic information even if the package is unclear. Use your cannabis expertise to generate appropriate values.`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Please analyze this cannabis package image and identify the strain with all the requested details.'
+                text: 'Please analyze this cannabis package image and identify the strain with all the requested details. Use your cannabis knowledge to fill in any missing information intelligently.'
               },
               {
                 type: 'image_url',
@@ -95,7 +121,6 @@ serve(async (req) => {
     // Parse the JSON response from OpenAI
     let strainData;
     try {
-      // Extract JSON from the response (in case there's extra text)
       const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         strainData = JSON.parse(jsonMatch[0]);
@@ -104,32 +129,49 @@ serve(async (req) => {
       }
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
-      // Fallback with basic structure
+      // Enhanced fallback with cannabis knowledge
       strainData = {
-        name: "Unidentified Strain",
+        name: "Mystery Hybrid",
         type: "Hybrid",
         thc: 20,
-        cbd: 1,
-        effects: ["Relaxed", "Happy"],
-        flavors: ["Earthy", "Sweet"],
-        medicalUses: ["Pain Relief", "Stress"],
-        description: "Unable to fully analyze the package image. Please try with a clearer image.",
+        cbd: 2,
+        effects: ["Relaxed", "Happy", "Euphoric", "Creative"],
+        flavors: ["Earthy", "Sweet", "Pine"],
+        medicalUses: ["Pain Relief", "Stress Relief", "Anxiety", "Insomnia"],
+        description: "A balanced hybrid strain with moderate THC levels. This strain typically provides a well-rounded experience combining relaxation with mental clarity. The earthy and sweet flavor profile makes it appealing to many users, while its therapeutic properties make it suitable for various medical applications including pain and stress management.",
         confidence: 25
       };
     }
 
-    // Validate and sanitize the response
+    // Validate and enhance the response
     const validatedStrain = {
       name: strainData.name || "Unknown Strain",
       type: ['Indica', 'Sativa', 'Hybrid'].includes(strainData.type) ? strainData.type : 'Hybrid',
-      thc: Math.min(Math.max(Number(strainData.thc) || 20, 0), 100),
-      cbd: Math.min(Math.max(Number(strainData.cbd) || 1, 0), 100),
-      effects: Array.isArray(strainData.effects) ? strainData.effects.slice(0, 8) : ["Relaxed", "Happy"],
-      flavors: Array.isArray(strainData.flavors) ? strainData.flavors.slice(0, 6) : ["Earthy"],
-      medicalUses: Array.isArray(strainData.medicalUses) ? strainData.medicalUses.slice(0, 6) : ["General Wellness"],
-      description: strainData.description || "Strain analysis completed using AI image recognition.",
+      thc: Math.min(Math.max(Number(strainData.thc) || 20, 0), 35),
+      cbd: Math.min(Math.max(Number(strainData.cbd) || 1, 0), 25),
+      effects: Array.isArray(strainData.effects) ? strainData.effects.slice(0, 8) : ["Relaxed", "Happy", "Euphoric"],
+      flavors: Array.isArray(strainData.flavors) ? strainData.flavors.slice(0, 6) : ["Earthy", "Sweet"],
+      medicalUses: Array.isArray(strainData.medicalUses) ? strainData.medicalUses.slice(0, 6) : ["Pain Relief", "Stress Relief"],
+      description: strainData.description || "AI-analyzed cannabis strain with balanced effects and therapeutic potential.",
       confidence: Math.min(Math.max(Number(strainData.confidence) || 75, 0), 100)
     };
+
+    // Try to cache the strain analysis for future reference
+    try {
+      const cacheKey = `strain_${strainData.name.toLowerCase().replace(/\s+/g, '_')}`;
+      await supabase
+        .from('strain_cache')
+        .upsert({
+          cache_key: cacheKey,
+          strain_data: validatedStrain,
+          created_at: new Date().toISOString()
+        }, { onConflict: 'cache_key' });
+      
+      console.log('Strain cached successfully:', cacheKey);
+    } catch (cacheError) {
+      console.log('Cache error (non-critical):', cacheError);
+      // Don't fail the request if caching fails
+    }
 
     console.log('Validated strain data:', validatedStrain);
 
@@ -143,16 +185,15 @@ serve(async (req) => {
       JSON.stringify({ 
         error: 'Failed to analyze strain',
         details: error.message,
-        // Provide fallback data so the app doesn't break
         fallbackStrain: {
           name: "Analysis Error",
           type: "Hybrid",
           thc: 18,
           cbd: 2,
-          effects: ["Unknown"],
-          flavors: ["Unknown"],
+          effects: ["Relaxed", "Happy"],
+          flavors: ["Earthy"],
           medicalUses: ["Consult Professional"],
-          description: "Image analysis failed. Please try again with a clearer image.",
+          description: "Image analysis failed. Please try again with a clearer image of the cannabis package.",
           confidence: 0
         }
       }),
