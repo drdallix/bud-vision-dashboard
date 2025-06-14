@@ -1,2 +1,2 @@
 
-export { default } from './BrowseStrains';
+export { default } from './BrowseStrains/index';
