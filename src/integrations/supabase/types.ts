@@ -50,6 +50,7 @@ export type Database = {
           scanned_at: string
           strain_name: string
           strain_type: string
+          terpenes: Json | null
           thc: number | null
           user_id: string
         }
@@ -66,6 +67,7 @@ export type Database = {
           scanned_at?: string
           strain_name: string
           strain_type: string
+          terpenes?: Json | null
           thc?: number | null
           user_id: string
         }
@@ -82,6 +84,7 @@ export type Database = {
           scanned_at?: string
           strain_name?: string
           strain_type?: string
+          terpenes?: Json | null
           thc?: number | null
           user_id?: string
         }
