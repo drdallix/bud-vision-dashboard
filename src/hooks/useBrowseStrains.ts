@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { convertDatabaseScanToStrain } from '@/utils/strainConverters';
-import { Strain } from '@/types/strain';
+import { Strain, DatabaseScan } from '@/types/strain';
 import { useEffect, useMemo } from 'react';
 
 export const useBrowseStrains = (searchTerm: string, filterType: string, sortBy: string) => {
@@ -45,15 +45,15 @@ export const useBrowseStrains = (searchTerm: string, filterType: string, sortBy:
           // Update cache optimistically
           queryClient.setQueryData(['browse-strains'], (oldData: Strain[] = []) => {
             if (payload.eventType === 'INSERT') {
-              const newStrain = convertDatabaseScanToStrain(payload.new);
+              const newStrain = convertDatabaseScanToStrain(payload.new as DatabaseScan);
               return [newStrain, ...oldData];
             } else if (payload.eventType === 'UPDATE') {
-              const updatedStrain = convertDatabaseScanToStrain(payload.new);
+              const updatedStrain = convertDatabaseScanToStrain(payload.new as DatabaseScan);
               return oldData.map(strain => 
                 strain.id === updatedStrain.id ? updatedStrain : strain
               );
             } else if (payload.eventType === 'DELETE') {
-              return oldData.filter(strain => strain.id !== payload.old.id);
+              return oldData.filter(strain => strain.id !== (payload.old as DatabaseScan).id);
             }
             return oldData;
           });
