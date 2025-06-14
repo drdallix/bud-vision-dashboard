@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Scan, FileSearch, LogIn, Plus } from 'lucide-react';
+import { Scan, FileSearch, LogIn, Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,31 +10,10 @@ import { useScans } from '@/hooks/useScans';
 import CameraScanner from '@/components/CameraScanner';
 import StrainDashboard from '@/components/StrainDashboard';
 import BrowseStrains from '@/components/BrowseStrains';
-import Settings from '@/components/Settings';
+import SettingsPage from '@/components/Settings';
 import UserNav from '@/components/UserNav';
 import InstallBanner from '@/components/InstallBanner';
-
-interface Terpene {
-  name: string;
-  percentage: number;
-  effects: string;
-}
-
-interface Strain {
-  id: string;
-  name: string;
-  type: 'Indica' | 'Sativa' | 'Hybrid';
-  thc: number;
-  cbd: number;
-  effects: string[];
-  flavors: string[];
-  terpenes?: Terpene[];
-  medicalUses: string[];
-  description: string;
-  imageUrl: string;
-  scannedAt: string;
-  confidence: number;
-}
+import { Strain } from '@/types/strain';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('browse');
@@ -56,10 +35,17 @@ const Index = () => {
     }
   }, []);
 
-  const handleScanComplete = async (strain: Strain) => {
-    setCurrentStrain(strain);
+  const handleScanComplete = async (strain: Omit<Strain, 'inStock' | 'userId'>) => {
+    // Add required properties for the complete Strain type
+    const completeStrain: Strain = {
+      ...strain,
+      inStock: true,
+      userId: user?.id || ''
+    };
+    
+    setCurrentStrain(completeStrain);
     if (user) {
-      await addScan(strain);
+      await addScan(completeStrain);
     }
     setActiveTab('details');
   };
@@ -86,15 +72,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 pb-20"> {/* Add bottom padding for mobile nav */}
         {/* Header */}
-        <div className="flex justify-between items-start mb-8">
+        <div className="flex justify-between items-start mb-6">
           <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent mb-4">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent mb-2">
               Cannabis Strain Database
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Community-powered cannabis strain information and identification platform
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Community-powered cannabis strain information platform
             </p>
           </div>
           
@@ -112,30 +98,33 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Main Navigation */}
+        {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:mx-auto">
-            <TabsTrigger value="browse" className="flex items-center gap-2">
-              <FileSearch className="h-4 w-4" />
-              Browse Strains
-            </TabsTrigger>
-            {user && (
-              <TabsTrigger value="add" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Strain
+          {/* Desktop Navigation */}
+          <div className="hidden md:block">
+            <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:mx-auto">
+              <TabsTrigger value="browse" className="flex items-center gap-2">
+                <FileSearch className="h-4 w-4" />
+                Browse Strains
               </TabsTrigger>
-            )}
-            <TabsTrigger value="details" className="flex items-center gap-2">
-              <Scan className="h-4 w-4" />
-              Details
-            </TabsTrigger>
-            {user && showSettings && (
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Settings
+              {user && (
+                <TabsTrigger value="add" className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Strain
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="details" className="flex items-center gap-2">
+                <Scan className="h-4 w-4" />
+                Details
               </TabsTrigger>
-            )}
-          </TabsList>
+              {user && showSettings && (
+                <TabsTrigger value="settings" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
           <TabsContent value="browse" className="space-y-6">
             <BrowseStrains onStrainSelect={(strain) => {
@@ -160,7 +149,7 @@ const Index = () => {
 
           {user && showSettings && (
             <TabsContent value="settings" className="space-y-6">
-              <Settings scanHistory={scans} onDataRestore={handleDataRestore} />
+              <SettingsPage scanHistory={scans} onDataRestore={handleDataRestore} />
             </TabsContent>
           )}
         </Tabs>
@@ -206,6 +195,49 @@ const Index = () => {
             </Card>
           </div>
         )}
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border">
+        <div className="grid grid-cols-3 h-16">
+          <button
+            onClick={() => setActiveTab('browse')}
+            className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
+              activeTab === 'browse' 
+                ? 'text-green-600 bg-green-50' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <FileSearch className="h-5 w-5" />
+            <span>Browse</span>
+          </button>
+
+          {user && (
+            <button
+              onClick={() => setActiveTab('add')}
+              className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
+                activeTab === 'add' 
+                  ? 'text-green-600 bg-green-50' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Plus className="h-5 w-5" />
+              <span>Add</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setActiveTab('details')}
+            className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
+              activeTab === 'details' 
+                ? 'text-green-600 bg-green-50' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Scan className="h-5 w-5" />
+            <span>Details</span>
+          </button>
+        </div>
       </div>
       
       <InstallBanner />
