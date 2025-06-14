@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,17 +26,17 @@ interface Strain {
   confidence: number;
 }
 
-// Use the actual database return type from Supabase
+// Use the actual database return type from Supabase (matching the generated types)
 type DatabaseScan = {
   id: string;
   user_id: string;
   strain_name: string;
-  strain_type: string; // This comes as string from database
+  strain_type: string;
   thc: number | null;
   cbd: number | null;
   effects: string[] | null;
   flavors: string[] | null;
-  terpenes?: Terpene[] | null;
+  terpenes: any | null; // Using 'any' to match Json type from database
   medical_uses: string[] | null;
   description: string | null;
   image_url: string | null;
@@ -56,6 +57,18 @@ export const useScans = () => {
       return ['Indica', 'Sativa', 'Hybrid'].includes(type);
     };
 
+    // Helper function to safely parse terpenes
+    const parseTerpenes = (terpenes: any): Terpene[] => {
+      if (!terpenes) return [];
+      if (Array.isArray(terpenes)) return terpenes;
+      try {
+        const parsed = typeof terpenes === 'string' ? JSON.parse(terpenes) : terpenes;
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    };
+
     return {
       id: scan.id,
       name: scan.strain_name,
@@ -64,7 +77,7 @@ export const useScans = () => {
       cbd: Number(scan.cbd) || 0,
       effects: scan.effects || [],
       flavors: scan.flavors || [],
-      terpenes: scan.terpenes || [],
+      terpenes: parseTerpenes(scan.terpenes),
       medicalUses: scan.medical_uses || [],
       description: scan.description || '',
       imageUrl: scan.image_url || '/placeholder.svg',
@@ -124,7 +137,7 @@ export const useScans = () => {
           cbd: strain.cbd,
           effects: strain.effects,
           flavors: strain.flavors,
-          terpenes: strain.terpenes || [],
+          terpenes: strain.terpenes || null, // Store as JSON
           medical_uses: strain.medicalUses,
           description: strain.description,
           image_url: strain.imageUrl,
