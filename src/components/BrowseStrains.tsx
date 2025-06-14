@@ -1,52 +1,41 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, TrendingUp, Eye, Edit3, Package, PackageX, Mic, MicOff } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useInventoryManagement } from '@/hooks/useInventoryManagement';
-import { convertDatabaseScanToStrain } from '@/utils/strainConverters';
+import { useBrowseStrains } from '@/hooks/useBrowseStrains';
 import { Strain } from '@/types/strain';
 
 interface BrowseStrainsProps {
   onStrainSelect: (strain: Strain) => void;
 }
 
-// Cache interface
-interface CacheData {
-  strains: Strain[];
-  timestamp: number;
-}
-
-const CACHE_KEY = 'cached_strains';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
-  const [strains, setStrains] = useState<Strain[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
   const [editMode, setEditMode] = useState(false);
   const [selectedStrains, setSelectedStrains] = useState<string[]>([]);
   const [isListening, setIsListening] = useState(false);
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
   const { updateStockStatus, batchUpdateStock, loading: inventoryLoading } = useInventoryManagement();
+  
+  // Use the new optimized hook
+  const { strains, isLoading, updateStrainInCache } = useBrowseStrains(searchTerm, filterType, sortBy);
 
   // Voice recognition setup
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
-
   useEffect(() => {
-    // Initialize speech recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
@@ -76,114 +65,14 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
       setRecognition(recognitionInstance);
     }
 
-    fetchStrains();
-    
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('strains-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scans'
-        },
-        (payload) => {
-          console.log('Real-time strain update:', payload);
-          handleRealtimeUpdate(payload);
-        }
-      )
-      .subscribe();
-
     return () => {
-      supabase.removeChannel(channel);
       if (recognition) {
         recognition.abort();
       }
     };
   }, []);
 
-  const handleRealtimeUpdate = (payload: any) => {
-    if (payload.eventType === 'INSERT') {
-      const newStrain = convertDatabaseScanToStrain(payload.new);
-      setStrains(prev => [newStrain, ...prev]);
-      updateCache([newStrain, ...strains]);
-    } else if (payload.eventType === 'UPDATE') {
-      const updatedStrain = convertDatabaseScanToStrain(payload.new);
-      setStrains(prev => prev.map(strain => 
-        strain.id === updatedStrain.id ? updatedStrain : strain
-      ));
-    } else if (payload.eventType === 'DELETE') {
-      setStrains(prev => prev.filter(strain => strain.id !== payload.old.id));
-    }
-  };
-
-  const getCachedStrains = (): CacheData | null => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const data: CacheData = JSON.parse(cached);
-        const isExpired = Date.now() - data.timestamp > CACHE_DURATION;
-        return isExpired ? null : data;
-      }
-    } catch (error) {
-      console.error('Cache read error:', error);
-    }
-    return null;
-  };
-
-  const updateCache = (strains: Strain[]) => {
-    try {
-      const cacheData: CacheData = {
-        strains,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-    } catch (error) {
-      console.error('Cache write error:', error);
-    }
-  };
-
-  const fetchStrains = async () => {
-    // Try cache first
-    const cachedData = getCachedStrains();
-    if (cachedData) {
-      setStrains(cachedData.strains);
-      setLoading(false);
-      // Fetch fresh data in background
-      fetchFreshData();
-      return;
-    }
-
-    // No cache, fetch fresh data with loading state
-    await fetchFreshData();
-  };
-
-  const fetchFreshData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('scans')
-        .select('*')
-        .order('scanned_at', { ascending: false });
-
-      if (error) throw error;
-
-      const formattedStrains = (data || []).map(convertDatabaseScanToStrain);
-      setStrains(formattedStrains);
-      updateCache(formattedStrains);
-    } catch (error) {
-      console.error('Error fetching strains:', error);
-      toast({
-        title: "Error loading strains",
-        description: "Failed to load strain information.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleVoiceInput = () => {
+  const toggleVoiceInput = useCallback(() => {
     if (!recognition) {
       toast({
         title: "Voice input not supported",
@@ -200,79 +89,89 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
       recognition.start();
       setIsListening(true);
     }
-  };
+  }, [recognition, isListening, toast]);
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = useCallback((type: string) => {
     switch (type) {
       case 'Indica': return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-300';
       case 'Sativa': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300';
       case 'Hybrid': return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300';
     }
-  };
+  }, []);
 
-  const handleStockToggle = async (strainId: string, currentStock: boolean) => {
+  const handleStockToggle = useCallback(async (strainId: string, currentStock: boolean) => {
+    // Optimistic update
+    updateStrainInCache(strainId, { inStock: !currentStock });
+    
     const success = await updateStockStatus(strainId, !currentStock);
-    if (success) {
-      setStrains(prev => prev.map(strain => 
-        strain.id === strainId ? { ...strain, inStock: !currentStock } : strain
-      ));
+    if (!success) {
+      // Revert on failure
+      updateStrainInCache(strainId, { inStock: currentStock });
     }
-  };
+  }, [updateStockStatus, updateStrainInCache]);
 
-  const handleBatchStockUpdate = async (inStock: boolean) => {
+  const handleBatchStockUpdate = useCallback(async (inStock: boolean) => {
     if (selectedStrains.length === 0) return;
+    
+    // Optimistic updates
+    selectedStrains.forEach(strainId => {
+      updateStrainInCache(strainId, { inStock });
+    });
     
     const success = await batchUpdateStock(selectedStrains, inStock);
     if (success) {
-      setStrains(prev => prev.map(strain => 
-        selectedStrains.includes(strain.id) ? { ...strain, inStock } : strain
-      ));
       setSelectedStrains([]);
     }
-  };
+  }, [selectedStrains, batchUpdateStock, updateStrainInCache]);
 
-  const handleStrainSelect = (strainId: string, checked: boolean) => {
+  const handleStrainSelect = useCallback((strainId: string, checked: boolean) => {
     setSelectedStrains(prev => 
       checked 
         ? [...prev, strainId]
         : prev.filter(id => id !== strainId)
     );
-  };
+  }, []);
 
-  const filteredAndSortedStrains = strains
-    .filter(strain => {
-      const matchesSearch = strain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          strain.effects.some(effect => effect.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          strain.flavors.some(flavor => flavor.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesType = filterType === 'all' || strain.type === filterType;
-      return matchesSearch && matchesType;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'recent':
-          return new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime();
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'thc':
-          return b.thc - a.thc;
-        case 'confidence':
-          return b.confidence - a.confidence;
-        default:
-          return 0;
-      }
-    });
-
-  if (loading) {
+  // Show skeleton loading only on first load, not on navigation
+  if (isLoading && strains.length === 0) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      <div className="space-y-4 pb-20">
+        {/* Search skeleton */}
+        <div className="relative">
+          <div className="h-12 bg-muted rounded-full animate-pulse" />
+        </div>
+        
+        {/* Filters skeleton */}
+        <div className="flex gap-3">
+          <div className="w-36 h-10 bg-muted rounded animate-pulse" />
+          <div className="w-40 h-10 bg-muted rounded animate-pulse" />
+        </div>
+        
+        {/* Strain cards skeleton */}
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-16 h-16 bg-muted rounded-lg animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-6 bg-muted rounded animate-pulse w-3/4" />
+                  <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
+                  <div className="flex gap-2">
+                    <div className="h-6 bg-muted rounded animate-pulse w-16" />
+                    <div className="h-6 bg-muted rounded animate-pulse w-16" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-20"> {/* Add bottom padding for mobile nav */}
+    <div className="space-y-6 pb-20">
       {/* Omnibar Search */}
       <div className="relative">
         <div className="relative">
@@ -389,7 +288,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
 
       {/* Strain Grid */}
       <div className="grid grid-cols-1 gap-4">
-        {filteredAndSortedStrains.map((strain) => (
+        {strains.map((strain) => (
           <Card 
             key={strain.id} 
             className={`transition-all duration-200 ${
@@ -464,7 +363,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         ))}
       </div>
 
-      {filteredAndSortedStrains.length === 0 && (
+      {strains.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Search className="h-12 w-12 text-muted-foreground mb-4" />
