@@ -10,6 +10,7 @@ import { useScans } from '@/hooks/useScans';
 import CameraScanner from '@/components/CameraScanner';
 import StrainDashboard from '@/components/StrainDashboard';
 import BrowseStrains from '@/components/BrowseStrains';
+import SearchBar from '@/components/BrowseStrains/SearchBar';
 import SettingsPage from '@/components/Settings';
 import UserNav from '@/components/UserNav';
 import InstallBanner from '@/components/InstallBanner';
@@ -20,6 +21,7 @@ const Index = () => {
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const { user, loading: authLoading } = useAuth();
   const { scans, loading: scansLoading, addScan } = useScans();
@@ -135,6 +137,19 @@ const Index = () => {
 
           {user && (
             <TabsContent value="add" className="space-y-6">
+              {/* Omnibar Search for Add Strain */}
+              <SearchBar 
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+              />
+              
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Add New Strain</h2>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Use the camera scanner below to identify and add cannabis strains to the database
+                </p>
+              </div>
+              
               <CameraScanner 
                 onScanComplete={handleScanComplete} 
                 isScanning={isScanning} 
