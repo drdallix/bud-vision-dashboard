@@ -33,6 +33,8 @@ export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
     imageUrl: scan.image_url || '/placeholder.svg',
     scannedAt: scan.scanned_at,
     confidence: scan.confidence || 0,
+    inStock: scan.in_stock,
+    userId: scan.user_id,
   };
 };
 
@@ -56,5 +58,6 @@ export const convertStrainForDatabase = (strain: Strain, userId: string) => {
     image_url: strain.imageUrl,
     confidence: strain.confidence,
     scanned_at: strain.scannedAt,
+    in_stock: strain.inStock,
   };
 };

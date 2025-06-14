@@ -10,10 +10,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, LogOut, Settings } from 'lucide-react';
+import { User, LogOut, Settings, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-const UserNav = () => {
+interface UserNavProps {
+  onSettingsClick?: () => void;
+}
+
+const UserNav = ({ onSettingsClick }: UserNavProps) => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -54,9 +58,9 @@ const UserNav = () => {
           <User className="mr-2 h-4 w-4" />
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem disabled>
+        <DropdownMenuItem onClick={onSettingsClick}>
           <Settings className="mr-2 h-4 w-4" />
-          Settings
+          Settings & Data
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} disabled={isLoading}>

@@ -19,6 +19,8 @@ export interface Strain {
   imageUrl: string;
   scannedAt: string;
   confidence: number;
+  inStock: boolean;
+  userId: string;
 }
 
 // Database return type from Supabase (matching the generated types)
@@ -38,4 +40,5 @@ export type DatabaseScan = {
   confidence: number | null;
   scanned_at: string;
   created_at: string;
+  in_stock: boolean;
 };
