@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -127,6 +128,9 @@ export const useScans = () => {
     }
 
     try {
+      // Convert terpenes to JSON format for database storage
+      const terpenes = strain.terpenes ? JSON.stringify(strain.terpenes) : null;
+      
       const { data, error } = await supabase
         .from('scans')
         .insert({
@@ -137,7 +141,7 @@ export const useScans = () => {
           cbd: strain.cbd,
           effects: strain.effects,
           flavors: strain.flavors,
-          terpenes: strain.terpenes || null, // Store as JSON
+          terpenes: terpenes,
           medical_uses: strain.medicalUses,
           description: strain.description,
           image_url: strain.imageUrl,
@@ -201,3 +205,4 @@ export const useScans = () => {
     refetch: fetchScans,
   };
 };
+
