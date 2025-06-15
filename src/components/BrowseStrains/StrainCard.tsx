@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -5,8 +6,8 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
+import { PricePoint } from '@/types/price';
 import { getDeterministicTHCRange } from '@/utils/thcGenerator';
-import { useStrainPrices } from '@/hooks/useStrainPrices';
 import PriceBadges from './components/PriceBadges';
 
 interface StrainCardProps {
@@ -18,6 +19,8 @@ interface StrainCardProps {
   onStockToggle: (strainId: string, currentStock: boolean) => void;
   onStrainClick: (strain: Strain) => void;
   inventoryLoading: boolean;
+  prices: PricePoint[];
+  pricesLoading: boolean;
 }
 
 const StrainCard = ({
@@ -28,7 +31,9 @@ const StrainCard = ({
   onSelect,
   onStockToggle,
   onStrainClick,
-  inventoryLoading
+  inventoryLoading,
+  prices,
+  pricesLoading
 }: StrainCardProps) => {
   // Local state to ensure immediate UI feedback
   const [localInStock, setLocalInStock] = useState(strain.inStock);
@@ -59,9 +64,6 @@ const StrainCard = ({
       default: return 'from-gray-500 to-gray-700';
     }
   };
-
-  // Fetch price points (hide if out of stock)
-  const { prices, isLoading: pricesLoading } = useStrainPrices(strain.id);
 
   const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
 
