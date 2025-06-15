@@ -5,6 +5,7 @@ import { createTextAnalysisMessages, createImageAnalysisMessages, callOpenAI, cr
 import { parseOpenAIResponse, validateStrainData } from './validation.ts';
 import { cacheStrainData } from './cache.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
+import { getDeterministicTHCRange } from './thcGenerator';
 
 // Emoji/color mappings for fallback
 const EFFECT_MAP: Record<string, {emoji: string, color: string}> = {
@@ -64,18 +65,34 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!openAIApiKey) throw new Error('OpenAI API key not configured');
 
-    // 1. PRIMARY BASIC STRAIN ANALYSIS
-    const messages = textQuery 
-      ? createTextAnalysisMessages(textQuery)
-      : createImageAnalysisMessages(imageData);
+    // ======= DETERMINISTIC THC GENERATION =======
+    // We'll always calculate the THC range FIRST, based only on the strain name for textQuery,
+    // or (for image) try passing a guessed strain name from package, or use a placeholder for now.
+    let thcRange: [number, number] = [21, 26.5];
+    let strainNameForTHC = textQuery || "Unknown";
+    if (textQuery) {
+      thcRange = getDeterministicTHCRange(textQuery);
+      strainNameForTHC = textQuery;
+    }
+
+    // --- PRIMARY BASIC STRAIN ANALYSIS ---
+    // For text, pass in the THC range as a strict constraint.
+    const messages = textQuery
+      ? createTextAnalysisMessages(textQuery, thcRange)
+      : createImageAnalysisMessages(imageData, strainNameForTHC, thcRange);
     const data = await callOpenAI(messages, openAIApiKey);
     const analysisText = data.choices[0].message.content;
     const strainData = parseOpenAIResponse(analysisText, textQuery);
-    // First step validation to get core info (and calculate actual THC)
+    // First validation (may update spelling, etc)
     let validatedStrain = validateStrainData(strainData, textQuery);
 
-    // Inject the CORRECT calculated THC into the description if needed
-    let updatedDescription = injectTHC(validatedStrain.description, validatedStrain.thc);
+    // Always OVERWRITE thc value with our deterministic average for the strain name
+    const [thcMin, thcMax] = getDeterministicTHCRange(validatedStrain.name);
+    const deterministicTHC = Number(((thcMin + thcMax) / 2).toFixed(2));
+    validatedStrain.thc = deterministicTHC;
+
+    // Update description (inject correct THC)
+    let updatedDescription = injectTHC(validatedStrain.description, deterministicTHC);
     validatedStrain.description = updatedDescription;
 
     // 2. EFFECT PROFILES

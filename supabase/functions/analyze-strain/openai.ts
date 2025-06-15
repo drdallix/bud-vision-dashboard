@@ -3,7 +3,7 @@ interface OpenAIMessage {
   content: any;
 }
 
-export const createTextAnalysisMessages = (textQuery: string): OpenAIMessage[] => [
+export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
   {
     role: 'system',
     content: `You are an expert cannabis strain identifier and cannabis knowledge expert. The user has provided a strain name or description that may contain spelling errors or poor punctuation. 
@@ -11,9 +11,10 @@ export const createTextAnalysisMessages = (textQuery: string): OpenAIMessage[] =
     IMPORTANT TASKS:
     1. CORRECT SPELLING & GRAMMAR: Fix any spelling mistakes, punctuation errors, and grammatical issues in the provided text
     2. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
-    
-    For the corrected and cleaned strain name/description, provide realistic information:
-    
+
+    STRICT REQUIREMENT:
+    - The THC percentage for this strain must be between ${thcRangeHint ? `${thcRangeHint[0]}% and ${thcRangeHint[1]}%` : '21% and 26.5%'}. Do not use values outside this range in your returned JSON or in your description.
+
     Cannabis Knowledge Guidelines:
     - Indica strains: typically 15-25% THC, 0-5% CBD, relaxing/sedating effects, earthy/sweet flavors
     - Sativa strains: typically 18-28% THC, 0-3% CBD, energizing/uplifting effects, citrus/pine flavors  
@@ -48,13 +49,16 @@ export const createTextAnalysisMessages = (textQuery: string): OpenAIMessage[] =
   }
 ];
 
-export const createImageAnalysisMessages = (imageData: string): OpenAIMessage[] => [
+export const createImageAnalysisMessages = (imageData: string, strainNameHint?: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
   {
     role: 'system',
     content: `You are an expert cannabis strain identifier and cannabis knowledge expert. Analyze the cannabis package image and extract information to identify the strain. 
 
     IMPORTANT: Use your extensive cannabis knowledge to fill in ANY missing information intelligently:
-    
+
+    STRICT REQUIREMENT:
+    - If you are able to extract or infer a strain name, use it. If not, use the best guess. For THC, strictly use a value between ${thcRangeHint ? `${thcRangeHint[0]}% and ${thcRangeHint[1]}%` : '21% and 26.5%'}. Do not use values outside this range in your answer or in the description.
+
     Look for visible information:
     - Strain name on the package
     - THC and CBD percentages
@@ -175,3 +179,5 @@ export const callOpenAI = async (messages: OpenAIMessage[], openAIApiKey: string
 
   return response.json();
 };
+
+import { getDeterministicTHCRange } from "./thcGenerator";
