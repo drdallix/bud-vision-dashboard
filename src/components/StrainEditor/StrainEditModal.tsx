@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Strain } from '@/types/strain';
 import StrainBasicInfoForm from './StrainBasicInfoForm';
 import StrainPricingForm from './StrainPricingForm';
+import StrainDescriptionForm from './StrainDescriptionForm';
+import StrainProfilesForm from './StrainProfilesForm';
 import { useStrainEditor } from './hooks/useStrainEditor';
 
 interface StrainEditModalProps {
@@ -40,7 +42,7 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className="text-2xl">🌿</span>
@@ -49,8 +51,10 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="profiles">Effects & Flavors</TabsTrigger>
+            <TabsTrigger value="description">Description</TabsTrigger>
             <TabsTrigger value="pricing">Pricing</TabsTrigger>
           </TabsList>
 
@@ -58,6 +62,22 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
             <StrainBasicInfoForm
               strain={editedStrain}
               errors={errors}
+              onUpdate={updateField}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+
+          <TabsContent value="profiles" className="space-y-4">
+            <StrainProfilesForm
+              strain={editedStrain}
+              onUpdate={updateField}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+
+          <TabsContent value="description" className="space-y-4">
+            <StrainDescriptionForm
+              strain={editedStrain}
               onUpdate={updateField}
               isLoading={isLoading}
             />
