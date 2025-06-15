@@ -27,14 +27,14 @@ interface BrowseStrainsProps {
 const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   // Centralized strain state management
   const {
-    strains: allStrains,
+    strains: allStrains = [], // Provide default empty array
     pricesMap,
     isLoading,
     pricesLoading
   } = useStrainStore(true); // Get all strains for browsing
 
   // Filter and UI state management
-  const { searchTerm, filterType, sortBy, updateFilters } = useBrowseFilters();
+  const { searchTerm, filterType, sortBy, updateFilters } = useBrowseFilters(allStrains);
   const { selectedStrains, toggleSelection, clearSelection, selectAll } = useStrainSelection();
   const { handleStockToggle, handleBatchStockUpdate, inventoryLoading } = useInventoryActions(true);
 
@@ -42,8 +42,8 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   const filteredStrains = useStrainFiltering(allStrains, searchTerm, filterType, sortBy);
 
   console.log('BrowseStrains render:', {
-    totalStrains: allStrains.length,
-    filteredStrains: filteredStrains.length,
+    totalStrains: allStrains?.length || 0,
+    filteredStrains: filteredStrains?.length || 0,
     selectedCount: selectedStrains.length,
     isLoading,
     pricesLoading,
@@ -53,12 +53,8 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   return (
     <div className="space-y-6">
       <BrowseHeader
-        searchTerm={searchTerm}
-        filterType={filterType}
-        sortBy={sortBy}
         selectedCount={selectedStrains.length}
-        totalCount={filteredStrains.length}
-        onFiltersChange={updateFilters}
+        totalCount={filteredStrains?.length || 0}
         onSelectAll={() => selectAll(filteredStrains.map(s => s.id))}
         onClearSelection={clearSelection}
         onBatchStockUpdate={handleBatchStockUpdate}
@@ -67,7 +63,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
       />
 
       <StrainGrid
-        strains={filteredStrains}
+        strains={filteredStrains || []}
         editMode={selectedStrains.length > 0}
         selectedStrains={selectedStrains}
         user={null} // Will be populated by auth context
@@ -75,7 +71,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         onStockToggle={handleStockToggle}
         onStrainClick={onStrainSelect}
         inventoryLoading={inventoryLoading}
-        pricesMap={pricesMap}
+        pricesMap={pricesMap || {}}
         pricesLoading={pricesLoading}
       />
     </div>

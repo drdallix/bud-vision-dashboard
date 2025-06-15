@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Strain } from '@/types/strain';
 import { getDeterministicTHCRange } from '@/utils/thcGenerator';
@@ -10,7 +11,7 @@ export function getLowestPrice(prices: {nowPrice: number}[] | undefined): number
   return prices.reduce((min, cur) => Math.min(min, cur.nowPrice), Infinity);
 }
 
-export const useBrowseFilters = (strains: Strain[]) => {
+export const useBrowseFilters = (strains: Strain[] = []) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
@@ -18,11 +19,16 @@ export const useBrowseFilters = (strains: Strain[]) => {
 
   // Only filter by search, type, etc. Don't call hooks in here!
   const filteredAndSortedStrains = useMemo(() => {
+    // Guard against undefined or null strains array
+    if (!strains || !Array.isArray(strains)) {
+      return [];
+    }
+
     let filtered = strains
       .filter(strain => {
-        const effectNames = strain.effectProfiles.map(e => e.name);
-        const flavorNames = strain.flavorProfiles.map(f => f.name);
-        const matchesSearch = strain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const effectNames = strain.effectProfiles?.map(e => e.name) || [];
+        const flavorNames = strain.flavorProfiles?.map(f => f.name) || [];
+        const matchesSearch = strain.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             effectNames.some(effect => effect.toLowerCase().includes(searchTerm.toLowerCase())) ||
             flavorNames.some(flavor => flavor.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesType = filterType === 'all' || strain.type === filterType;
@@ -49,6 +55,18 @@ export const useBrowseFilters = (strains: Strain[]) => {
     return filtered;
   }, [strains, searchTerm, filterType, sortBy]);
 
+  const updateFilters = (updates: {
+    searchTerm?: string;
+    filterType?: string;
+    sortBy?: string;
+    priceFilter?: string | null;
+  }) => {
+    if (updates.searchTerm !== undefined) setSearchTerm(updates.searchTerm);
+    if (updates.filterType !== undefined) setFilterType(updates.filterType);
+    if (updates.sortBy !== undefined) setSortBy(updates.sortBy);
+    if (updates.priceFilter !== undefined) setPriceFilter(updates.priceFilter);
+  };
+
   return {
     searchTerm,
     setSearchTerm,
@@ -58,6 +76,7 @@ export const useBrowseFilters = (strains: Strain[]) => {
     setSortBy,
     priceFilter,
     setPriceFilter,
+    updateFilters,
     filteredStrains: filteredAndSortedStrains
   };
 };

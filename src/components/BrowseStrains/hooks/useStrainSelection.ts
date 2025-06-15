@@ -1,15 +1,18 @@
-
 import { useState, useCallback } from 'react';
 
 export const useStrainSelection = () => {
   const [selectedStrains, setSelectedStrains] = useState<string[]>([]);
 
-  const handleStrainSelect = useCallback((strainId: string, checked: boolean) => {
+  const toggleSelection = useCallback((strainId: string, checked: boolean) => {
     setSelectedStrains(prev => 
       checked 
         ? [...prev, strainId]
         : prev.filter(id => id !== strainId)
     );
+  }, []);
+
+  const selectAll = useCallback((strainIds: string[]) => {
+    setSelectedStrains(strainIds);
   }, []);
 
   const clearSelection = useCallback(() => {
@@ -18,7 +21,9 @@ export const useStrainSelection = () => {
 
   return {
     selectedStrains,
-    handleStrainSelect,
-    clearSelection
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    handleStrainSelect: toggleSelection
   };
 };
