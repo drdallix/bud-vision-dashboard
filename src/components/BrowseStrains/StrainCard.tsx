@@ -6,6 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
 import { getDeterministicTHCRange } from '@/utils/thcGenerator';
+import { useStrainPrices } from '@/hooks/useStrainPrices';
+import PriceBadges from './components/PriceBadges';
 
 interface StrainCardProps {
   strain: Strain;
@@ -55,6 +57,9 @@ const StrainCard = ({
     }
   };
 
+  // Fetch price points (hide if out of stock)
+  const { prices, isLoading: pricesLoading } = useStrainPrices(strain.id);
+
   const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
 
   return (
@@ -91,7 +96,10 @@ const StrainCard = ({
                 </Badge>
               )}
             </div>
-            
+
+            {/* Price badges (show only if in stock) */}
+            {strain.inStock && !pricesLoading && !!prices.length && <PriceBadges prices={prices} />}
+
             <div className="mb-2">
               <div className="text-xs text-muted-foreground">
                 THC: {thcMin}%–{thcMax}%
