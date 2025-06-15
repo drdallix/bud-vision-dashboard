@@ -89,11 +89,11 @@ export class CacheService {
       strain_name: strain.name,
       strain_type: strain.type,
       thc: strain.thc,
-      cbd: strain.cbd,
-      effects: strain.effects,
-      flavors: strain.flavors,
-      terpenes: [], // Will be populated by edge function if available
-      medical_uses: strain.medicalUses,
+      cbd: 0, // Default CBD value since new Strain type doesn't have it
+      effects: strain.effectProfiles?.map(p => p.name) || [],
+      flavors: strain.flavorProfiles?.map(p => p.name) || [],
+      terpenes: strain.terpenes || [],
+      medical_uses: [], // Default empty array since new Strain type doesn't have medicalUses
       description: strain.description,
       confidence: strain.confidence,
       scanned_at: strain.scannedAt,
