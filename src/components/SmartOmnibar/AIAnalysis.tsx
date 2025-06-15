@@ -13,7 +13,7 @@ export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string
     
     if (userId) {
       requestBody.userId = userId;
-      console.log('Including userId in AI request:', userId);
+      console.log('Including userId in AI request for database save:', userId);
     }
     
     const { data, error } = await supabase.functions.invoke('analyze-strain', {
@@ -25,7 +25,7 @@ export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string
       throw error;
     }
 
-    console.log('AI analysis result:', data);
+    console.log('AI analysis result with database save:', data);
 
     if (data.error) {
       console.error('Edge function returned error:', data.error);
@@ -35,6 +35,8 @@ export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string
       throw new Error(data.error);
     }
 
+    // The AI function now handles database saving when userId is provided
+    // Return the strain data for immediate UI update
     return data;
   } catch (error) {
     console.error('Error calling strain analysis:', error);

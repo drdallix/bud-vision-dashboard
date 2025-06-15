@@ -13,7 +13,6 @@ export const useStrainData = (includeAllStrains = false) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
-  const isSubscribedRef = useRef(false);
 
   // Memoize the query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => 
@@ -33,37 +32,30 @@ export const useStrainData = (includeAllStrains = false) => {
       return convertDatabaseScansToStrains(rawScans);
     },
     enabled: includeAllStrains || !!user,
-    staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
 
   // Cleanup function
   const cleanupChannel = useCallback(() => {
-    if (channelRef.current && isSubscribedRef.current) {
-      console.log('Cleaning up existing channel:', channelRef.current);
+    if (channelRef.current) {
+      console.log('Cleaning up existing channel');
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
-      isSubscribedRef.current = false;
     }
   }, []);
 
-  // Set up real-time subscription
+  // Set up real-time subscription - simplified to prevent duplicates
   useEffect(() => {
     if (!includeAllStrains && !user) return;
-    if (isSubscribedRef.current) return; // Prevent multiple subscriptions
 
     // Clean up any existing channel first
     cleanupChannel();
 
-    // Create a unique channel name to avoid conflicts
-    const channelName = includeAllStrains 
-      ? `strains-all-${Date.now()}-${Math.random()}` 
-      : `strains-user-${user!.id}-${Date.now()}-${Math.random()}`;
-
-    console.log('Creating new channel:', channelName);
+    console.log('Setting up real-time subscription for:', includeAllStrains ? 'all strains' : `user ${user!.id}`);
 
     const channel = supabase
-      .channel(channelName)
+      .channel('scans-changes')
       .on(
         'postgres_changes',
         {
@@ -73,24 +65,22 @@ export const useStrainData = (includeAllStrains = false) => {
           ...(includeAllStrains ? {} : { filter: `user_id=eq.${user!.id}` })
         },
         (payload) => {
-          console.log('Real-time strain update:', payload);
+          console.log('Real-time strain update:', payload.eventType, payload);
           
-          // Invalidate and refetch data
+          // Invalidate and refetch data immediately
           queryClient.invalidateQueries({ queryKey });
+          
+          // Force a refetch to ensure UI updates
+          queryClient.refetchQueries({ queryKey });
         }
       )
       .subscribe((status) => {
         console.log('Subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          isSubscribedRef.current = true;
-        }
       });
 
     channelRef.current = channel;
 
-    return () => {
-      cleanupChannel();
-    };
+    return cleanupChannel;
   }, [user?.id, includeAllStrains, cleanupChannel, queryClient, queryKey]);
 
   // Show error toast only once per error
@@ -104,25 +94,47 @@ export const useStrainData = (includeAllStrains = false) => {
     }
   }, [error, toast]);
 
-  const updateStrainInCache = (strainId: string, updates: Partial<Strain>) => {
+  const updateStrainInCache = useCallback((strainId: string, updates: Partial<Strain>) => {
     queryClient.setQueryData(queryKey, (oldData: Strain[] = []) => {
-      return oldData.map(strain => 
+      const updated = oldData.map(strain => 
         strain.id === strainId ? { ...strain, ...updates } : strain
       );
+      console.log('Updated strain in cache:', strainId, updated.length);
+      return updated;
     });
-  };
+    
+    // Also invalidate to trigger a fresh fetch
+    queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
-  const addStrainToCache = (newStrain: Strain) => {
+  const addStrainToCache = useCallback((newStrain: Strain) => {
+    console.log('Adding strain to cache:', newStrain.name);
     queryClient.setQueryData(queryKey, (oldData: Strain[] = []) => {
-      return [newStrain, ...oldData];
+      // Check if strain already exists to prevent duplicates
+      const exists = oldData.some(strain => strain.id === newStrain.id || strain.name === newStrain.name);
+      if (exists) {
+        console.log('Strain already exists in cache, not adding duplicate');
+        return oldData;
+      }
+      const updated = [newStrain, ...oldData];
+      console.log('Added strain to cache, new total:', updated.length);
+      return updated;
     });
-  };
+    
+    // Also invalidate to ensure consistency
+    queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
-  const removeStrainFromCache = (strainId: string) => {
+  const removeStrainFromCache = useCallback((strainId: string) => {
     queryClient.setQueryData(queryKey, (oldData: Strain[] = []) => {
       return oldData.filter(strain => strain.id !== strainId);
     });
-  };
+  }, [queryClient, queryKey]);
+
+  const refetch = useCallback(() => {
+    console.log('Manual refetch triggered');
+    return queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
 
   return {
     strains,
@@ -131,6 +143,6 @@ export const useStrainData = (includeAllStrains = false) => {
     updateStrainInCache,
     addStrainToCache,
     removeStrainFromCache,
-    refetch: () => queryClient.invalidateQueries({ queryKey }),
+    refetch,
   };
 };

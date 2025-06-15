@@ -55,7 +55,7 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         description: "DoobieDB is reading package information for customer recommendations.",
       });
 
-      // The AI analysis now handles both analysis AND saving to database
+      // The AI analysis now handles database saving when userId is provided
       const aiResult = await analyzeStrainWithAI(selectedImage, undefined, user.id);
       
       const identifiedStrain: Strain = {
@@ -66,12 +66,12 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         userId: user.id
       };
       
-      console.log('Scanner - strain analyzed:', identifiedStrain);
+      console.log('Scanner - strain analyzed and saved to database:', identifiedStrain);
       
       // Save to local cache as backup
       CacheService.saveScanToCache(identifiedStrain, 'synced');
       
-      // Add to the user's strain cache immediately for background inventory update
+      // Add to the user's strain cache immediately for UI update
       addStrainToCache(identifiedStrain);
       
       setSaveStatus('success');
@@ -84,8 +84,7 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         description: `Saved: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`,
       });
 
-      // Try to sync any pending scans
-      setTimeout(() => CacheService.syncPendingScans(user.id), 1000);
+      console.log('Scan complete - strain should now appear in inventory');
       
     } catch (error) {
       console.error('Scan error:', error);
