@@ -1,4 +1,3 @@
-
 interface OpenAIMessage {
   role: string;
   content: any;
@@ -113,6 +112,43 @@ export const createImageAnalysisMessages = (imageData: string): OpenAIMessage[] 
         }
       }
     ]
+  }
+];
+
+export const createEffectProfilesMessages = (strainName: string, strainType: string, effects: string[]) => [
+  {
+    role: 'system',
+    content: `You are an expert cannabis educator. For the given strain name, type, and listed effects, generate a JSON array of effect profiles, including intensity and emoji:
+- For each effect, assign:
+  - name: effect as received
+  - intensity: realistic 1-5 integer for this strain (1=Subtle, 5=Intense)
+  - emoji: appropriate modern emoji for the effect
+  - color: a hex color suited to effect's feeling.  
+Format: [{ name, intensity, emoji, color }]
+Examples: Relaxed=😌,#8B5CF6; Happy=😊,#F59E0B; Euphoric=🤩,#EF4444
+Be creative, but reflect typical effect strength for a ${strainType} strain. Answer ONLY with the array.`
+  },
+  {
+    role: 'user',
+    content: `Strain: "${strainName}"\nType: ${strainType}\nEffects: ${effects && effects.length ? effects.join(", ") : "None"}`
+  }
+];
+
+export const createFlavorProfilesMessages = (strainName: string, strainType: string, flavors: string[]) => [
+  {
+    role: 'system',
+    content: `You are a cannabis sommelier AI. For this strain and the possible flavors listed, generate a JSON array of flavor profiles, each including:
+- name: the flavor
+- intensity: realistic 1-5 integer (1=Hint, 5=Dominant)
+- emoji: fitting modern emoji
+- color: a vivid hex color
+Use flavor type and strain type for references. Example: Sweet=🍯,#F59E0B; Earthy=🌍,#78716C
+Output JSON array: [{ name, intensity, emoji, color }]
+Answer ONLY with the array.`
+  },
+  {
+    role: 'user',
+    content: `Strain: "${strainName}"\nType: ${strainType}\nFlavors: ${flavors && flavors.length ? flavors.join(", ") : "None"}`
   }
 ];
 
