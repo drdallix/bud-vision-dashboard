@@ -91,7 +91,6 @@ const Index = () => {
               <SearchBar 
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
-                placeholder="Search strains or scan packages for instant information..."
               />
               
               <div>
