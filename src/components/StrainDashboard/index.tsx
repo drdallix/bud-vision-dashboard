@@ -39,11 +39,11 @@ const StrainDashboard: React.FC<StrainDashboardProps> = ({ strain }) => {
       <StrainCannabinoids strain={strain} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrainEffects effects={strain.effects || strain.effectProfiles?.map(p => p.name) || []} />
-        <StrainFlavors flavors={strain.flavors || strain.flavorProfiles?.map(p => p.name) || []} />
+        <StrainEffects effects={strain.effectProfiles?.map(p => p.name) || []} />
+        <StrainFlavors flavors={strain.flavorProfiles?.map(p => p.name) || []} />
       </div>
 
-      <StrainMedicalUses medicalUses={strain.medicalUses || []} />
+      <StrainMedicalUses medicalUses={[]} />
 
       {strain.terpenes && strain.terpenes.length > 0 && (
         <StrainTerpenes terpenes={strain.terpenes} />
@@ -60,4 +60,3 @@ const StrainDashboard: React.FC<StrainDashboardProps> = ({ strain }) => {
 };
 
 export default StrainDashboard;
-

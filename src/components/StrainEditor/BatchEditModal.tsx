@@ -193,14 +193,15 @@ const BatchEditModal = ({ strains, open, onClose, onBatchUpdate }: BatchEditModa
                   <div className="space-y-2">
                     <Label>Current Price</Label>
                     <Select
-                      value={newPrice?.toString() || ''}
-                      onValueChange={(value) => setNewPrice(Number(value))}
+                      value={newPrice?.toString() || 'none'}
+                      onValueChange={(value) => setNewPrice(value === 'none' ? null : Number(value))}
                       disabled={isLoading}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select price" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">Select price</SelectItem>
                         {VALID_PRICES.map((price) => (
                           <SelectItem key={price} value={price.toString()}>
                             ${price}/oz
@@ -213,15 +214,15 @@ const BatchEditModal = ({ strains, open, onClose, onBatchUpdate }: BatchEditModa
                   <div className="space-y-2">
                     <Label>Was Price (optional)</Label>
                     <Select
-                      value={wasPrice?.toString() || ''}
-                      onValueChange={(value) => setWasPrice(value ? Number(value) : null)}
+                      value={wasPrice?.toString() || 'none'}
+                      onValueChange={(value) => setWasPrice(value === 'none' ? null : Number(value))}
                       disabled={isLoading}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select was price" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No previous price</SelectItem>
+                        <SelectItem value="none">No previous price</SelectItem>
                         {VALID_PRICES.map((price) => (
                           <SelectItem key={price} value={price.toString()}>
                             ${price}/oz
@@ -253,14 +254,15 @@ const BatchEditModal = ({ strains, open, onClose, onBatchUpdate }: BatchEditModa
               
               {updateType && (
                 <Select
-                  value={strainType || ''}
-                  onValueChange={(value) => setStrainType(value as 'Indica' | 'Sativa' | 'Hybrid')}
+                  value={strainType || 'none'}
+                  onValueChange={(value) => setStrainType(value === 'none' ? null : value as 'Indica' | 'Sativa' | 'Hybrid')}
                   disabled={isLoading}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select strain type" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Select strain type</SelectItem>
                     <SelectItem value="Indica">🌙 Indica</SelectItem>
                     <SelectItem value="Sativa">☀️ Sativa</SelectItem>
                     <SelectItem value="Hybrid">🌓 Hybrid</SelectItem>

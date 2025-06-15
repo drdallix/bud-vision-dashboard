@@ -94,14 +94,15 @@ const StrainPricingForm = ({ strainId, isLoading }: StrainPricingFormProps) => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Current Price</label>
               <Select
-                value={newPriceNow?.toString() || ''}
-                onValueChange={(value) => setNewPriceNow(Number(value))}
+                value={newPriceNow?.toString() || 'none'}
+                onValueChange={(value) => setNewPriceNow(value === 'none' ? null : Number(value))}
                 disabled={isFormLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select price" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Select price</SelectItem>
                   {VALID_PRICES.map((price) => (
                     <SelectItem key={price} value={price.toString()}>
                       ${price}/oz
@@ -114,15 +115,15 @@ const StrainPricingForm = ({ strainId, isLoading }: StrainPricingFormProps) => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Was Price (optional)</label>
               <Select
-                value={newPriceWas?.toString() || ''}
-                onValueChange={(value) => setNewPriceWas(value ? Number(value) : null)}
+                value={newPriceWas?.toString() || 'none'}
+                onValueChange={(value) => setNewPriceWas(value === 'none' ? null : Number(value))}
                 disabled={isFormLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select was price" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No previous price</SelectItem>
+                  <SelectItem value="none">No previous price</SelectItem>
                   {VALID_PRICES.map((price) => (
                     <SelectItem key={price} value={price.toString()}>
                       ${price}/oz
