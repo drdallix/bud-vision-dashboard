@@ -3,13 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface VoiceInputProps {
-  onTranscript: (transcript: string) => void;
-  disabled?: boolean;
+  isOpen: boolean;
+  onClose: () => void;
+  onResult: (transcript: string) => void;
 }
 
-const VoiceInput = ({ onTranscript, disabled = false }: VoiceInputProps) => {
+const VoiceInput = ({ isOpen, onClose, onResult }: VoiceInputProps) => {
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const { toast } = useToast();
@@ -25,8 +27,9 @@ const VoiceInput = ({ onTranscript, disabled = false }: VoiceInputProps) => {
 
       recognitionInstance.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
-        onTranscript(transcript);
+        onResult(transcript);
         setIsListening(false);
+        onClose();
       };
 
       recognitionInstance.onerror = () => {
@@ -72,28 +75,35 @@ const VoiceInput = ({ onTranscript, disabled = false }: VoiceInputProps) => {
   }, [recognition, isListening, toast]);
 
   return (
-    <>
-      <Button
-        onClick={toggleVoiceInput}
-        variant="ghost"
-        size="sm"
-        className={`h-8 w-8 p-0 rounded-full ${
-          isListening ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100'
-        }`}
-        disabled={disabled}
-      >
-        {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-      </Button>
-
-      {/* Voice listening indicator */}
-      {isListening && (
-        <div className="absolute top-full left-0 right-0 mt-2 text-center">
-          <div className="bg-red-50 text-red-700 px-3 py-2 rounded-md text-sm">
-            🎤 Listening... Speak now
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Voice Input</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center space-y-4 py-4">
+          <Button
+            onClick={toggleVoiceInput}
+            variant={isListening ? "destructive" : "default"}
+            size="lg"
+            className="h-16 w-16 rounded-full"
+          >
+            {isListening ? <MicOff className="h-8 w-8" /> : <Mic className="h-8 w-8" />}
+          </Button>
+          
+          <div className="text-center">
+            {isListening ? (
+              <div className="text-red-600">
+                🎤 Listening... Speak now
+              </div>
+            ) : (
+              <div className="text-gray-600">
+                Click the microphone to start voice input
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,19 +1,20 @@
 
 interface GenerateHintProps {
+  searchTerm: string;
   hasResults: boolean;
-  hasContent: boolean;
-  isScanning: boolean;
 }
 
-const GenerateHint = ({ hasResults, hasContent, isScanning }: GenerateHintProps) => {
-  if (hasResults || !hasContent || isScanning) {
+const GenerateHint = ({ searchTerm, hasResults }: GenerateHintProps) => {
+  const hasContent = searchTerm.trim().length > 0;
+  
+  if (hasResults || !hasContent) {
     return null;
   }
 
   return (
     <div className="text-center">
       <div className="bg-green-50 text-green-700 px-3 py-2 rounded-md text-sm">
-        💡 Press Enter or click search to generate strain information
+        💡 Press "Generate Info" to analyze "{searchTerm}"
       </div>
     </div>
   );

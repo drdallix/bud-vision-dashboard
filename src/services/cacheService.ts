@@ -84,7 +84,7 @@ export class CacheService {
   }
 
   static async saveToDatabase(strain: Strain, userId: string): Promise<void> {
-    const { error } = await supabase.from('scans').insert([{
+    const { error } = await supabase.from('scans').insert({
       user_id: userId,
       strain_name: strain.name,
       strain_type: strain.type,
@@ -92,13 +92,13 @@ export class CacheService {
       cbd: 0, // Default CBD value since new Strain type doesn't have it
       effects: strain.effectProfiles?.map(p => p.name) || [],
       flavors: strain.flavorProfiles?.map(p => p.name) || [],
-      terpenes: strain.terpenes || [],
+      terpenes: strain.terpenes || null, // Convert to JSON-compatible format
       medical_uses: [], // Default empty array since new Strain type doesn't have medicalUses
       description: strain.description,
       confidence: strain.confidence,
       scanned_at: strain.scannedAt,
       in_stock: true
-    }]);
+    });
 
     if (error) {
       throw new Error(`Database save failed: ${error.message}`);
