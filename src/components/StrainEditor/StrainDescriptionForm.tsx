@@ -20,6 +20,7 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [proposedDescription, setProposedDescription] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   const handleRegenerateDescription = async () => {
@@ -76,14 +77,39 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
     }
   };
 
-  const handleApproveDescription = () => {
-    onUpdate('description', proposedDescription);
-    setProposedDescription('');
-    setHumanGuidance('');
-    toast({
-      title: "Description Updated",
-      description: "The new description has been applied to the strain.",
-    });
+  const handleApproveDescription = async () => {
+    setIsSaving(true);
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('strains')
+        .update({ description: proposedDescription })
+        .eq('id', strain.id);
+
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      // Update local state
+      onUpdate('description', proposedDescription);
+      setProposedDescription('');
+      setHumanGuidance('');
+      
+      toast({
+        title: "Description Updated",
+        description: "The new description has been applied and saved to the strain.",
+      });
+    } catch (error) {
+      console.error('Error saving description:', error);
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save description. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleRejectDescription = () => {
@@ -95,29 +121,29 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Wand2 className="h-5 w-5 text-purple-600" />
-        <h3 className="text-lg font-semibold">Description Management</h3>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-2 mb-2 sm:mb-4">
+        <Wand2 className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+        <h3 className="text-base sm:text-lg font-semibold">Description Management</h3>
       </div>
 
       {/* Current Description */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center justify-between">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-sm sm:text-base flex items-center justify-between">
             Current Description
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowHistory(!showHistory)}
-              className="text-muted-foreground"
+              className="text-muted-foreground h-8 w-8 p-0 sm:h-auto sm:w-auto sm:p-2"
             >
-              <History className="h-4 w-4" />
+              <History className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="p-3 bg-gray-50 border rounded-lg text-sm">
+          <div className="p-2 sm:p-3 bg-gray-50 border rounded-lg text-xs sm:text-sm">
             {strain.description || 'No description available'}
           </div>
         </CardContent>
@@ -125,31 +151,32 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
 
       {/* Human Guidance Input */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Budtender Guidance</CardTitle>
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-sm sm:text-base">Budtender Guidance</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4">
           <Textarea
             value={humanGuidance}
             onChange={(e) => setHumanGuidance(e.target.value)}
             placeholder="Provide corrections, additional information, or specific changes you want made to the description..."
-            className="min-h-[100px]"
+            className="min-h-[80px] sm:min-h-[100px] text-sm"
             disabled={isLoading || isRegenerating}
           />
           
           <Button
             onClick={handleRegenerateDescription}
             disabled={!humanGuidance.trim() || isLoading || isRegenerating}
-            className="w-full"
+            className="w-full text-sm"
+            size="sm"
           >
             {isRegenerating ? (
               <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
                 Generating...
               </>
             ) : (
               <>
-                <Wand2 className="h-4 w-4 mr-2" />
+                <Wand2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Regenerate Description
               </>
             )}
@@ -160,32 +187,34 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
       {/* Proposed Description Review */}
       {proposedDescription && (
         <Card className="border-purple-200">
-          <CardHeader>
-            <CardTitle className="text-base text-purple-900">
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-sm sm:text-base text-purple-900">
               Proposed New Description
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm">
+          <CardContent className="space-y-3 sm:space-y-4">
+            <div className="p-2 sm:p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs sm:text-sm">
               {proposedDescription}
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={handleApproveDescription}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                disabled={isLoading}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-sm"
+                disabled={isLoading || isSaving}
+                size="sm"
               >
-                <Check className="h-4 w-4 mr-2" />
-                Approve & Apply
+                <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                {isSaving ? 'Saving...' : 'Approve & Apply'}
               </Button>
               <Button
                 onClick={handleRejectDescription}
                 variant="outline"
-                className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
-                disabled={isLoading}
+                className="flex-1 text-red-600 border-red-300 hover:bg-red-50 text-sm"
+                disabled={isLoading || isSaving}
+                size="sm"
               >
-                <X className="h-4 w-4 mr-2" />
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                 Reject
               </Button>
             </div>
@@ -195,9 +224,9 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
 
       {/* Guidelines */}
       <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <h4 className="font-medium text-blue-900 mb-2">Description Tips</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
+        <CardContent className="pt-4 sm:pt-6">
+          <h4 className="font-medium text-blue-900 mb-2 text-sm">Description Tips</h4>
+          <ul className="text-xs sm:text-sm text-blue-800 space-y-1">
             <li>• Be specific about corrections needed</li>
             <li>• Mention unique characteristics or effects</li>
             <li>• Include customer feedback or observations</li>
