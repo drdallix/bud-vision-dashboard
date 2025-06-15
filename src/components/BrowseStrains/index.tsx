@@ -13,6 +13,7 @@ import { useBrowseFilters } from './hooks/useBrowseFilters';
 import { useStrainSelection } from './hooks/useStrainSelection';
 import { useInventoryActions } from './hooks/useInventoryActions';
 import { useStrainPrices } from '@/hooks/useStrainPrices';
+import { useToast } from '@/hooks/use-toast';
 
 interface BrowseStrainsProps {
   onStrainSelect: (strain: Strain) => void;
@@ -45,7 +46,8 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   // Batch price logic
   const [batchPriceState, setBatchPriceState] = useState<{nowPrice: number, wasPrice?: number | null} | null>(null);
   const { addPricePoint } = useStrainPrices('DUMMY'); // dummy to expose .addPricePoint
-  const { toast } = require('@/hooks/use-toast')();
+
+  const { toast } = useToast();
 
   const handleStrainGenerated = useCallback((strain: Strain) => {
     onStrainSelect(strain);
@@ -77,7 +79,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
       toast({ title: "Some strains failed to update price.", variant: "destructive" });
     }
     clearSelection();
-  }, [selectedStrains, addPricePoint, clearSelection]);
+  }, [selectedStrains, addPricePoint, clearSelection, toast]);
 
   // Filter strains for customer view
   const displayStrains = user ? filteredStrains : filteredStrains.filter(strain => strain.inStock);
