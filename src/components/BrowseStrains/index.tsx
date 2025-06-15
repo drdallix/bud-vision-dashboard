@@ -34,6 +34,8 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
     setFilterType,
     sortBy,
     setSortBy,
+    priceFilter,
+    setPriceFilter,
     filteredStrains
   } = useBrowseFilters(strains);
   
@@ -134,8 +136,10 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         <FilterControls
           filterType={filterType}
           sortBy={sortBy}
+          priceFilter={priceFilter}
           onFilterChange={setFilterType}
           onSortChange={setSortBy}
+          onPriceFilterChange={setPriceFilter}
         />
         
         <BrowseHeader
