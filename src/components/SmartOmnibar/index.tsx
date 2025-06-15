@@ -133,7 +133,7 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
     setSelectedImage(null);
   }, []);
 
-  const hasContent = searchTerm.trim() || selectedImage;
+  const hasContent = Boolean(searchTerm.trim() || selectedImage);
 
   return (
     <div className="relative space-y-2">
