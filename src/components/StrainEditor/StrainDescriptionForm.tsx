@@ -80,9 +80,9 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
   const handleApproveDescription = async () => {
     setIsSaving(true);
     try {
-      // Update in database
+      // Update in database - the table is called 'scans', not 'strains'
       const { error } = await supabase
-        .from('strains')
+        .from('scans')
         .update({ description: proposedDescription })
         .eq('id', strain.id);
 
