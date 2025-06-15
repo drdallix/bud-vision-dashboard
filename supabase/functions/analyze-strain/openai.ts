@@ -12,26 +12,26 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
     1. CORRECT SPELLING & GRAMMAR: Fix any spelling mistakes, punctuation errors, and grammatical issues in the provided text
     2. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
 
-    STRICT REQUIREMENT:
-    - The THC percentage for this strain must be between ${thcRangeHint ? `${thcRangeHint[0]}% and ${thcRangeHint[1]}%` : '21% and 26.5%'}. Do not use values outside this range in your returned JSON.
-
-    - Critically important: DO NOT mention or refer to the THC percent or value in the "description" field under any circumstance. The description must NOT mention the THC amount, percentage, or content.
+    CRITICAL THC REQUIREMENT:
+    - You MUST use EXACTLY ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC percentage. This is a predetermined value based on our system's calculations.
+    - Do NOT use any other THC value. The exact value must be ${thcRangeHint ? `${thcRangeHint[0]}` : '21'}.
+    - Do NOT mention THC percentage in the description field under any circumstance.
 
     Cannabis Knowledge Guidelines:
-    - Indica strains: typically 15-25% THC, 0-5% CBD, relaxing/sedating effects, earthy/sweet flavors
-    - Sativa strains: typically 18-28% THC, 0-3% CBD, energizing/uplifting effects, citrus/pine flavors  
-    - Hybrid strains: balanced effects combining both, THC 16-26%, variable CBD
+    - Indica strains: typically relaxing/sedating effects, earthy/sweet flavors
+    - Sativa strains: typically energizing/uplifting effects, citrus/pine flavors  
+    - Hybrid strains: balanced effects combining both
     - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
     - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
-    - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory), Terpinolene (piney), Humulene (appetite suppressant)
+    - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
     - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
     
     Return a JSON object with this exact structure:
     {
       "name": "corrected and properly formatted strain name",
       "type": "Indica" | "Sativa" | "Hybrid",
-      "thc": number (realistic for strain type),
-      "cbd": number (realistic for strain type), 
+      "thc": ${thcRangeHint ? thcRangeHint[0] : 21} (USE EXACTLY THIS VALUE),
+      "cbd": number (realistic for strain type, typically 0.1-5), 
       "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
       "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
       "terpenes": [
@@ -39,11 +39,11 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
         ...
       ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
       "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-      "description": "detailed description with corrected spelling/grammar, strain background, effects, and usage notes. DO NOT refer to THC percent.",
-      "confidence": number (85 for text-generated strains)
+      "description": "detailed description with corrected spelling/grammar, strain background, effects, and usage notes. DO NOT mention THC percentage.",
+      "confidence": 85
     }
     
-    Always provide complete, realistic information with proper spelling and grammar.`
+    REMEMBER: Use EXACTLY ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for THC value. No other value is acceptable.`
   },
   {
     role: 'user',
@@ -56,41 +56,35 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     role: 'system',
     content: `You are an expert cannabis strain identifier and cannabis knowledge expert. Analyze the cannabis package image and extract information to identify the strain. 
 
-    IMPORTANT: Use your extensive cannabis knowledge to fill in ANY missing information intelligently:
-
-    STRICT REQUIREMENT:
-    - If you are able to extract or infer a strain name, use it. If not, use the best guess. For THC, strictly use a value between ${thcRangeHint ? `${thcRangeHint[0]}% and ${thcRangeHint[1]}%` : '21% and 26.5%'}. Do not use values outside this range in your answer or in the description.
+    CRITICAL THC REQUIREMENT:
+    - If you can read a THC percentage from the package, ignore it completely.
+    - You MUST use EXACTLY ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC percentage. This is predetermined by our system.
+    - Do NOT use any other THC value under any circumstances.
+    - Do NOT mention THC percentage in the description field.
 
     Look for visible information:
-    - Strain name on the package
-    - THC and CBD percentages
+    - Strain name on the package (most important)
     - Package text and labels
     - Visual characteristics of the product
     - Brand information
     
-    For missing information, use your cannabis knowledge to provide:
-    - Realistic THC/CBD ranges for the strain type
-    - Appropriate effects based on Indica/Sativa/Hybrid classification
-    - Common flavors for the identified or similar strains
-    - Detailed terpene profiles with percentages
-    - Relevant medical uses based on cannabinoid profile
-    - Detailed strain description with background information
+    For missing information, use your cannabis knowledge to provide appropriate details.
     
     Cannabis Knowledge Guidelines:
-    - Indica strains: typically 15-25% THC, 0-5% CBD, relaxing/sedating effects, earthy/sweet flavors
-    - Sativa strains: typically 18-28% THC, 0-3% CBD, energizing/uplifting effects, citrus/pine flavors  
-    - Hybrid strains: balanced effects combining both, THC 16-26%, variable CBD
+    - Indica strains: typically relaxing/sedating effects, earthy/sweet flavors
+    - Sativa strains: typically energizing/uplifting effects, citrus/pine flavors  
+    - Hybrid strains: balanced effects combining both
     - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
     - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
-    - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory), Terpinolene (piney), Humulene (appetite suppressant)
+    - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
     - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
     
     Return a JSON object with this exact structure:
     {
-      "name": "strain name (if not visible, provide educated guess based on appearance)",
+      "name": "strain name from package (if visible) or educated guess",
       "type": "Indica" | "Sativa" | "Hybrid",
-      "thc": number (0-35, realistic for strain type),
-      "cbd": number (0-25, realistic for strain type), 
+      "thc": ${thcRangeHint ? thcRangeHint[0] : 21} (USE EXACTLY THIS VALUE),
+      "cbd": number (realistic, typically 0.1-5), 
       "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
       "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
       "terpenes": [
@@ -98,18 +92,18 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
         ...
       ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
       "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-      "description": "detailed description with strain background, effects, and usage notes",
-      "confidence": number (0-100, based on visible package information clarity)
+      "description": "detailed description with strain background, effects, and usage notes. DO NOT mention THC percentage.",
+      "confidence": number (0-100, based on package clarity)
     }
     
-    Always provide complete, realistic information even if the package is unclear. Use your cannabis expertise to generate appropriate values.`
+    CRITICAL: Use EXACTLY ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for THC. Ignore any THC values visible on the package.`
   },
   {
     role: 'user',
     content: [
       {
         type: 'text',
-        text: 'Please analyze this cannabis package image and identify the strain with all the requested details including detailed terpene profiles. Use your cannabis knowledge to fill in any missing information intelligently.'
+        text: 'Please analyze this cannabis package image and identify the strain. Use the predetermined THC value as specified in the system instructions.'
       },
       {
         type: 'image_url',

@@ -1,238 +1,207 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, handleCorsPreflightRequest } from './cors.ts';
-import { createTextAnalysisMessages, createImageAnalysisMessages, callOpenAI, createEffectProfilesMessages, createFlavorProfilesMessages } from './openai.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
+import { corsHeaders } from './cors.ts';
+import { createTextAnalysisMessages, createImageAnalysisMessages, createEffectProfilesMessages, createFlavorProfilesMessages, callOpenAI } from './openai.ts';
 import { parseOpenAIResponse, validateStrainData } from './validation.ts';
-import { cacheStrainData } from './cache.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { getDeterministicTHCRange } from './thcGenerator.ts';
 
-// Emoji/color mappings for fallback
-const EFFECT_MAP: Record<string, {emoji: string, color: string}> = {
-  'Relaxed': { emoji: '😌', color: '#8B5CF6' },
-  'Happy': { emoji: '😊', color: '#F59E0B' },
-  'Euphoric': { emoji: '🤩', color: '#EF4444' },
-  'Creative': { emoji: '🎨', color: '#3B82F6' },
-  'Energetic': { emoji: '⚡', color: '#10B981' },
-  'Focused': { emoji: '🎯', color: '#6366F1' },
-  'Sleepy': { emoji: '😴', color: '#6B7280' },
-  'Uplifted': { emoji: '🚀', color: '#F97316' },
-  'Talkative': { emoji: '💬', color: '#EC4899' },
-  'Giggly': { emoji: '😂', color: '#84CC16' },
-};
-const FLAVOR_MAP: Record<string, {emoji: string, color: string}> = {
-  'Sweet': { emoji: '🍯', color: '#F59E0B' },
-  'Earthy': { emoji: '🌍', color: '#78716C' },
-  'Pine': { emoji: '🌲', color: '#059669' },
-  'Citrus': { emoji: '🍋', color: '#EAB308' },
-  'Berry': { emoji: '🫐', color: '#7C3AED' },
-  'Diesel': { emoji: '⛽', color: '#374151' },
-  'Vanilla': { emoji: '🍦', color: '#F3E8FF' },
-  'Grape': { emoji: '🍇', color: '#8B5CF6' },
-  'Woody': { emoji: '🪵', color: '#92400E' },
-  'Tropical': { emoji: '🥭', color: '#F97316' },
-  'Pungent': { emoji: '💨', color: '#6B7280' },
-  'Spicy': { emoji: '🌶️', color: '#DC2626' }
-};
-
-function fallbackProfile(entries: string[], map: Record<string, {emoji: string, color: string}>, type: 'effect'|'flavor') {
-  return entries.map(name => ({
-    name,
-    intensity: 3,
-    emoji: map[name]?.emoji || '🌿',
-    color: map[name]?.color || '#10B981'
-  }));
-}
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return handleCorsPreflightRequest();
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { imageData, textQuery, userId } = await req.json();
-    console.log('Request received:', { 
-      hasImage: !!imageData, 
-      hasText: !!textQuery, 
-      userId: userId ? `${userId.substring(0, 8)}...` : 'none' 
-    });
     
-    if (!imageData && !textQuery) throw new Error('No image data or text query provided');
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!openAIApiKey) throw new Error('OpenAI API key not configured');
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return new Response(JSON.stringify({ 
+        error: 'OpenAI API key not configured',
+        fallbackStrain: null
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
-    // ======= DETERMINISTIC THC GENERATION =======
-    let thcRange: [number, number] = [21, 26.5];
-    let strainNameForTHC = textQuery || "Unknown";
+    console.log('Processing strain analysis request:', {
+      hasImage: !!imageData,
+      hasText: !!textQuery,
+      userId: userId || 'anonymous'
+    });
+
+    let strainName = textQuery || "Mystery Strain";
+    let initialMessages;
+    let thcRange: [number, number];
+
     if (textQuery) {
-      thcRange = getDeterministicTHCRange(textQuery);
-      strainNameForTHC = textQuery;
+      // For text queries, we need to clean the name first to get consistent THC
+      const cleanedName = textQuery.replace(/[^\w\s]/g, '').trim();
+      strainName = cleanedName || "Mystery Strain";
+      thcRange = getDeterministicTHCRange(strainName);
+      initialMessages = createTextAnalysisMessages(textQuery, thcRange);
+    } else {
+      // For image analysis, use a default name initially, we'll update after getting the real name
+      thcRange = getDeterministicTHCRange("Mystery Strain");
+      initialMessages = createImageAnalysisMessages(imageData!, strainName, thcRange);
     }
 
-    // --- PRIMARY BASIC STRAIN ANALYSIS ---
-    const messages = textQuery
-      ? createTextAnalysisMessages(textQuery, thcRange)
-      : createImageAnalysisMessages(imageData, strainNameForTHC, thcRange);
+    console.log('Using THC range for', strainName, ':', thcRange);
 
-    const data = await callOpenAI(messages, openAIApiKey);
-    const analysisText = data.choices[0].message.content;
-    const strainData = parseOpenAIResponse(analysisText, textQuery);
-    let validatedStrain = validateStrainData(strainData, textQuery);
+    // Get initial strain analysis from OpenAI
+    const analysisResponse = await callOpenAI(initialMessages, openAIApiKey);
+    const analysisText = analysisResponse.choices[0].message.content;
+    
+    let strainData = parseOpenAIResponse(analysisText, textQuery);
+    
+    // If we got a strain name from image analysis, recalculate THC range with the actual name
+    if (!textQuery && strainData.name && strainData.name !== "Mystery Strain") {
+      const actualThcRange = getDeterministicTHCRange(strainData.name);
+      console.log('Recalculating THC range for discovered strain:', strainData.name, actualThcRange);
+      
+      // Update the THC values to match our deterministic system
+      strainData.thc = actualThcRange[0]; // Use the minimum as the main THC value
+      thcRange = actualThcRange;
+    } else {
+      // Ensure THC matches our deterministic calculation
+      strainData.thc = thcRange[0];
+    }
 
-    // Always OVERWRITE thc value with our deterministic average for the strain name
-    const [thcMin, thcMax] = getDeterministicTHCRange(validatedStrain.name);
-    const deterministicTHC = Number(((thcMin + thcMax) / 2).toFixed(2));
-    validatedStrain.thc = deterministicTHC;
+    // Validate and clean the strain data
+    const validatedData = validateStrainData(strainData, textQuery);
+    
+    // Override THC with our deterministic value to ensure consistency
+    validatedData.thc = thcRange[0];
 
-    // 2. EFFECT PROFILES
+    console.log('Validated strain data with consistent THC:', {
+      name: validatedData.name,
+      thc: validatedData.thc,
+      thcRange: thcRange
+    });
+
+    // Generate enhanced effect profiles
     let effectProfiles = [];
-    try {
-      const m2 = createEffectProfilesMessages(validatedStrain.name, validatedStrain.type, validatedStrain.effects);
-      const effRes = await callOpenAI(m2, openAIApiKey);
-      let effContent = effRes.choices[0].message.content.trim();
-      if (effContent.startsWith("```")) {
-        effContent = effContent.replace(/```[a-z]*\n?/i, '').replace(/```$/, '');
+    if (validatedData.effects && validatedData.effects.length > 0) {
+      try {
+        const effectMessages = createEffectProfilesMessages(
+          validatedData.name, 
+          validatedData.type, 
+          validatedData.effects
+        );
+        const effectResponse = await callOpenAI(effectMessages, openAIApiKey);
+        const effectText = effectResponse.choices[0].message.content;
+        effectProfiles = JSON.parse(effectText.replace(/```json\n?|\n?```/g, ''));
+        console.log('Generated effect profiles:', effectProfiles.length);
+      } catch (error) {
+        console.error('Error generating effect profiles:', error);
+        effectProfiles = validatedData.effects.slice(0, 4).map((effect: string, index: number) => ({
+          name: effect,
+          intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
+          emoji: ['😌', '😊', '🤩', '💭'][index] || '✨',
+          color: ['#8B5CF6', '#F59E0B', '#EF4444', '#10B981'][index] || '#6B7280'
+        }));
       }
-      effectProfiles = JSON.parse(effContent);
-      effectProfiles = effectProfiles.map((e: any) => ({
-        ...e,
-        emoji: e.emoji || EFFECT_MAP[e.name]?.emoji || '🌿',
-        color: e.color || EFFECT_MAP[e.name]?.color || '#10B981'
-      }));
-    } catch (effectErr) {
-      console.error('EffectProfiles AI step failed:', effectErr);
-      effectProfiles = fallbackProfile(validatedStrain.effects, EFFECT_MAP, 'effect');
     }
 
-    // 3. FLAVOR PROFILES
+    // Generate enhanced flavor profiles
     let flavorProfiles = [];
-    try {
-      const m3 = createFlavorProfilesMessages(validatedStrain.name, validatedStrain.type, validatedStrain.flavors);
-      const flavRes = await callOpenAI(m3, openAIApiKey);
-      let flavContent = flavRes.choices[0].message.content.trim();
-      if (flavContent.startsWith("```")) {
-        flavContent = flavContent.replace(/```[a-z]*\n?/i, '').replace(/```$/, '');
+    if (validatedData.flavors && validatedData.flavors.length > 0) {
+      try {
+        const flavorMessages = createFlavorProfilesMessages(
+          validatedData.name, 
+          validatedData.type, 
+          validatedData.flavors
+        );
+        const flavorResponse = await callOpenAI(flavorMessages, openAIApiKey);
+        const flavorText = flavorResponse.choices[0].message.content;
+        flavorProfiles = JSON.parse(flavorText.replace(/```json\n?|\n?```/g, ''));
+        console.log('Generated flavor profiles:', flavorProfiles.length);
+      } catch (error) {
+        console.error('Error generating flavor profiles:', error);
+        flavorProfiles = validatedData.flavors.slice(0, 3).map((flavor: string, index: number) => ({
+          name: flavor,
+          intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
+          emoji: ['🌍', '🍯', '🌲'][index] || '🌿',
+          color: ['#78716C', '#F59E0B', '#10B981'][index] || '#6B7280'
+        }));
       }
-      flavorProfiles = JSON.parse(flavContent);
-      flavorProfiles = flavorProfiles.map((f: any) => ({
-        ...f,
-        emoji: f.emoji || FLAVOR_MAP[f.name]?.emoji || '🌿',
-        color: f.color || FLAVOR_MAP[f.name]?.color || '#10B981'
-      }));
-    } catch (flavorErr) {
-      console.error('FlavorProfiles AI step failed:', flavorErr);
-      flavorProfiles = fallbackProfile(validatedStrain.flavors, FLAVOR_MAP, 'flavor');
     }
 
-    // Compose full enriched object
+    // Create the final strain object with consistent THC
     const finalStrain = {
-      ...validatedStrain,
-      effectProfiles,
-      flavorProfiles
+      name: validatedData.name,
+      type: validatedData.type,
+      thc: thcRange[0], // Always use our deterministic calculation
+      effectProfiles: effectProfiles,
+      flavorProfiles: flavorProfiles,
+      terpenes: validatedData.terpenes || [],
+      description: validatedData.description,
+      confidence: validatedData.confidence
     };
 
-    // Cache strain data if supabase is available
-    if (supabaseUrl && supabaseKey) {
+    console.log('Final strain object created:', {
+      name: finalStrain.name,
+      thc: finalStrain.thc,
+      thcRange: thcRange,
+      effectsCount: finalStrain.effectProfiles.length,
+      flavorsCount: finalStrain.flavorProfiles.length
+    });
+
+    // Save to database if userId is provided
+    if (userId) {
       try {
-        await cacheStrainData(finalStrain, supabaseUrl, supabaseKey);
-      } catch (cacheError) {
-        console.error('Strain caching failed but not fatal:', cacheError);
-      }
-      
-      // Insert into scans if userId is available
-      if (userId) {
-        try {
-          const supabase = createClient(supabaseUrl, supabaseKey);
-          const entry = {
-            user_id: userId,
-            strain_name: finalStrain.name,
-            strain_type: finalStrain.type,
-            thc: finalStrain.thc,
-            cbd: finalStrain.cbd,
-            effects: finalStrain.effects,
-            flavors: finalStrain.flavors,
-            terpenes: finalStrain.terpenes,
-            medical_uses: finalStrain.medicalUses,
-            description: finalStrain.description,
-            confidence: finalStrain.confidence,
-            scanned_at: new Date().toISOString(),
-            in_stock: true
-          };
-          
-          console.log('Attempting to insert scan for user:', userId.substring(0, 8) + '...');
-          const { data: insertData, error } = await supabase.from('scans').insert([entry]).select();
-          
-          if (error) {
-            console.error('Database insert error:', {
-              error: error.message,
-              code: error.code,
-              details: error.details,
-              hint: error.hint,
-              userId: userId.substring(0, 8) + '...',
-              strainName: entry.strain_name
-            });
-          } else {
-            console.log('Successfully inserted scan:', {
-              strainName: entry.strain_name,
-              insertedId: insertData?.[0]?.id,
-              userId: userId.substring(0, 8) + '...'
-            });
-          }
-        } catch (dbErr) {
-          console.error('Supabase DB insert failed:', {
-            error: dbErr.message,
-            userId: userId.substring(0, 8) + '...',
-            strainName: finalStrain.name
-          });
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        
+        const scanData = {
+          user_id: userId,
+          strain_name: finalStrain.name,
+          strain_type: finalStrain.type,
+          thc: finalStrain.thc,
+          cbd: validatedData.cbd || 1,
+          effects: validatedData.effects || [],
+          flavors: validatedData.flavors || [],
+          terpenes: finalStrain.terpenes,
+          medical_uses: validatedData.medicalUses || [],
+          description: finalStrain.description,
+          confidence: finalStrain.confidence,
+          scanned_at: new Date().toISOString(),
+          in_stock: true
+        };
+
+        const { data, error } = await supabase
+          .from('scans')
+          .insert(scanData)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Database save error:', error);
+        } else {
+          console.log('Strain saved to database with ID:', data.id);
         }
-      } else {
-        console.warn('No userId provided for scan DB insert - strain will not be saved to database');
+      } catch (dbError) {
+        console.error('Database operation failed:', dbError);
       }
-    } else {
-      console.warn('Supabase not configured - skipping database operations');
     }
 
-    console.log('Analysis complete:', {
-      strainName: finalStrain.name,
-      confidence: finalStrain.confidence,
-      userId: userId ? userId.substring(0, 8) + '...' : 'none'
+    return new Response(JSON.stringify(finalStrain), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-    return new Response(JSON.stringify(finalStrain), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
-    console.error('Error in analyze-strain function:', {
-      error: error.message,
-      stack: error.stack
+    console.error('Edge function error:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      fallbackStrain: null
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
-    
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to analyze strain',
-        details: error.message,
-        fallbackStrain: {
-          name: "Analysis Error",
-          type: "Hybrid",
-          thc: 18,
-          cbd: 2,
-          effects: ["Relaxed", "Happy"],
-          flavors: ["Earthy"],
-          terpenes: [{"name": "Myrcene", "percentage": 1.0, "effects": "Relaxing"}],
-          medicalUses: ["Consult Professional"],
-          description: "Analysis failed. Please try again with a clearer image or corrected spelling.",
-          confidence: 0,
-          effectProfiles: [],
-          flavorProfiles: []
-        }
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
   }
 });

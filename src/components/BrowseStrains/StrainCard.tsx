@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +8,7 @@ import { Strain } from '@/types/strain';
 import { PricePoint } from '@/types/price';
 import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 import PriceBadges from './components/PriceBadges';
+import { useStrainTHC } from '@/hooks/useStrainTHC';
 
 interface StrainCardProps {
   strain: Strain;
@@ -37,6 +37,9 @@ const StrainCard = ({
 }: StrainCardProps) => {
   // Local state to ensure immediate UI feedback
   const [localInStock, setLocalInStock] = useState(strain.inStock);
+  
+  // Use centralized THC calculation
+  const { thcDisplay } = useStrainTHC(strain.name);
   
   const getTypeColor = useCallback((type: string) => {
     switch (type) {
@@ -133,7 +136,7 @@ const StrainCard = ({
 
             <div className="mb-2">
               <div className="text-xs text-muted-foreground">
-                THC: {thcMin}%–{thcMax}%
+                THC: {thcDisplay}
               </div>
             </div>
             

@@ -1,10 +1,17 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Strain } from '@/types/strain';
+import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string, userId?: string) => {
   try {
     console.log('Calling AI strain analysis...', textQuery ? 'with text query' : 'with image');
+    
+    // Calculate the deterministic THC range before making the API call
+    const strainName = textQuery ? textQuery.replace(/[^\w\s]/g, '').trim() || "Mystery Strain" : "Mystery Strain";
+    const [thcMin, thcMax] = getDeterministicTHCRange(strainName);
+    
+    console.log('Pre-calculated THC range for', strainName, ':', [thcMin, thcMax]);
     
     const requestBody: any = { 
       imageData: imageData || null,
@@ -25,25 +32,45 @@ export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string
       throw error;
     }
 
-    console.log('AI analysis result with database save:', data);
+    console.log('AI analysis result:', data);
 
     if (data.error) {
       console.error('Edge function returned error:', data.error);
       if (data.fallbackStrain) {
-        return data.fallbackStrain;
+        // Ensure fallback strain also uses correct THC
+        const fallback = {
+          ...data.fallbackStrain,
+          thc: thcMin // Use our deterministic calculation
+        };
+        return fallback;
       }
       throw new Error(data.error);
     }
 
-    // The AI function now handles database saving when userId is provided
-    // Return the strain data for immediate UI update
-    return data;
+    // Ensure the returned data uses our deterministic THC calculation
+    const finalStrain = {
+      ...data,
+      thc: thcMin // Always override with our calculated value
+    };
+
+    console.log('Final strain with consistent THC:', {
+      name: finalStrain.name,
+      thc: finalStrain.thc,
+      expectedRange: [thcMin, thcMax]
+    });
+
+    return finalStrain;
   } catch (error) {
     console.error('Error calling strain analysis:', error);
+    
+    // Fallback strain with correct THC calculation
+    const fallbackName = textQuery ? textQuery.replace(/[^\w\s]/g, '').trim() || "Unknown Strain" : "Unknown Strain";
+    const [fallbackThcMin] = getDeterministicTHCRange(fallbackName);
+    
     return {
-      name: textQuery || "Unknown Strain",
+      name: fallbackName,
       type: "Hybrid" as const,
-      thc: Math.max(21, Math.floor(Math.random() * 8) + 21), // 21-28% THC
+      thc: fallbackThcMin, // Use deterministic calculation
       effectProfiles: [
         { name: "Relaxed", intensity: 3, emoji: "😌", color: "#8B5CF6" },
         { name: "Happy", intensity: 4, emoji: "😊", color: "#F59E0B" }
