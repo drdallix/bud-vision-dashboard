@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+
+import { useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -30,6 +31,9 @@ const StrainCard = ({
   onStrainClick,
   inventoryLoading
 }: StrainCardProps) => {
+  // Local state to ensure immediate UI feedback
+  const [localInStock, setLocalInStock] = useState(strain.inStock);
+  
   const getTypeColor = useCallback((type: string) => {
     switch (type) {
       case 'Indica': return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-300';
@@ -62,27 +66,37 @@ const StrainCard = ({
 
   const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
 
-  // Function to handle switch without blocking
+  // Function to handle switch with immediate UI feedback
   const handleStockSwitch = async () => {
-    const wasInStock = strain.inStock;
-    onStockToggle(strain.id, wasInStock); // Optimistic update
+    const wasInStock = localInStock;
+    
+    // Immediately update local state for instant UI feedback
+    setLocalInStock(!wasInStock);
+    
+    // Call parent handler for cache/database update
+    onStockToggle(strain.id, wasInStock);
 
     // If marking out of stock, fire & forget deleteAllForStrain (no blocking, no popup)
     if (wasInStock) {
       // Use import() to avoid SSR problems and keep bundle small
       import('@/services/priceService').then((mod) => {
-        // Correction: Use PriceService static method from the module
         mod.PriceService.deleteAllForStrain(strain.id);
       });
     }
-    // No need to handle "back in stock" here (no action required)
   };
+
+  // Use local state for UI, but sync with prop changes
+  React.useEffect(() => {
+    setLocalInStock(strain.inStock);
+  }, [strain.inStock]);
+
+  const displayInStock = localInStock;
 
   return (
     <Card 
       className={`transition-all duration-200 ${
         !editMode ? 'cursor-pointer hover:shadow-md' : ''
-      } ${!strain.inStock ? 'opacity-60' : ''}`}
+      } ${!displayInStock ? 'opacity-60' : ''}`}
       onClick={() => !editMode && onStrainClick(strain)}
     >
       <CardContent className="p-4">
@@ -106,7 +120,7 @@ const StrainCard = ({
               <Badge className={`${getTypeColor(strain.type)} text-xs`}>
                 {strain.type}
               </Badge>
-              {!strain.inStock && (
+              {!displayInStock && (
                 <Badge variant="secondary" className="text-xs">
                   Out of Stock
                 </Badge>
@@ -114,7 +128,7 @@ const StrainCard = ({
             </div>
 
             {/* Price badges (show only if in stock) */}
-            {strain.inStock && !pricesLoading && !!prices.length && <PriceBadges prices={prices} />}
+            {displayInStock && !pricesLoading && !!prices.length && <PriceBadges prices={prices} />}
 
             <div className="mb-2">
               <div className="text-xs text-muted-foreground">
@@ -144,7 +158,7 @@ const StrainCard = ({
               
               {editMode && canEdit && (
                 <Switch
-                  checked={strain.inStock}
+                  checked={displayInStock}
                   onCheckedChange={handleStockSwitch}
                   disabled={inventoryLoading}
                 />

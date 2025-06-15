@@ -8,11 +8,14 @@ export const useInventoryActions = () => {
   const { updateStrainInCache } = useBrowseStrains('', 'all', 'recent');
 
   const handleStockToggle = useCallback(async (strainId: string, currentStock: boolean) => {
-    // Optimistically update the cache
-    updateStrainInCache(strainId, { inStock: !currentStock });
+    const newStockStatus = !currentStock;
     
-    // Attempt the actual update
-    const success = await updateStockStatus(strainId, !currentStock);
+    // Immediately update the cache for instant UI feedback
+    updateStrainInCache(strainId, { inStock: newStockStatus });
+    
+    // Attempt the actual update in the background
+    const success = await updateStockStatus(strainId, newStockStatus);
+    
     if (!success) {
       // Revert on failure
       updateStrainInCache(strainId, { inStock: currentStock });
@@ -28,6 +31,14 @@ export const useInventoryActions = () => {
     });
     
     const success = await batchUpdateStock(strainIds, inStock);
+    
+    if (!success) {
+      // Revert all on failure
+      strainIds.forEach(strainId => {
+        updateStrainInCache(strainId, { inStock: !inStock });
+      });
+    }
+    
     return success;
   }, [batchUpdateStock, updateStrainInCache]);
 
