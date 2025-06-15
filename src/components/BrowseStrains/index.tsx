@@ -1,78 +1,67 @@
 
 import { useState, useCallback } from 'react';
-import { Search, Eye, Edit3, Package } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useInventoryManagement } from '@/hooks/useInventoryManagement';
 import { useBrowseStrains } from '@/hooks/useBrowseStrains';
 import { Strain } from '@/types/strain';
 import SmartOmnibar from '@/components/SmartOmnibar';
 import FilterControls from './FilterControls';
 import BatchActions from './BatchActions';
-import StrainCard from './StrainCard';
+import BrowseHeader from './components/BrowseHeader';
+import StrainGrid from './components/StrainGrid';
+import { useBrowseFilters } from './hooks/useBrowseFilters';
+import { useStrainSelection } from './hooks/useStrainSelection';
+import { useInventoryActions } from './hooks/useInventoryActions';
 
 interface BrowseStrainsProps {
   onStrainSelect: (strain: Strain) => void;
 }
 
 const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('recent');
   const [editMode, setEditMode] = useState(false);
-  const [selectedStrains, setSelectedStrains] = useState<string[]>([]);
-  
   const { user } = useAuth();
-  const { updateStockStatus, batchUpdateStock, loading: inventoryLoading } = useInventoryManagement();
   
-  // Use the optimized hook
-  const { strains, isLoading, updateStrainInCache } = useBrowseStrains(searchTerm, filterType, sortBy);
-
-  const handleStockToggle = useCallback(async (strainId: string, currentStock: boolean) => {
-    // Optimistic update
-    updateStrainInCache(strainId, { inStock: !currentStock });
-    
-    const success = await updateStockStatus(strainId, !currentStock);
-    if (!success) {
-      // Revert on failure
-      updateStrainInCache(strainId, { inStock: currentStock });
-    }
-  }, [updateStockStatus, updateStrainInCache]);
-
-  const handleBatchStockUpdate = useCallback(async (inStock: boolean) => {
-    if (selectedStrains.length === 0) return;
-    
-    // Optimistic updates
-    selectedStrains.forEach(strainId => {
-      updateStrainInCache(strainId, { inStock });
-    });
-    
-    const success = await batchUpdateStock(selectedStrains, inStock);
-    if (success) {
-      setSelectedStrains([]);
-    }
-  }, [selectedStrains, batchUpdateStock, updateStrainInCache]);
-
-  const handleStrainSelect = useCallback((strainId: string, checked: boolean) => {
-    setSelectedStrains(prev => 
-      checked 
-        ? [...prev, strainId]
-        : prev.filter(id => id !== strainId)
-    );
-  }, []);
+  // Data fetching
+  const { strains, isLoading } = useBrowseStrains('', 'all', 'recent');
+  
+  // Filtering and sorting
+  const {
+    searchTerm,
+    setSearchTerm,
+    filterType,
+    setFilterType,
+    sortBy,
+    setSortBy,
+    filteredStrains
+  } = useBrowseFilters(strains);
+  
+  // Selection management
+  const { selectedStrains, handleStrainSelect, clearSelection } = useStrainSelection();
+  
+  // Inventory actions
+  const { handleStockToggle, handleBatchStockUpdate, inventoryLoading } = useInventoryActions();
 
   const handleStrainGenerated = useCallback((strain: Strain) => {
     onStrainSelect(strain);
   }, [onStrainSelect]);
 
-  // Filter strains for customer view (only show in-stock items)
-  const displayStrains = user ? strains : strains.filter(strain => strain.inStock);
+  const handleBatchInStock = useCallback(async () => {
+    const success = await handleBatchStockUpdate(selectedStrains, true);
+    if (success) clearSelection();
+  }, [selectedStrains, handleBatchStockUpdate, clearSelection]);
+
+  const handleBatchOutOfStock = useCallback(async () => {
+    const success = await handleBatchStockUpdate(selectedStrains, false);
+    if (success) clearSelection();
+  }, [selectedStrains, handleBatchStockUpdate, clearSelection]);
+
+  // Filter strains for customer view
+  const displayStrains = user ? filteredStrains : filteredStrains.filter(strain => strain.inStock);
   const inStockCount = strains.filter(strain => strain.inStock).length;
   const hasResults = displayStrains.length > 0;
 
-  // Show skeleton loading only on first load, not on navigation
+  // Loading skeleton
   if (isLoading && strains.length === 0) {
     return (
       <div className="space-y-4 pb-20">
@@ -111,7 +100,6 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Smart Omnibar */}
       <SmartOmnibar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -119,47 +107,13 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         hasResults={hasResults}
       />
 
-      {/* Header with mode toggle */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-2xl font-bold">
-              {user ? 'Inventory Management' : 'Today\'s Menu'}
-            </h2>
-            {!user && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Package className="h-3 w-3" />
-                {inStockCount} available
-              </Badge>
-            )}
-          </div>
-          <p className="text-muted-foreground text-sm">
-            {editMode 
-              ? 'Manage inventory and stock status for your dispensary' 
-              : user 
-                ? 'Browse strain database for customer recommendations'
-                : 'Browse our current selection of available cannabis strains'
-            }
-          </p>
-        </div>
-        
-        {user && (
-          <div className="flex items-center gap-2">
-            <Eye className="h-4 w-4" />
-            <Switch
-              checked={editMode}
-              onCheckedChange={setEditMode}
-              aria-label="Toggle inventory management mode"
-            />
-            <Edit3 className="h-4 w-4" />
-            <span className="text-sm text-muted-foreground">
-              {editMode ? 'Inventory Mode' : 'Browse Mode'}
-            </span>
-          </div>
-        )}
-      </div>
+      <BrowseHeader
+        user={user}
+        editMode={editMode}
+        onEditModeChange={setEditMode}
+        inStockCount={inStockCount}
+      />
 
-      {/* Filters */}
       <FilterControls
         filterType={filterType}
         sortBy={sortBy}
@@ -167,33 +121,26 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         onSortChange={setSortBy}
       />
 
-      {/* Batch actions for edit mode */}
       {editMode && user && (
         <BatchActions
           selectedCount={selectedStrains.length}
-          onInStock={() => handleBatchStockUpdate(true)}
-          onOutOfStock={() => handleBatchStockUpdate(false)}
-          onClear={() => setSelectedStrains([])}
+          onInStock={handleBatchInStock}
+          onOutOfStock={handleBatchOutOfStock}
+          onClear={clearSelection}
           loading={inventoryLoading}
         />
       )}
 
-      {/* Strain Grid */}
-      <div className="grid grid-cols-1 gap-4">
-        {displayStrains.map((strain) => (
-          <StrainCard
-            key={strain.id}
-            strain={strain}
-            editMode={editMode && user !== null}
-            isSelected={selectedStrains.includes(strain.id)}
-            canEdit={user !== null && strain.userId === user.id}
-            onSelect={handleStrainSelect}
-            onStockToggle={handleStockToggle}
-            onStrainClick={onStrainSelect}
-            inventoryLoading={inventoryLoading}
-          />
-        ))}
-      </div>
+      <StrainGrid
+        strains={displayStrains}
+        editMode={editMode}
+        selectedStrains={selectedStrains}
+        user={user}
+        onSelect={handleStrainSelect}
+        onStockToggle={handleStockToggle}
+        onStrainClick={onStrainSelect}
+        inventoryLoading={inventoryLoading}
+      />
 
       {displayStrains.length === 0 && (
         <Card>
