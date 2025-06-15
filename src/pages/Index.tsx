@@ -3,10 +3,8 @@ import { useState, useEffect } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScans } from '@/hooks/useScans';
-import CameraScanner from '@/components/CameraScanner';
 import StrainDashboard from '@/components/StrainDashboard';
 import BrowseStrains from '@/components/BrowseStrains';
-import SearchBar from '@/components/BrowseStrains/SearchBar';
 import SettingsPage from '@/components/Settings';
 import InstallBanner from '@/components/InstallBanner';
 import Header from '@/components/Layout/Header';
@@ -18,12 +16,10 @@ import { Strain } from '@/types/strain';
 const Index = () => {
   const [activeTab, setActiveTab] = useState('browse');
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   
   const { user, loading: authLoading } = useAuth();
-  const { scans, loading: scansLoading, addScan } = useScans();
+  const { scans, addScan } = useScans();
 
   // Register service worker for PWA
   useEffect(() => {
@@ -36,7 +32,7 @@ const Index = () => {
     }
   }, []);
 
-  const handleScanComplete = async (strain: Omit<Strain, 'inStock' | 'userId'>) => {
+  const handleStrainGenerated = async (strain: Strain) => {
     // Add required properties for the complete Strain type
     const completeStrain: Strain = {
       ...strain,
@@ -85,28 +81,6 @@ const Index = () => {
               setActiveTab('details');
             }} />
           </TabsContent>
-
-          {user && (
-            <TabsContent value="add" className="space-y-6">
-              <SearchBar 
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-              />
-              
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Package Scanner</h2>
-                <p className="text-muted-foreground text-sm mb-6">
-                  Instantly scan any cannabis package in your dispensary to get comprehensive strain information for customer recommendations
-                </p>
-              </div>
-              
-              <CameraScanner 
-                onScanComplete={handleScanComplete} 
-                isScanning={isScanning} 
-                setIsScanning={setIsScanning} 
-              />
-            </TabsContent>
-          )}
 
           <TabsContent value="details" className="space-y-6">
             <StrainDashboard strain={currentStrain} />

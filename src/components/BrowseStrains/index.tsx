@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventoryManagement } from '@/hooks/useInventoryManagement';
 import { useBrowseStrains } from '@/hooks/useBrowseStrains';
 import { Strain } from '@/types/strain';
-import SearchBar from './SearchBar';
+import SmartOmnibar from '@/components/SmartOmnibar';
 import FilterControls from './FilterControls';
 import BatchActions from './BatchActions';
 import StrainCard from './StrainCard';
@@ -63,9 +63,14 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
     );
   }, []);
 
+  const handleStrainGenerated = useCallback((strain: Strain) => {
+    onStrainSelect(strain);
+  }, [onStrainSelect]);
+
   // Filter strains for customer view (only show in-stock items)
   const displayStrains = user ? strains : strains.filter(strain => strain.inStock);
   const inStockCount = strains.filter(strain => strain.inStock).length;
+  const hasResults = displayStrains.length > 0;
 
   // Show skeleton loading only on first load, not on navigation
   if (isLoading && strains.length === 0) {
@@ -106,10 +111,12 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
 
   return (
     <div className="space-y-6 pb-20">
-      {/* Omnibar Search */}
-      <SearchBar 
+      {/* Smart Omnibar */}
+      <SmartOmnibar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        onStrainGenerated={handleStrainGenerated}
+        hasResults={hasResults}
       />
 
       {/* Header with mode toggle */}
