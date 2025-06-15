@@ -62,6 +62,21 @@ const StrainCard = ({
 
   const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
 
+  // Function to handle switch without blocking
+  const handleStockSwitch = async () => {
+    const wasInStock = strain.inStock;
+    onStockToggle(strain.id, wasInStock); // Optimistic update
+
+    // If marking out of stock, fire & forget deleteAllForStrain (no blocking, no popup)
+    if (wasInStock) {
+      // Use import() to avoid SSR problems and keep bundle small
+      import('@/services/priceService').then(({ deleteAllForStrain }) => {
+        deleteAllForStrain(strain.id);
+      });
+    }
+    // No need to handle "back in stock" here (no action required)
+  };
+
   return (
     <Card 
       className={`transition-all duration-200 ${
@@ -129,14 +144,7 @@ const StrainCard = ({
               {editMode && canEdit && (
                 <Switch
                   checked={strain.inStock}
-                  onCheckedChange={async () => {
-                    onStockToggle(strain.id, strain.inStock);
-                    // If marking out of stock, delete all prices
-                    if (strain.inStock) {
-                      const { deleteAllForStrain } = require('@/services/priceService');
-                      await deleteAllForStrain(strain.id);
-                    }
-                  }}
+                  onCheckedChange={handleStockSwitch}
                   disabled={inventoryLoading}
                 />
               )}
