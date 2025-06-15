@@ -13,6 +13,7 @@ export const useStrainData = (includeAllStrains = false) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
   // Memoize the query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => 
@@ -38,24 +39,29 @@ export const useStrainData = (includeAllStrains = false) => {
 
   // Cleanup function
   const cleanupChannel = useCallback(() => {
-    if (channelRef.current) {
+    if (channelRef.current && isSubscribedRef.current) {
       console.log('Cleaning up existing channel');
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
+      isSubscribedRef.current = false;
     }
   }, []);
 
-  // Set up real-time subscription - simplified to prevent duplicates
+  // Set up real-time subscription - with proper cleanup to prevent duplicates
   useEffect(() => {
     if (!includeAllStrains && !user) return;
+    if (isSubscribedRef.current) return; // Prevent duplicate subscriptions
 
     // Clean up any existing channel first
     cleanupChannel();
 
     console.log('Setting up real-time subscription for:', includeAllStrains ? 'all strains' : `user ${user!.id}`);
 
+    // Create a unique channel name to avoid conflicts
+    const channelName = includeAllStrains ? 'scans-all-changes' : `scans-user-${user!.id}-changes`;
+
     const channel = supabase
-      .channel('scans-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -69,13 +75,13 @@ export const useStrainData = (includeAllStrains = false) => {
           
           // Invalidate and refetch data immediately
           queryClient.invalidateQueries({ queryKey });
-          
-          // Force a refetch to ensure UI updates
-          queryClient.refetchQueries({ queryKey });
         }
       )
       .subscribe((status) => {
         console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          isSubscribedRef.current = true;
+        }
       });
 
     channelRef.current = channel;
