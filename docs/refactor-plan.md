@@ -23,7 +23,9 @@ This document outlines the comprehensive refactor plan to improve code readabili
 - Created `src/data/converters/` directory with focused converters
 - Created `src/data/hooks/` for unified data management
 - Fixed TypeScript type issues in converters
+- Fixed Supabase real-time subscription issues
 - Maintained backward compatibility through re-exports
+- Implemented proper channel lifecycle management
 
 ### 🔄 IN PROGRESS - Priority 3: Component Decomposition
 **Target:** `src/components/StrainDashboard` and other large components
@@ -63,8 +65,9 @@ This document outlines the comprehensive refactor plan to improve code readabili
 1. **Component Size Reduction**: Main BrowseStrains component reduced by 60%
 2. **Data Layer Organization**: Clean separation between services, converters, and hooks
 3. **Type Safety**: Fixed TypeScript errors and improved type consistency
-4. **Code Reusability**: Created reusable hooks and components
-5. **Separation of Concerns**: Clear boundaries between UI, data, and business logic
+4. **Real-time Subscriptions**: Fixed channel subscription lifecycle issues
+5. **Code Reusability**: Created reusable hooks and components
+6. **Separation of Concerns**: Clear boundaries between UI, data, and business logic
 
 ### 🎯 Next Focus Areas
 1. **StrainDashboard Component**: Still large and needs decomposition
@@ -79,6 +82,7 @@ This document outlines the comprehensive refactor plan to improve code readabili
 - ✅ Consistent filtering patterns with `useStrainFiltering`
 - ✅ Clean type conversions between database and application models
 - ✅ Real-time updates with optimistic UI patterns
+- ✅ Fixed Supabase channel subscription management
 
 ### Component Structure
 - ✅ Focused, single-responsibility components
@@ -98,12 +102,22 @@ This document outlines the comprehensive refactor plan to improve code readabili
 - Mixed concerns in single files
 - Complex type conversions scattered throughout
 - Inconsistent patterns across the app
+- Supabase subscription issues
 
 ### After Refactor
 - ✅ Focused components (< 100 lines each)
 - ✅ Clear separation of concerns
 - ✅ Centralized, consistent type handling
 - ✅ Reusable patterns and components
+- ✅ Fixed real-time subscription management
+
+## Recent Fixes
+### Fixed Issues:
+1. **Supabase Channel Subscriptions**: Resolved "tried to subscribe multiple times" error by:
+   - Adding proper channel lifecycle management with useRef
+   - Creating unique channel names to avoid conflicts
+   - Ensuring proper cleanup in useEffect return function
+2. **TypeScript Errors**: Fixed missing 'cbd' property in strain converter functions
 
 ## Next Steps
 1. Continue with StrainDashboard component decomposition

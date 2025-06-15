@@ -5,13 +5,14 @@ import { useToast } from '@/hooks/use-toast';
 import { StrainService } from '@/services/strainService';
 import { convertDatabaseScansToStrains } from '@/data/converters/strainConverters';
 import { Strain } from '@/types/strain';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useStrainData = (includeAllStrains = false) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const channelRef = useRef<any>(null);
 
   const queryKey = includeAllStrains ? ['strains-all'] : ['strains-user', user?.id];
 
@@ -35,8 +36,19 @@ export const useStrainData = (includeAllStrains = false) => {
   useEffect(() => {
     if (!includeAllStrains && !user) return;
 
+    // Clean up any existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    // Create a unique channel name to avoid conflicts
+    const channelName = includeAllStrains 
+      ? `strains-all-${Date.now()}` 
+      : `strains-user-${user!.id}-${Date.now()}`;
+
     const channel = supabase
-      .channel('strains-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -54,10 +66,15 @@ export const useStrainData = (includeAllStrains = false) => {
       )
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [queryClient, user, includeAllStrains, queryKey]);
+  }, [queryClient, user?.id, includeAllStrains, queryKey]);
 
   // Show error toast only once per error
   useEffect(() => {
