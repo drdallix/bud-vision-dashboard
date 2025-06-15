@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
 
 interface StrainCardProps {
@@ -36,6 +37,24 @@ const StrainCard = ({
     }
   }, []);
 
+  const getStrainEmoji = (type: string) => {
+    switch (type) {
+      case 'Indica': return '🌙';
+      case 'Sativa': return '☀️';
+      case 'Hybrid': return '🌓';
+      default: return '🌿';
+    }
+  };
+
+  const getGradientColor = (type: string) => {
+    switch (type) {
+      case 'Indica': return 'from-purple-500 to-purple-700';
+      case 'Sativa': return 'from-green-500 to-green-700';
+      case 'Hybrid': return 'from-blue-500 to-blue-700';
+      default: return 'from-gray-500 to-gray-700';
+    }
+  };
+
   return (
     <Card 
       className={`transition-all duration-200 ${
@@ -53,11 +72,10 @@ const StrainCard = ({
             />
           )}
           
-          <img 
-            src={strain.imageUrl} 
-            alt={strain.name}
-            className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-          />
+          <div className={`w-16 h-16 rounded-lg bg-gradient-to-br ${getGradientColor(strain.type)} flex items-center justify-center flex-shrink-0 relative`}>
+            <div className="text-2xl opacity-20 absolute">🌿</div>
+            <div className="text-xl z-10">{getStrainEmoji(strain.type)}</div>
+          </div>
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -72,9 +90,15 @@ const StrainCard = ({
               )}
             </div>
             
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-              <span className="font-medium">THC: {strain.thc}%</span>
-              <span>CBD: {strain.cbd}%</span>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div>
+                <div className="text-xs text-muted-foreground">THC: {strain.thc}%</div>
+                <Progress value={strain.thc} max={35} className="h-1" />
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">CBD: {strain.cbd}%</div>
+                <Progress value={strain.cbd} max={25} className="h-1" />
+              </div>
             </div>
             
             <div className="flex flex-wrap gap-1 mb-2">

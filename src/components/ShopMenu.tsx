@@ -17,7 +17,6 @@ interface FeaturedStrain {
   flavors: string[];
   price: string;
   rating: number;
-  image: string;
   description: string;
   inStock: boolean;
   lastUpdated: string;
@@ -39,7 +38,6 @@ const ShopMenu = () => {
       flavors: ['Berry', 'Sweet', 'Earthy'],
       price: '$45/8th',
       rating: 4.8,
-      image: '/placeholder.svg',
       description: 'A balanced hybrid providing full-body relaxation with gentle cerebral invigoration.',
       inStock: true,
       lastUpdated: '2 hours ago'
@@ -130,6 +128,24 @@ const ShopMenu = () => {
     }
   };
 
+  const getStrainEmoji = (type: string) => {
+    switch (type) {
+      case 'Indica': return '🌙';
+      case 'Sativa': return '☀️';
+      case 'Hybrid': return '🌓';
+      default: return '🌿';
+    }
+  };
+
+  const getGradientColor = (type: string) => {
+    switch (type) {
+      case 'Indica': return 'from-purple-500 to-purple-700';
+      case 'Sativa': return 'from-green-500 to-green-700';
+      case 'Hybrid': return 'from-blue-500 to-blue-700';
+      default: return 'from-gray-500 to-gray-700';
+    }
+  };
+
   const filteredStrains = featuredStrains.filter(strain => {
     const matchesSearch = strain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          strain.effects.some(effect => effect.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -212,10 +228,11 @@ const ShopMenu = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {availableStrains.map((strain) => (
             <Card key={strain.id} className={`overflow-hidden transition-all ${strain.inStock ? 'hover:shadow-lg border-green-200' : 'opacity-50'}`}>
-              <div className="aspect-video bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center relative">
-                <Leaf className="h-16 w-16 text-green-600" />
+              <div className={`h-24 bg-gradient-to-br ${getGradientColor(strain.type)} flex items-center justify-center relative`}>
+                <div className="text-4xl opacity-20 absolute">🌿</div>
+                <div className="text-3xl z-10">{getStrainEmoji(strain.type)}</div>
                 {strain.inStock && (
-                  <Badge className="absolute top-2 right-2 bg-green-600 text-white">
+                  <Badge className="absolute top-2 right-2 bg-white/20 text-white border-white/30">
                     In Stock
                   </Badge>
                 )}
@@ -318,8 +335,9 @@ const ShopMenu = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
               {filteredStrains.filter(strain => !strain.inStock).map((strain) => (
                 <Card key={strain.id} className="overflow-hidden opacity-60">
-                  <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
-                    <Leaf className="h-16 w-16 text-gray-400" />
+                  <div className="h-24 bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center relative">
+                    <div className="text-4xl opacity-20 absolute">🌿</div>
+                    <div className="text-3xl text-gray-300 z-10">{getStrainEmoji(strain.type)}</div>
                     <Badge className="absolute top-2 right-2 bg-gray-500 text-white">
                       Out of Stock
                     </Badge>

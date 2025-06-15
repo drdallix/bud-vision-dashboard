@@ -16,7 +16,6 @@ export interface Strain {
   terpenes?: Terpene[];
   medicalUses: string[];
   description: string;
-  imageUrl: string;
   scannedAt: string;
   confidence: number;
   inStock: boolean;

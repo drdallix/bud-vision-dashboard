@@ -4,21 +4,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Users } from 'lucide-react';
 import { Strain } from '@/types/strain';
+import StrainVisualCard from './StrainVisualCard';
 
 interface StrainHeaderProps {
   strain: Strain;
 }
 
 const StrainHeader = ({ strain }: StrainHeaderProps) => {
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'Indica': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Sativa': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Hybrid': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   const getRecommendationContext = (type: string, effects: string[]) => {
     const timeOfDay = type === 'Indica' ? 'evening/nighttime' : type === 'Sativa' ? 'daytime' : 'any time';
     const primaryEffects = effects.slice(0, 2).join(' and ').toLowerCase();
@@ -30,21 +22,12 @@ const StrainHeader = ({ strain }: StrainHeaderProps) => {
       <CardContent className="p-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-shrink-0">
-            <img 
-              src={strain.imageUrl} 
-              alt={strain.name}
-              className="w-48 h-48 object-cover rounded-lg shadow-lg"
-            />
+            <StrainVisualCard strain={strain} />
           </div>
           
           <div className="flex-grow space-y-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{strain.name}</h1>
-                <Badge className={getTypeColor(strain.type)}>
-                  {strain.type}
-                </Badge>
-              </div>
+              <h1 className="text-3xl font-bold mb-2">{strain.name}</h1>
               <p className="text-muted-foreground">{strain.description}</p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
                 <div className="flex items-start gap-2">

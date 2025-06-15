@@ -30,7 +30,6 @@ export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
     terpenes: parseTerpenes(scan.terpenes),
     medicalUses: scan.medical_uses || [],
     description: scan.description || '',
-    imageUrl: scan.image_url || '/placeholder.svg',
     scannedAt: scan.scanned_at,
     confidence: scan.confidence || 0,
     inStock: scan.in_stock,
@@ -55,7 +54,7 @@ export const convertStrainForDatabase = (strain: Strain, userId: string) => {
     terpenes: terpenes,
     medical_uses: strain.medicalUses,
     description: strain.description,
-    image_url: strain.imageUrl,
+    image_url: null, // No longer storing images
     confidence: strain.confidence,
     scanned_at: strain.scannedAt,
     in_stock: strain.inStock,

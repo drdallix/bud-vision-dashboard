@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Leaf, Zap, Heart, Beaker, Clock } from 'lucide-react';
+import { Leaf, Zap, Heart, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,7 +24,6 @@ interface Strain {
   terpenes?: Terpene[];
   medicalUses: string[];
   description: string;
-  imageUrl: string;
   scannedAt: string;
   confidence: number;
 }
@@ -59,7 +58,6 @@ const PublicStrainView = () => {
         terpenes: scan.terpenes || [],
         medicalUses: scan.medical_uses || [],
         description: scan.description || '',
-        imageUrl: scan.image_url || '/placeholder.svg',
         scannedAt: scan.scanned_at,
         confidence: scan.confidence || 0,
       }));
@@ -86,6 +84,24 @@ const PublicStrainView = () => {
     }
   };
 
+  const getStrainEmoji = (type: string) => {
+    switch (type) {
+      case 'Indica': return '🌙';
+      case 'Sativa': return '☀️';
+      case 'Hybrid': return '🌓';
+      default: return '🌿';
+    }
+  };
+
+  const getGradientColor = (type: string) => {
+    switch (type) {
+      case 'Indica': return 'from-purple-500 to-purple-700';
+      case 'Sativa': return 'from-green-500 to-green-700';
+      case 'Hybrid': return 'from-blue-500 to-blue-700';
+      default: return 'from-gray-500 to-gray-700';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -104,26 +120,22 @@ const PublicStrainView = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {strains.map((strain) => (
           <Card key={strain.id} className="hover:shadow-lg transition-shadow">
+            <div className={`h-24 bg-gradient-to-br ${getGradientColor(strain.type)} flex items-center justify-center relative rounded-t-lg`}>
+              <div className="text-4xl opacity-20 absolute">🌿</div>
+              <div className="text-3xl z-10">{getStrainEmoji(strain.type)}</div>
+              <Badge className="absolute top-2 right-2 bg-white/20 text-white border-white/30">
+                {strain.type}
+              </Badge>
+            </div>
+            
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{strain.name}</CardTitle>
-                <Badge className={getTypeColor(strain.type)}>
-                  {strain.type}
-                </Badge>
-              </div>
+              <CardTitle className="text-lg">{strain.name}</CardTitle>
               <CardDescription className="line-clamp-2">
                 {strain.description}
               </CardDescription>
             </CardHeader>
+            
             <CardContent className="space-y-4">
-              {strain.imageUrl && (
-                <img 
-                  src={strain.imageUrl} 
-                  alt={strain.name}
-                  className="w-full h-32 object-cover rounded-lg"
-                />
-              )}
-              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center justify-between mb-1">
