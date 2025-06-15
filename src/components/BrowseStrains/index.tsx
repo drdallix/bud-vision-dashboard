@@ -64,16 +64,14 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   // Loading skeleton
   if (isLoading && strains.length === 0) {
     return (
-      <div className="space-y-4 pb-20">
+      <div className="space-y-3 pb-20">
         {/* Search skeleton */}
-        <div className="relative">
-          <div className="h-12 bg-muted rounded-full animate-pulse" />
-        </div>
+        <div className="h-10 bg-muted rounded-lg animate-pulse" />
         
         {/* Filters skeleton */}
-        <div className="flex gap-3">
-          <div className="w-36 h-10 bg-muted rounded animate-pulse" />
-          <div className="w-40 h-10 bg-muted rounded animate-pulse" />
+        <div className="flex gap-2">
+          <div className="w-28 h-8 bg-muted rounded animate-pulse" />
+          <div className="w-32 h-8 bg-muted rounded animate-pulse" />
         </div>
         
         {/* Strain cards skeleton */}
@@ -99,7 +97,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   }
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-3 pb-20">
       <SmartOmnibar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -107,19 +105,21 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         hasResults={hasResults}
       />
 
-      <BrowseHeader
-        user={user}
-        editMode={editMode}
-        onEditModeChange={setEditMode}
-        inStockCount={inStockCount}
-      />
-
-      <FilterControls
-        filterType={filterType}
-        sortBy={sortBy}
-        onFilterChange={setFilterType}
-        onSortChange={setSortBy}
-      />
+      <div className="flex items-center justify-between">
+        <FilterControls
+          filterType={filterType}
+          sortBy={sortBy}
+          onFilterChange={setFilterType}
+          onSortChange={setSortBy}
+        />
+        
+        <BrowseHeader
+          user={user}
+          editMode={editMode}
+          onEditModeChange={setEditMode}
+          inStockCount={inStockCount}
+        />
+      </div>
 
       {editMode && user && (
         <BatchActions

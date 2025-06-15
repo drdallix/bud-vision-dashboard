@@ -11,14 +11,14 @@ interface FilterControlsProps {
 
 const FilterControls = ({ filterType, sortBy, onFilterChange, onSortChange }: FilterControlsProps) => {
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex items-center gap-2 px-1">
       <Select value={filterType} onValueChange={onFilterChange}>
-        <SelectTrigger className="w-36">
-          <Filter className="h-4 w-4 mr-2" />
-          <SelectValue placeholder="Type" />
+        <SelectTrigger className="h-8 w-28 text-xs">
+          <Filter className="h-3 w-3 mr-1" />
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Types</SelectItem>
+          <SelectItem value="all">All</SelectItem>
           <SelectItem value="Indica">Indica</SelectItem>
           <SelectItem value="Sativa">Sativa</SelectItem>
           <SelectItem value="Hybrid">Hybrid</SelectItem>
@@ -26,15 +26,15 @@ const FilterControls = ({ filterType, sortBy, onFilterChange, onSortChange }: Fi
       </Select>
       
       <Select value={sortBy} onValueChange={onSortChange}>
-        <SelectTrigger className="w-40">
-          <TrendingUp className="h-4 w-4 mr-2" />
-          <SelectValue placeholder="Sort" />
+        <SelectTrigger className="h-8 w-32 text-xs">
+          <TrendingUp className="h-3 w-3 mr-1" />
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="recent">Most Recent</SelectItem>
-          <SelectItem value="name">Name A-Z</SelectItem>
-          <SelectItem value="thc">Highest THC</SelectItem>
-          <SelectItem value="confidence">Highest Confidence</SelectItem>
+          <SelectItem value="recent">Recent</SelectItem>
+          <SelectItem value="name">A-Z</SelectItem>
+          <SelectItem value="thc">THC ↓</SelectItem>
+          <SelectItem value="confidence">Confidence</SelectItem>
         </SelectContent>
       </Select>
     </div>
