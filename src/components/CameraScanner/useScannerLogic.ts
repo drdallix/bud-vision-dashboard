@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { analyzeStrainWithAI } from '@/components/SmartOmnibar/AIAnalysis';
 import { CacheService } from '@/services/cacheService';
+import { useStrainData } from '@/data/hooks/useStrainData';
 import { Strain } from '@/types/strain';
 
 export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
@@ -12,6 +13,7 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'failed' | 'cached'>('idle');
   const { toast } = useToast();
   const { user } = useAuth();
+  const { addStrainToCache } = useStrainData(false); // Get user-specific strain cache functions
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -53,6 +55,7 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         description: "DoobieDB is reading package information for customer recommendations.",
       });
 
+      // The AI analysis now handles both analysis AND saving to database
       const aiResult = await analyzeStrainWithAI(selectedImage, undefined, user.id);
       
       const identifiedStrain: Strain = {
@@ -63,39 +66,23 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         userId: user.id
       };
       
-      console.log('Final strain data:', identifiedStrain);
+      console.log('Scanner - strain analyzed:', identifiedStrain);
       
-      // Always save to local cache first
-      CacheService.saveScanToCache(identifiedStrain, 'pending');
+      // Save to local cache as backup
+      CacheService.saveScanToCache(identifiedStrain, 'synced');
       
-      // Try to save to database
-      let databaseSaveSuccess = false;
-      try {
-        await CacheService.saveToDatabase(identifiedStrain, user.id);
-        CacheService.updateCachedScanStatus(identifiedStrain.id, 'synced');
-        setSaveStatus('success');
-        databaseSaveSuccess = true;
-        console.log('Successfully saved to database');
-      } catch (dbError) {
-        console.error('Database save failed, keeping in cache:', dbError);
-        setSaveStatus('cached');
-        
-        toast({
-          title: "Saved locally",
-          description: "Analysis complete but saved offline. Will sync when connection improves.",
-        });
-      }
+      // Add to the user's strain cache immediately for background inventory update
+      addStrainToCache(identifiedStrain);
       
+      setSaveStatus('success');
       setIsScanning(false);
       onScanComplete(identifiedStrain);
       setSelectedImage(null);
       
-      if (databaseSaveSuccess) {
-        toast({
-          title: "Package analysis complete!",
-          description: `Saved to cloud: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`,
-        });
-      }
+      toast({
+        title: "Package analysis complete!",
+        description: `Saved: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`,
+      });
 
       // Try to sync any pending scans
       setTimeout(() => CacheService.syncPendingScans(user.id), 1000);
