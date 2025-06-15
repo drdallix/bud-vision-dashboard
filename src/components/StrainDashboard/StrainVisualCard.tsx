@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -50,13 +49,13 @@ const StrainVisualCard = ({
   const getTextColor = (type: string) => {
     switch (type) {
       case 'Indica':
-        return 'text-purple-800 dark:text-purple-200';
+        return 'text-purple-900 dark:text-purple-100';
       case 'Sativa':
-        return 'text-green-800 dark:text-green-200';
+        return 'text-green-900 dark:text-green-100';
       case 'Hybrid':
-        return 'text-blue-800 dark:text-blue-200';
+        return 'text-blue-900 dark:text-blue-100';
       default:
-        return 'text-gray-800 dark:text-gray-200';
+        return 'text-gray-900 dark:text-gray-100';
     }
   };
 
