@@ -1,46 +1,42 @@
 
 import { useCallback } from 'react';
-import { useInventoryManagement } from '@/hooks/useInventoryManagement';
-import { useBrowseStrains } from '@/hooks/useBrowseStrains';
+import { useStrainStore } from '@/stores/useStrainStore';
 
-export const useInventoryActions = () => {
-  const { updateStockStatus, batchUpdateStock, loading: inventoryLoading } = useInventoryManagement();
-  const { updateStrainInCache } = useBrowseStrains('', 'all', 'recent');
+/**
+ * Enhanced Inventory Actions Hook
+ * 
+ * Now uses the centralized strain store for better state management
+ * and optimistic updates with rollback capability.
+ */
+export const useInventoryActions = (includeAllStrains = false) => {
+  const { 
+    updateStock, 
+    updateStockBatch, 
+    inventoryLoading 
+  } = useStrainStore(includeAllStrains);
 
+  /**
+   * Handle individual stock toggle with optimistic updates
+   */
   const handleStockToggle = useCallback(async (strainId: string, currentStock: boolean) => {
     const newStockStatus = !currentStock;
+    console.log(`Toggling stock for strain ${strainId}: ${currentStock} -> ${newStockStatus}`);
     
-    // Immediately update the cache for instant UI feedback
-    updateStrainInCache(strainId, { inStock: newStockStatus });
-    
-    // Attempt the actual update in the background
-    const success = await updateStockStatus(strainId, newStockStatus);
-    
-    if (!success) {
-      // Revert on failure
-      updateStrainInCache(strainId, { inStock: currentStock });
-    }
-  }, [updateStockStatus, updateStrainInCache]);
+    return await updateStock(strainId, newStockStatus);
+  }, [updateStock]);
 
+  /**
+   * Handle batch stock update with optimistic updates
+   */
   const handleBatchStockUpdate = useCallback(async (strainIds: string[], inStock: boolean) => {
-    if (strainIds.length === 0) return false;
-    
-    // Optimistically update all selected strains
-    strainIds.forEach(strainId => {
-      updateStrainInCache(strainId, { inStock });
-    });
-    
-    const success = await batchUpdateStock(strainIds, inStock);
-    
-    if (!success) {
-      // Revert all on failure
-      strainIds.forEach(strainId => {
-        updateStrainInCache(strainId, { inStock: !inStock });
-      });
+    if (strainIds.length === 0) {
+      console.warn('No strains selected for batch update');
+      return false;
     }
     
-    return success;
-  }, [batchUpdateStock, updateStrainInCache]);
+    console.log(`Batch updating ${strainIds.length} strains to ${inStock ? 'in stock' : 'out of stock'}`);
+    return await updateStockBatch(strainIds, inStock);
+  }, [updateStockBatch]);
 
   return {
     handleStockToggle,

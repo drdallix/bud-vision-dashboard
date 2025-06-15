@@ -1,8 +1,8 @@
 
 import { Strain } from '@/types/strain';
+import { PricePoint } from '@/types/price';
 import StrainCard from '../StrainCard';
 import StrainPriceEditor from './StrainPriceEditor';
-import { useBulkStrainPrices } from '@/hooks/useBulkStrainPrices';
 
 interface SafeStrainGridProps {
   strains: Strain[];
@@ -13,8 +13,16 @@ interface SafeStrainGridProps {
   onStockToggle: (strainId: string, currentStock: boolean) => void;
   onStrainClick: (strain: Strain) => void;
   inventoryLoading: boolean;
+  pricesMap: Record<string, PricePoint[]>;
+  pricesLoading: boolean;
 }
 
+/**
+ * Enhanced SafeStrainGrid
+ * 
+ * Now receives pricesMap as a prop to avoid conditional hook calls.
+ * All price data is managed at the parent level through the centralized store.
+ */
 const SafeStrainGrid = ({
   strains,
   editMode,
@@ -23,11 +31,17 @@ const SafeStrainGrid = ({
   onSelect,
   onStockToggle,
   onStrainClick,
-  inventoryLoading
+  inventoryLoading,
+  pricesMap,
+  pricesLoading
 }: SafeStrainGridProps) => {
-  // Fetch all prices at once to avoid conditional hook calls
-  const strainIds = strains.map(strain => strain.id);
-  const { pricesMap, isLoading: pricesLoading } = useBulkStrainPrices(strainIds);
+  console.log('SafeStrainGrid render:', {
+    strainCount: strains.length,
+    editMode,
+    selectedCount: selectedStrains.length,
+    pricesMapKeys: Object.keys(pricesMap).length,
+    pricesLoading
+  });
 
   return (
     <div className="grid grid-cols-1 gap-4">

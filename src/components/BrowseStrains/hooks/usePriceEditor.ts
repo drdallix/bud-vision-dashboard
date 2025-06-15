@@ -1,48 +1,48 @@
 
-import { useState } from 'react';
-import { useStrainPrices } from '@/hooks/useStrainPrices';
-import { useToast } from '@/hooks/use-toast';
+import { usePriceStore } from '@/stores/usePriceStore';
 
+/**
+ * Enhanced Price Editor Hook
+ * 
+ * Now uses the centralized price store for better state management,
+ * optimistic updates, and batch operations.
+ */
 export function usePriceEditor(strainId: string) {
-  const { addPricePoint, updatePricePoint, deletePricePoint, refetch } = useStrainPrices(strainId);
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { 
+    addPrice: addPriceOperation,
+    updatePrice: updatePriceOperation,
+    deletePrice: deletePriceOperation,
+    isLoading 
+  } = usePriceStore();
 
+  /**
+   * Add price with optimistic update
+   */
   const addPrice = async (nowPrice: number, wasPrice?: number | null) => {
-    setLoading(true);
-    try {
-      await addPricePoint({ nowPrice, wasPrice });
-      toast({ title: "Price added", variant: "default" });
-      refetch();
-    } catch (e: any) {
-      toast({ title: "Could not add price", description: e.message, variant: "destructive" });
-    }
-    setLoading(false);
+    console.log(`Adding price for strain ${strainId}: $${nowPrice}${wasPrice ? ` (was $${wasPrice})` : ''}`);
+    return await addPriceOperation(strainId, nowPrice, wasPrice);
   };
 
+  /**
+   * Update price with optimistic update
+   */
   const updatePrice = async (id: string, nowPrice: number, wasPrice?: number | null) => {
-    setLoading(true);
-    try {
-      await updatePricePoint({ id, nowPrice, wasPrice });
-      toast({ title: "Price updated", variant: "default" });
-      refetch();
-    } catch (e: any) {
-      toast({ title: "Could not update price", description: e.message, variant: "destructive" });
-    }
-    setLoading(false);
+    console.log(`Updating price ${id} for strain ${strainId}: $${nowPrice}${wasPrice ? ` (was $${wasPrice})` : ''}`);
+    return await updatePriceOperation(id, strainId, nowPrice, wasPrice);
   };
 
+  /**
+   * Delete price with optimistic update
+   */
   const deletePrice = async (id: string) => {
-    setLoading(true);
-    try {
-      await deletePricePoint(id);
-      toast({ title: "Price deleted", variant: "default" });
-      refetch();
-    } catch (e: any) {
-      toast({ title: "Could not delete price", description: e.message, variant: "destructive" });
-    }
-    setLoading(false);
+    console.log(`Deleting price ${id} for strain ${strainId}`);
+    return await deletePriceOperation(id, strainId);
   };
 
-  return { addPrice, updatePrice, deletePrice, loading };
+  return { 
+    addPrice, 
+    updatePrice, 
+    deletePrice, 
+    loading: isLoading 
+  };
 }
