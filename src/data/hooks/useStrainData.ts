@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { StrainService } from '@/services/strainService';
 import { convertDatabaseScansToStrains } from '@/data/converters/strainConverters';
 import { Strain } from '@/types/strain';
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useStrainData = (includeAllStrains = false) => {
@@ -13,6 +13,7 @@ export const useStrainData = (includeAllStrains = false) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
   // Memoize the query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => 
@@ -36,21 +37,28 @@ export const useStrainData = (includeAllStrains = false) => {
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
-  // Set up real-time subscription
-  useEffect(() => {
-    if (!includeAllStrains && !user) return;
-
-    // Clean up any existing channel
-    if (channelRef.current) {
+  // Cleanup function
+  const cleanupChannel = useCallback(() => {
+    if (channelRef.current && isSubscribedRef.current) {
       console.log('Cleaning up existing channel:', channelRef.current);
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
+      isSubscribedRef.current = false;
     }
+  }, []);
+
+  // Set up real-time subscription
+  useEffect(() => {
+    if (!includeAllStrains && !user) return;
+    if (isSubscribedRef.current) return; // Prevent multiple subscriptions
+
+    // Clean up any existing channel first
+    cleanupChannel();
 
     // Create a unique channel name to avoid conflicts
     const channelName = includeAllStrains 
-      ? `strains-all-${Date.now()}` 
-      : `strains-user-${user!.id}-${Date.now()}`;
+      ? `strains-all-${Date.now()}-${Math.random()}` 
+      : `strains-user-${user!.id}-${Date.now()}-${Math.random()}`;
 
     console.log('Creating new channel:', channelName);
 
@@ -71,18 +79,19 @@ export const useStrainData = (includeAllStrains = false) => {
           queryClient.invalidateQueries({ queryKey });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          isSubscribedRef.current = true;
+        }
+      });
 
     channelRef.current = channel;
 
     return () => {
-      if (channelRef.current) {
-        console.log('Cleanup: removing channel:', channelRef.current);
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      cleanupChannel();
     };
-  }, [queryClient, user?.id, includeAllStrains]); // Remove queryKey from dependencies
+  }, [user?.id, includeAllStrains, cleanupChannel, queryClient, queryKey]);
 
   // Show error toast only once per error
   useEffect(() => {
