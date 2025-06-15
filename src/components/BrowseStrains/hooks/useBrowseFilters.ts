@@ -1,8 +1,6 @@
-
 import { useState, useMemo } from 'react';
 import { Strain } from '@/types/strain';
 import { getDeterministicTHCRange } from '@/utils/thcGenerator';
-import { useStrainPrices } from '@/hooks/useStrainPrices';
 
 const PRESET_PRICES = [30,40,50,60,80,100,120,200,300];
 
@@ -18,17 +16,7 @@ export const useBrowseFilters = (strains: Strain[]) => {
   const [sortBy, setSortBy] = useState<string>('recent');
   const [priceFilter, setPriceFilter] = useState<string | null>(null);
 
-  // Map from strainId -> [PricePoints]. Memoized for performance.
-  const priceMap = useMemo(() => {
-    let obj: Record<string, { nowPrice: number }[]> = {};
-    for (const s of strains) {
-      const res = useStrainPrices(s.id);
-      obj[s.id] = res.prices?.map(({ nowPrice }) => ({ nowPrice })) || [];
-    }
-    return obj;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [strains.map(s => s.id).join(',')]); // Re-run if strain set changes
-
+  // Only filter by search, type, etc. Don't call hooks in here!
   const filteredAndSortedStrains = useMemo(() => {
     let filtered = strains
       .filter(strain => {
@@ -38,12 +26,7 @@ export const useBrowseFilters = (strains: Strain[]) => {
             effectNames.some(effect => effect.toLowerCase().includes(searchTerm.toLowerCase())) ||
             flavorNames.some(flavor => flavor.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesType = filterType === 'all' || strain.type === filterType;
-        let matchesPrice = true;
-        if (priceFilter) {
-          const prices = priceMap?.[strain.id] || [];
-          matchesPrice = prices.some(p => Number(p.nowPrice) === Number(priceFilter));
-        }
-        return matchesSearch && matchesType && matchesPrice;
+        return matchesSearch && matchesType;
       });
 
     filtered.sort((a, b) => {
@@ -59,20 +42,12 @@ export const useBrowseFilters = (strains: Strain[]) => {
         }
         case 'confidence':
           return b.confidence - a.confidence;
-        case 'price-asc':
-        case 'price-desc': {
-          // Sort by lowest price for each strain, fallback Infinity for those with no price
-          const aMin = getLowestPrice(priceMap[a.id]);
-          const bMin = getLowestPrice(priceMap[b.id]);
-          if (sortBy === 'price-asc') return aMin - bMin;
-          else return bMin - aMin;
-        }
         default:
           return 0;
       }
     });
     return filtered;
-  }, [strains, searchTerm, filterType, sortBy, priceFilter, priceMap]);
+  }, [strains, searchTerm, filterType, sortBy]);
 
   return {
     searchTerm,
