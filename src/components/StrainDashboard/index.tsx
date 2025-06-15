@@ -3,10 +3,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Database } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import StrainHeader from './StrainHeader';
-import StrainEffects from './StrainEffects';
-import StrainFlavors from './StrainFlavors';
+import StrainEffectsVisual from './StrainEffectsVisual';
+import StrainFlavorsVisual from './StrainFlavorsVisual';
 import StrainTerpenes from './StrainTerpenes';
-import StrainMedicalUses from './StrainMedicalUses';
 import StrainCannabinoids from './StrainCannabinoids';
 
 interface StrainDashboardProps {
@@ -34,11 +33,10 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
     <div className="max-w-6xl mx-auto space-y-6 slide-up">
       <StrainHeader strain={strain} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-        <StrainEffects effects={strain.effects} />
-        <StrainFlavors flavors={strain.flavors} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <StrainEffectsVisual effectProfiles={strain.effectProfiles} />
+        <StrainFlavorsVisual flavorProfiles={strain.flavorProfiles} />
         <StrainTerpenes terpenes={strain.terpenes} />
-        <StrainMedicalUses medicalUses={strain.medicalUses} />
       </div>
 
       <StrainCannabinoids strain={strain} />

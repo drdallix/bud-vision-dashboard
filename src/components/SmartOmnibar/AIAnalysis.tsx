@@ -34,12 +34,16 @@ export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string
     return {
       name: textQuery || "Unknown Strain",
       type: "Hybrid" as const,
-      thc: 15,
-      cbd: 2,
-      effects: ["Unknown"],
-      flavors: ["Unknown"],
+      thc: Math.max(21, Math.floor(Math.random() * 8) + 21), // 21-28% THC
+      effectProfiles: [
+        { name: "Relaxed", intensity: 3, emoji: "😌", color: "#8B5CF6" },
+        { name: "Happy", intensity: 4, emoji: "😊", color: "#F59E0B" }
+      ],
+      flavorProfiles: [
+        { name: "Earthy", intensity: 3, emoji: "🌍", color: "#78716C" },
+        { name: "Sweet", intensity: 2, emoji: "🍯", color: "#F59E0B" }
+      ],
       terpenes: [{"name": "Myrcene", "percentage": 1.0, "effects": "Relaxing"}],
-      medicalUses: ["Consult Professional"],
       description: textQuery ? 
         "Text analysis incomplete. Please check spelling and try again." :
         "Package scan incomplete. Please try again with clearer lighting and ensure all text is visible.",

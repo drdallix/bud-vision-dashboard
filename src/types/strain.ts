@@ -1,25 +1,44 @@
-
 export interface Terpene {
   name: string;
   percentage: number;
   effects: string;
 }
 
+export interface EffectProfile {
+  name: string;
+  intensity: number; // 1-5 scale
+  emoji: string;
+  color: string;
+}
+
+export interface FlavorProfile {
+  name: string;
+  intensity: number; // 1-5 scale
+  emoji: string;
+  color: string;
+}
+
 export interface Strain {
   id: string;
   name: string;
   type: 'Indica' | 'Sativa' | 'Hybrid';
-  thc: number;
-  cbd: number;
-  effects: string[];
-  flavors: string[];
+  thc: number; // Always 21% or higher for recreational focus
+  effectProfiles: EffectProfile[];
+  flavorProfiles: FlavorProfile[];
   terpenes?: Terpene[];
-  medicalUses: string[];
   description: string;
   scannedAt: string;
   confidence: number;
   inStock: boolean;
   userId: string;
+}
+
+// Keep legacy properties for backward compatibility during migration
+export interface LegacyStrain extends Omit<Strain, 'effectProfiles' | 'flavorProfiles'> {
+  effects: string[];
+  flavors: string[];
+  medicalUses: string[];
+  cbd?: number; // Optional for migration
 }
 
 // Database return type from Supabase (matching the generated types)
@@ -32,7 +51,7 @@ export type DatabaseScan = {
   cbd: number | null;
   effects: string[] | null;
   flavors: string[] | null;
-  terpenes: any | null; // Using 'any' to match Json type from database
+  terpenes: any | null;
   medical_uses: string[] | null;
   description: string | null;
   image_url: string | null;

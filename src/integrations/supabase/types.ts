@@ -45,7 +45,6 @@ export type Database = {
           effects: string[] | null
           flavors: string[] | null
           id: string
-          image_url: string | null
           in_stock: boolean
           medical_uses: string[] | null
           scanned_at: string
@@ -63,7 +62,6 @@ export type Database = {
           effects?: string[] | null
           flavors?: string[] | null
           id?: string
-          image_url?: string | null
           in_stock?: boolean
           medical_uses?: string[] | null
           scanned_at?: string
@@ -81,7 +79,6 @@ export type Database = {
           effects?: string[] | null
           flavors?: string[] | null
           id?: string
-          image_url?: string | null
           in_stock?: boolean
           medical_uses?: string[] | null
           scanned_at?: string

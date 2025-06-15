@@ -8,12 +8,28 @@ interface StrainCannabinoidsProps {
 }
 
 const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
+  const getPotencyLabel = (thc: number) => {
+    if (thc >= 28) return 'Very High Potency';
+    if (thc >= 25) return 'High Potency';
+    if (thc >= 22) return 'Moderate-High Potency';
+    return 'Moderate Potency';
+  };
+
+  const getRecommendation = (thc: number, type: string) => {
+    const tolerance = thc >= 25 ? 'experienced users' : 'most users';
+    const effects = type === 'Indica' ? 'relaxation and stress relief' : 
+                   type === 'Sativa' ? 'energy and creativity' : 
+                   'balanced mind and body effects';
+    
+    return `Perfect for ${tolerance} seeking ${effects}. The ${thc}% THC content delivers ${thc >= 25 ? 'powerful' : 'reliable'} recreational effects.`;
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Complete Cannabinoid Analysis</CardTitle>
+        <CardTitle>THC Potency Analysis</CardTitle>
         <CardDescription>
-          Detailed breakdown for informed customer recommendations
+          Recreational-focused potency breakdown for informed recommendations
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -22,32 +38,24 @@ const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="font-medium">THC (Psychoactive)</span>
-                <span className="font-bold text-lg">{strain.thc}%</span>
+                <span className="font-bold text-lg text-green-600">{strain.thc}%</span>
               </div>
-              <Progress value={strain.thc} max={35} className="h-3" />
-              <p className="text-sm text-muted-foreground mt-1">
-                Primary psychoactive compound - responsible for euphoric effects
-              </p>
-            </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-medium">CBD (Therapeutic)</span>
-                <span className="font-bold text-lg">{strain.cbd}%</span>
+              <Progress value={strain.thc} max={35} className="h-4" />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>Moderate (21%)</span>
+                <span>Very High (35%+)</span>
               </div>
-              <Progress value={strain.cbd} max={25} className="h-3" />
-              <p className="text-sm text-muted-foreground mt-1">
-                Non-psychoactive, therapeutic compound - provides wellness benefits
+              <p className="text-sm text-muted-foreground mt-2">
+                <strong>{getPotencyLabel(strain.thc)}</strong> - Primary compound responsible for euphoric recreational effects
               </p>
             </div>
           </div>
           
           <div className="space-y-4">
-            <div className="bg-accent/30 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Budtender Notes</h4>
-              <p className="text-sm text-muted-foreground">
-                This <strong>{strain.type}</strong> strain is ideal for customers seeking {strain.effects.slice(0, 2).join(' and ').toLowerCase()} effects. 
-                The {strain.thc}% THC content provides {strain.thc > 20 ? 'strong' : strain.thc > 15 ? 'moderate' : 'mild'} potency.
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h4 className="font-medium mb-2 text-green-800">Budtender Recommendation</h4>
+              <p className="text-sm text-green-700">
+                {getRecommendation(strain.thc, strain.type)}
               </p>
             </div>
             
