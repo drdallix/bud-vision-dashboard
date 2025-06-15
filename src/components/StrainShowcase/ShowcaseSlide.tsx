@@ -1,11 +1,14 @@
 
+import { useState } from 'react';
 import { Strain } from '@/types/strain';
-import StrainHeader from '@/components/StrainDashboard/StrainHeader';
 import StrainEffectsVisual from '@/components/StrainDashboard/StrainEffectsVisual';
 import StrainFlavorsVisual from '@/components/StrainDashboard/StrainFlavorsVisual';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Sparkles, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sparkles, Zap, Heart } from 'lucide-react';
+import { useStrainTHC } from '@/hooks/useStrainTHC';
+import { useToast } from '@/hooks/use-toast';
 
 interface ShowcaseSlideProps {
   strain: Strain;
@@ -14,6 +17,10 @@ interface ShowcaseSlideProps {
 }
 
 const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProps) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const { toast } = useToast();
+  const { thcDisplay } = useStrainTHC(strain.name);
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'Indica': return 'from-purple-500 to-indigo-600';
@@ -30,6 +37,15 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
       case 'Hybrid': return '🌓';
       default: return '🌿';
     }
+  };
+
+  const handleHeartClick = () => {
+    setIsLiked(!isLiked);
+    toast({
+      title: isLiked ? "Removed from favorites" : "Added to favorites",
+      description: `${strain.name} ${isLiked ? 'removed from' : 'added to'} your favorites`,
+      duration: 2000,
+    });
   };
 
   return (
@@ -49,51 +65,72 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
         <div className={`absolute -bottom-10 -left-10 w-24 h-24 bg-gradient-to-br ${getTypeColor(strain.type)} opacity-10 rounded-full animate-pulse`} style={{ animationDelay: '1s' }}></div>
       </div>
 
-      <div className="relative space-y-6">
-        {/* Enhanced Header */}
+      <div className="relative space-y-4 md:space-y-6">
+        {/* Enhanced Header - Full Width */}
         <div className="relative">
           <Card className="border-0 bg-theme-card shadow-xl">
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{getTypeEmoji(strain.type)}</span>
-                    <div>
-                      <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            <div className="p-3 md:p-6">
+              <div className="flex items-start justify-between mb-3 md:mb-4">
+                <div className="space-y-1 md:space-y-2 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <span className="text-2xl md:text-3xl flex-shrink-0">{getTypeEmoji(strain.type)}</span>
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground truncate">
                         {strain.name}
                       </h1>
-                      <Badge 
-                        className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-lg`}
-                      >
-                        {strain.type}
-                      </Badge>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge 
+                          className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-lg text-xs md:text-sm`}
+                        >
+                          {strain.type}
+                        </Badge>
+                        <Badge className="bg-green-100 text-green-800 border-green-200 animate-pulse dark:bg-green-900 dark:text-green-100 dark:border-green-700 text-xs md:text-sm">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          In Stock
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                   
-                  <p className="text-muted-foreground leading-relaxed max-w-2xl">
+                  <p className="text-sm md:text-base text-muted-foreground leading-relaxed mt-2 md:mt-3">
                     {strain.description}
                   </p>
                 </div>
 
-                <div className="text-right space-y-2">
-                  <div className="flex items-center gap-2 justify-end">
-                    <Zap className="h-4 w-4 text-yellow-500" />
-                    <span className="text-lg font-bold text-foreground">
-                      {strain.thc}% THC
-                    </span>
+                <div className="flex flex-col items-end gap-2 ml-3 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleHeartClick}
+                    className={`h-10 w-10 md:h-12 md:w-12 ${
+                      isLiked 
+                        ? 'text-red-500 hover:text-red-600' 
+                        : 'text-gray-400 hover:text-red-500'
+                    } transition-colors`}
+                    title="Add to favorites"
+                  >
+                    <Heart 
+                      className={`h-5 w-5 md:h-6 md:w-6 ${isLiked ? 'fill-current' : ''}`} 
+                    />
+                  </Button>
+                  
+                  <div className="text-center">
+                    <div className="flex items-center gap-1 md:gap-2 justify-end">
+                      <Zap className="h-4 w-4 text-yellow-500" />
+                      <span className="text-base md:text-lg font-bold text-foreground">
+                        {thcDisplay}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">THC</div>
                   </div>
-                  <Badge className="bg-green-100 text-green-800 border-green-200 animate-pulse dark:bg-green-900 dark:text-green-100 dark:border-green-700">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    In Stock
-                  </Badge>
                 </div>
               </div>
             </div>
           </Card>
         </div>
 
-        {/* Effects and Flavors Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
+        {/* Effects and Flavors Grid - Mobile Optimized */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
           <div className="transform hover:scale-105 transition-transform duration-300">
             <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-lg overflow-hidden">
               <div className="p-1">
@@ -111,12 +148,12 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
           </div>
         </div>
 
-        {/* Confidence and Date */}
-        <div className="flex justify-between items-center text-sm text-muted-foreground bg-theme-muted rounded-lg p-3 backdrop-blur-sm">
+        {/* Confidence and Date - Mobile Friendly */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-xs md:text-sm text-muted-foreground bg-theme-muted rounded-lg p-2 md:p-3 backdrop-blur-sm">
           <span>
-            Scanned on {new Date(strain.scannedAt).toLocaleDateString()}
+            Scanned {new Date(strain.scannedAt).toLocaleDateString()}
           </span>
-          <Badge variant="outline" className="text-green-700 border-green-300 dark:text-green-300 dark:border-green-600">
+          <Badge variant="outline" className="text-green-700 border-green-300 dark:text-green-300 dark:border-green-600 self-start sm:self-auto">
             {strain.confidence}% confidence
           </Badge>
         </div>

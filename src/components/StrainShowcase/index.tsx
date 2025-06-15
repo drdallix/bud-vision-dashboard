@@ -125,13 +125,13 @@ const StrainShowcase = () => {
 
   if (!filteredStrains.length) {
     return (
-      <div className="w-full max-w-6xl mx-auto space-y-6">
+      <div className="w-full max-w-7xl mx-auto space-y-4 md:space-y-6 px-2 md:px-4">
         {/* Main Showcase - Empty State */}
         <div className="relative">
-          <div className="shadow-2xl rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
-            <div className="h-96 flex flex-col items-center justify-center text-muted-foreground">
-              <span className="text-6xl mb-4 animate-bounce">🪴</span>
-              <div className="text-xl font-medium">No strains match your filters</div>
+          <div className="shadow-2xl rounded-2xl md:rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
+            <div className="h-64 md:h-96 flex flex-col items-center justify-center text-muted-foreground">
+              <span className="text-4xl md:text-6xl mb-4 animate-bounce">🪴</span>
+              <div className="text-lg md:text-xl font-medium">No strains match your filters</div>
               <div className="text-sm mt-2">Try adjusting your search criteria below</div>
             </div>
           </div>
@@ -155,14 +155,14 @@ const StrainShowcase = () => {
 
   return (
     <div 
-      className="w-full max-w-6xl mx-auto space-y-6"
+      className="w-full max-w-7xl mx-auto space-y-4 md:space-y-6 px-2 md:px-4"
       onClick={handleInteraction}
       onTouchStart={handleInteraction}
       onMouseMove={handleInteraction}
     >
-      {/* Main Showcase */}
+      {/* Main Showcase - Full Width */}
       <div className="relative">
-        <div className="shadow-2xl rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
+        <div className="shadow-2xl rounded-2xl md:rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
           <Carousel
             setApi={setApi}
             opts={{
@@ -176,10 +176,10 @@ const StrainShowcase = () => {
             }}
             className="w-full"
           >
-            <CarouselContent className="-ml-2 md:-ml-4">
+            <CarouselContent className="-ml-1 md:-ml-2">
               {filteredStrains.map((strain, index) => (
-                <CarouselItem key={strain.id} className="pl-2 md:pl-4">
-                  <div className="p-4 md:p-8">
+                <CarouselItem key={strain.id} className="pl-1 md:pl-2">
+                  <div className="p-2 md:p-4 lg:p-8">
                     <ShowcaseSlide 
                       strain={strain} 
                       isActive={index === current}
@@ -193,12 +193,12 @@ const StrainShowcase = () => {
         </div>
 
         {/* Progress dots */}
-        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+        <div className="absolute -bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1 md:gap-2">
           {filteredStrains.map((_, index) => (
             <button
               key={index}
               onClick={() => api?.scrollTo(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all duration-300 ${
                 index === current 
                   ? 'bg-green-600 scale-150 shadow-lg' 
                   : 'bg-gray-300 hover:bg-gray-400'
