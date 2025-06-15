@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Search, Mic, MicOff, Camera, Upload, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -79,12 +78,15 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
     }
   }, [recognition, isListening, toast]);
 
-  const analyzeStrainWithAI = async (imageData: string) => {
+  const analyzeStrainWithAI = async (imageData?: string, textQuery?: string) => {
     try {
-      console.log('Calling AI strain analysis...');
+      console.log('Calling AI strain analysis...', textQuery ? 'with text query' : 'with image');
       
       const { data, error } = await supabase.functions.invoke('analyze-strain', {
-        body: { imageData }
+        body: { 
+          imageData: imageData || null,
+          textQuery: textQuery || null
+        }
       });
 
       if (error) {
@@ -106,14 +108,17 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
     } catch (error) {
       console.error('Error calling strain analysis:', error);
       return {
-        name: "Unknown Strain",
+        name: textQuery || "Unknown Strain",
         type: "Hybrid" as const,
         thc: 15,
         cbd: 2,
         effects: ["Unknown"],
         flavors: ["Unknown"],
+        terpenes: [{"name": "Myrcene", "percentage": 1.0, "effects": "Relaxing"}],
         medicalUses: ["Consult Professional"],
-        description: "Package scan incomplete. Please try again with clearer lighting and ensure all text is visible.",
+        description: textQuery ? 
+          "Text analysis incomplete. Please check spelling and try again." :
+          "Package scan incomplete. Please try again with clearer lighting and ensure all text is visible.",
         confidence: 0
       };
     }
@@ -175,28 +180,25 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
         setIsScanning(false);
       }
     } else if (searchTerm.trim()) {
-      // Generate from text query
+      // Generate from text query with spelling/grammar correction
       setIsScanning(true);
       
       try {
         toast({
           title: "Generating strain information...",
-          description: `Creating profile for: ${searchTerm}`,
+          description: `Creating profile for: ${searchTerm} (fixing spelling/grammar)`,
         });
 
-        // Use search term as strain name for AI generation
-        const mockImageData = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
-        const aiResult = await analyzeStrainWithAI(mockImageData);
+        // Use text query for AI generation with spelling correction
+        const aiResult = await analyzeStrainWithAI(undefined, searchTerm.trim());
         
         const generatedStrain: Strain = {
           ...aiResult,
-          name: searchTerm,
           id: Date.now().toString(),
           scannedAt: new Date().toISOString(),
           imageUrl: '',
           inStock: true,
-          userId: '',
-          confidence: 85
+          userId: ''
         };
         
         console.log('Generated strain from text:', generatedStrain);

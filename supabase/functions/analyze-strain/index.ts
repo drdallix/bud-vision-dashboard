@@ -15,10 +15,10 @@ serve(async (req) => {
   }
 
   try {
-    const { imageData } = await req.json();
+    const { imageData, textQuery } = await req.json();
     
-    if (!imageData) {
-      throw new Error('No image data provided');
+    if (!imageData && !textQuery) {
+      throw new Error('No image data or text query provided');
     }
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -32,7 +32,125 @@ serve(async (req) => {
     // Initialize Supabase client for caching
     const supabase = createClient(supabaseUrl!, supabaseKey!);
 
-    console.log('Analyzing cannabis package image with OpenAI Vision...');
+    console.log('Analyzing with OpenAI Vision...', textQuery ? 'Text query mode' : 'Image mode');
+
+    let messages;
+    
+    if (textQuery) {
+      // Text-based generation with enhanced spelling/grammar correction
+      messages = [
+        {
+          role: 'system',
+          content: `You are an expert cannabis strain identifier and cannabis knowledge expert. The user has provided a strain name or description that may contain spelling errors or poor punctuation. 
+
+          IMPORTANT TASKS:
+          1. CORRECT SPELLING & GRAMMAR: Fix any spelling mistakes, punctuation errors, and grammatical issues in the provided text
+          2. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
+          
+          For the corrected and cleaned strain name/description, provide realistic information:
+          
+          Cannabis Knowledge Guidelines:
+          - Indica strains: typically 15-25% THC, 0-5% CBD, relaxing/sedating effects, earthy/sweet flavors
+          - Sativa strains: typically 18-28% THC, 0-3% CBD, energizing/uplifting effects, citrus/pine flavors  
+          - Hybrid strains: balanced effects combining both, THC 16-26%, variable CBD
+          - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
+          - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
+          - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory), Terpinolene (piney), Humulene (appetite suppressant)
+          - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
+          
+          Return a JSON object with this exact structure:
+          {
+            "name": "corrected and properly formatted strain name",
+            "type": "Indica" | "Sativa" | "Hybrid",
+            "thc": number (realistic for strain type),
+            "cbd": number (realistic for strain type), 
+            "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
+            "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
+            "terpenes": [
+              {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
+              ...
+            ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
+            "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
+            "description": "detailed description with corrected spelling/grammar, strain background, effects, and usage notes",
+            "confidence": number (85 for text-generated strains)
+          }
+          
+          Always provide complete, realistic information with proper spelling and grammar.`
+        },
+        {
+          role: 'user',
+          content: `Please analyze and correct this strain name/description, then generate complete strain information: "${textQuery}"`
+        }
+      ];
+    } else {
+      // Image-based analysis (existing logic)
+      messages = [
+        {
+          role: 'system',
+          content: `You are an expert cannabis strain identifier and cannabis knowledge expert. Analyze the cannabis package image and extract information to identify the strain. 
+
+          IMPORTANT: Use your extensive cannabis knowledge to fill in ANY missing information intelligently:
+          
+          Look for visible information:
+          - Strain name on the package
+          - THC and CBD percentages
+          - Package text and labels
+          - Visual characteristics of the product
+          - Brand information
+          
+          For missing information, use your cannabis knowledge to provide:
+          - Realistic THC/CBD ranges for the strain type
+          - Appropriate effects based on Indica/Sativa/Hybrid classification
+          - Common flavors for the identified or similar strains
+          - Detailed terpene profiles with percentages
+          - Relevant medical uses based on cannabinoid profile
+          - Detailed strain description with background information
+          
+          Cannabis Knowledge Guidelines:
+          - Indica strains: typically 15-25% THC, 0-5% CBD, relaxing/sedating effects, earthy/sweet flavors
+          - Sativa strains: typically 18-28% THC, 0-3% CBD, energizing/uplifting effects, citrus/pine flavors  
+          - Hybrid strains: balanced effects combining both, THC 16-26%, variable CBD
+          - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
+          - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
+          - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory), Terpinolene (piney), Humulene (appetite suppressant)
+          - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
+          
+          Return a JSON object with this exact structure:
+          {
+            "name": "strain name (if not visible, provide educated guess based on appearance)",
+            "type": "Indica" | "Sativa" | "Hybrid",
+            "thc": number (0-35, realistic for strain type),
+            "cbd": number (0-25, realistic for strain type), 
+            "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
+            "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
+            "terpenes": [
+              {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
+              ...
+            ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
+            "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
+            "description": "detailed description with strain background, effects, and usage notes",
+            "confidence": number (0-100, based on visible package information clarity)
+          }
+          
+          Always provide complete, realistic information even if the package is unclear. Use your cannabis expertise to generate appropriate values.`
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Please analyze this cannabis package image and identify the strain with all the requested details including detailed terpene profiles. Use your cannabis knowledge to fill in any missing information intelligently.'
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageData
+              }
+            }
+          ]
+        }
+      ];
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -42,72 +160,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert cannabis strain identifier and cannabis knowledge expert. Analyze the cannabis package image and extract information to identify the strain. 
-
-            IMPORTANT: Use your extensive cannabis knowledge to fill in ANY missing information intelligently:
-            
-            Look for visible information:
-            - Strain name on the package
-            - THC and CBD percentages
-            - Package text and labels
-            - Visual characteristics of the product
-            - Brand information
-            
-            For missing information, use your cannabis knowledge to provide:
-            - Realistic THC/CBD ranges for the strain type
-            - Appropriate effects based on Indica/Sativa/Hybrid classification
-            - Common flavors for the identified or similar strains
-            - Detailed terpene profiles with percentages
-            - Relevant medical uses based on cannabinoid profile
-            - Detailed strain description with background information
-            
-            Cannabis Knowledge Guidelines:
-            - Indica strains: typically 15-25% THC, 0-5% CBD, relaxing/sedating effects, earthy/sweet flavors
-            - Sativa strains: typically 18-28% THC, 0-3% CBD, energizing/uplifting effects, citrus/pine flavors  
-            - Hybrid strains: balanced effects combining both, THC 16-26%, variable CBD
-            - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
-            - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
-            - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory), Terpinolene (piney), Humulene (appetite suppressant)
-            - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
-            
-            Return a JSON object with this exact structure:
-            {
-              "name": "strain name (if not visible, provide educated guess based on appearance)",
-              "type": "Indica" | "Sativa" | "Hybrid",
-              "thc": number (0-35, realistic for strain type),
-              "cbd": number (0-25, realistic for strain type), 
-              "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
-              "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
-              "terpenes": [
-                {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
-                ...
-              ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
-              "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-              "description": "detailed description with strain background, effects, and usage notes",
-              "confidence": number (0-100, based on visible package information clarity)
-            }
-            
-            Always provide complete, realistic information even if the package is unclear. Use your cannabis expertise to generate appropriate values.`
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Please analyze this cannabis package image and identify the strain with all the requested details including detailed terpene profiles. Use your cannabis knowledge to fill in any missing information intelligently.'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageData
-                }
-              }
-            ]
-          }
-        ],
+        messages: messages,
         max_tokens: 1500,
         temperature: 0.3
       }),
@@ -137,7 +190,7 @@ serve(async (req) => {
       console.error('Error parsing OpenAI response:', parseError);
       // Enhanced fallback with cannabis knowledge including terpenes
       strainData = {
-        name: "Mystery Hybrid",
+        name: textQuery ? textQuery.replace(/[^\w\s]/g, '').trim() : "Mystery Hybrid",
         type: "Hybrid",
         thc: 20,
         cbd: 2,
@@ -150,13 +203,13 @@ serve(async (req) => {
         ],
         medicalUses: ["Pain Relief", "Stress Relief", "Anxiety", "Insomnia"],
         description: "A balanced hybrid strain with moderate THC levels. This strain typically provides a well-rounded experience combining relaxation with mental clarity. The earthy and sweet flavor profile makes it appealing to many users, while its therapeutic properties make it suitable for various medical applications including pain and stress management.",
-        confidence: 25
+        confidence: textQuery ? 85 : 25
       };
     }
 
     // Validate and enhance the response
     const validatedStrain = {
-      name: strainData.name || "Unknown Strain",
+      name: strainData.name || (textQuery ? textQuery.replace(/[^\w\s]/g, '').trim() : "Unknown Strain"),
       type: ['Indica', 'Sativa', 'Hybrid'].includes(strainData.type) ? strainData.type : 'Hybrid',
       thc: Math.min(Math.max(Number(strainData.thc) || 20, 0), 35),
       cbd: Math.min(Math.max(Number(strainData.cbd) || 1, 0), 25),
@@ -168,12 +221,12 @@ serve(async (req) => {
       ],
       medicalUses: Array.isArray(strainData.medicalUses) ? strainData.medicalUses.slice(0, 6) : ["Pain Relief", "Stress Relief"],
       description: strainData.description || "AI-analyzed cannabis strain with balanced effects and therapeutic potential.",
-      confidence: Math.min(Math.max(Number(strainData.confidence) || 75, 0), 100)
+      confidence: Math.min(Math.max(Number(strainData.confidence) || (textQuery ? 85 : 75), 0), 100)
     };
 
     // Try to cache the strain analysis for future reference
     try {
-      const cacheKey = `strain_${strainData.name.toLowerCase().replace(/\s+/g, '_')}`;
+      const cacheKey = `strain_${validatedStrain.name.toLowerCase().replace(/\s+/g, '_')}`;
       await supabase
         .from('strain_cache')
         .upsert({
@@ -209,7 +262,7 @@ serve(async (req) => {
           flavors: ["Earthy"],
           terpenes: [{"name": "Myrcene", "percentage": 1.0, "effects": "Relaxing"}],
           medicalUses: ["Consult Professional"],
-          description: "Image analysis failed. Please try again with a clearer image of the cannabis package.",
+          description: "Analysis failed. Please try again with a clearer image or corrected spelling.",
           confidence: 0
         }
       }),
