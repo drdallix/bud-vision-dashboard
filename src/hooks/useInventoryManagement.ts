@@ -1,8 +1,8 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { StrainService } from '@/services/strainService';
 
 export const useInventoryManagement = () => {
   const [loading, setLoading] = useState(false);
@@ -21,13 +21,7 @@ export const useInventoryManagement = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('scans')
-        .update({ in_stock: inStock })
-        .eq('id', strainId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await StrainService.updateStockStatus(strainId, user.id, inStock);
 
       toast({
         title: "Stock status updated",
@@ -49,24 +43,20 @@ export const useInventoryManagement = () => {
   };
 
   const batchUpdateStock = async (strainIds: string[], inStock: boolean) => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to manage inventory.",
-        variant: "destructive",
-      });
+    if (!user || strainIds.length === 0) {
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to manage inventory.",
+          variant: "destructive",
+        });
+      }
       return false;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('scans')
-        .update({ in_stock: inStock })
-        .in('id', strainIds)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await StrainService.batchUpdateStock(strainIds, user.id, inStock);
 
       toast({
         title: "Bulk update completed",

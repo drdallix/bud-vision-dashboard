@@ -8,10 +8,13 @@ export const useInventoryActions = () => {
   const { updateStrainInCache } = useBrowseStrains('', 'all', 'recent');
 
   const handleStockToggle = useCallback(async (strainId: string, currentStock: boolean) => {
+    // Optimistically update the cache
     updateStrainInCache(strainId, { inStock: !currentStock });
     
+    // Attempt the actual update
     const success = await updateStockStatus(strainId, !currentStock);
     if (!success) {
+      // Revert on failure
       updateStrainInCache(strainId, { inStock: currentStock });
     }
   }, [updateStockStatus, updateStrainInCache]);
@@ -19,6 +22,7 @@ export const useInventoryActions = () => {
   const handleBatchStockUpdate = useCallback(async (strainIds: string[], inStock: boolean) => {
     if (strainIds.length === 0) return false;
     
+    // Optimistically update all selected strains
     strainIds.forEach(strainId => {
       updateStrainInCache(strainId, { inStock });
     });
