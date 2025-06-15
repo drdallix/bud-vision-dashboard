@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -45,6 +46,20 @@ const StrainVisualCard = ({
         return 'bg-gray-100 border-gray-200';
     }
   };
+
+  const getTextColor = (type: string) => {
+    switch (type) {
+      case 'Indica':
+        return 'text-purple-800 dark:text-purple-200';
+      case 'Sativa':
+        return 'text-green-800 dark:text-green-200';
+      case 'Hybrid':
+        return 'text-blue-800 dark:text-blue-200';
+      default:
+        return 'text-gray-800 dark:text-gray-200';
+    }
+  };
+
   const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
   return <Card className="overflow-hidden">
       <div className={`h-32 bg-gradient-to-br ${getTypeColor(strain.type)} flex items-center justify-center relative`}>
@@ -65,7 +80,7 @@ const StrainVisualCard = ({
         
         <div className={`p-2 rounded-lg border ${getSecondaryColor(strain.type)} mb-4`}>
           <div className="text-xs text-muted-foreground mb-1">THC</div>
-          <div className="font-bold text-lg text-foreground">{thcMin}%–{thcMax}%</div>
+          <div className={`font-bold text-lg ${getTextColor(strain.type)}`}>{thcMin}%–{thcMax}%</div>
         </div>
 
         <div className="text-sm text-muted-foreground">
