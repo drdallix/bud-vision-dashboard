@@ -13,7 +13,10 @@ export const useStrainData = (includeAllStrains = false) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
-  const isSubscribedRef = useRef(false);
+  
+  // Create a unique subscription tracking key for this specific hook instance
+  const subscriptionKey = includeAllStrains ? 'all-strains' : `user-${user?.id || 'none'}`;
+  const isSubscribedRef = useRef<Set<string>>(new Set());
 
   // Memoize the query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => 
@@ -37,28 +40,31 @@ export const useStrainData = (includeAllStrains = false) => {
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
 
-  // Cleanup function
+  // Cleanup function specific to this subscription
   const cleanupChannel = useCallback(() => {
-    if (channelRef.current && isSubscribedRef.current) {
-      console.log('Cleaning up existing channel');
+    if (channelRef.current && isSubscribedRef.current.has(subscriptionKey)) {
+      console.log('Cleaning up channel for:', subscriptionKey);
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
-      isSubscribedRef.current = false;
+      isSubscribedRef.current.delete(subscriptionKey);
     }
-  }, []);
+  }, [subscriptionKey]);
 
-  // Set up real-time subscription - with proper cleanup to prevent duplicates
+  // Set up real-time subscription with proper isolation
   useEffect(() => {
     if (!includeAllStrains && !user) return;
-    if (isSubscribedRef.current) return; // Prevent duplicate subscriptions
+    if (isSubscribedRef.current.has(subscriptionKey)) {
+      console.log('Subscription already exists for:', subscriptionKey);
+      return; // Prevent duplicate subscriptions
+    }
 
     // Clean up any existing channel first
     cleanupChannel();
 
-    console.log('Setting up real-time subscription for:', includeAllStrains ? 'all strains' : `user ${user!.id}`);
+    console.log('Setting up real-time subscription for:', subscriptionKey);
 
     // Create a unique channel name to avoid conflicts
-    const channelName = includeAllStrains ? 'scans-all-changes' : `scans-user-${user!.id}-changes`;
+    const channelName = `scans-${subscriptionKey}-${Date.now()}`;
 
     const channel = supabase
       .channel(channelName)
@@ -71,23 +77,25 @@ export const useStrainData = (includeAllStrains = false) => {
           ...(includeAllStrains ? {} : { filter: `user_id=eq.${user!.id}` })
         },
         (payload) => {
-          console.log('Real-time strain update:', payload.eventType, payload);
+          console.log('Real-time strain update for', subscriptionKey, ':', payload.eventType);
           
           // Invalidate and refetch data immediately
           queryClient.invalidateQueries({ queryKey });
         }
       )
       .subscribe((status) => {
-        console.log('Subscription status:', status);
+        console.log('Subscription status for', subscriptionKey, ':', status);
         if (status === 'SUBSCRIBED') {
-          isSubscribedRef.current = true;
+          isSubscribedRef.current.add(subscriptionKey);
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          isSubscribedRef.current.delete(subscriptionKey);
         }
       });
 
     channelRef.current = channel;
 
     return cleanupChannel;
-  }, [user?.id, includeAllStrains, cleanupChannel, queryClient, queryKey]);
+  }, [user?.id, includeAllStrains, cleanupChannel, queryClient, queryKey, subscriptionKey]);
 
   // Show error toast only once per error
   useEffect(() => {
