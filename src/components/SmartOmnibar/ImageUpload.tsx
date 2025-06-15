@@ -11,19 +11,23 @@ interface ImageUploadProps {
   disabled?: boolean;
 }
 
+// This just triggers the CameraModal; logic/workflow is handled in CameraModal now
 const ImageUpload = ({ onImageSelect, disabled = false }: ImageUploadProps) => {
   const [cameraOpen, setCameraOpen] = useState(false);
 
   // When user taps camera icon, open modal
   const handleCameraCapture = () => {
     setCameraOpen(true);
+    console.log("Camera icon clicked: Camera modal opening");
   };
 
-  // When photo is captured, trigger AI analysis immediately
+  // After photo is captured & analysis starts
+  // No preview, scan happens directly from CameraModal
+  // The modal closes automatically after processing.
   const handleCaptured = (imageDataUrl: string) => {
-    setCameraOpen(false);
-    // Fire parent action to start scan/analyze. We do not preview, but run immediately.
+    // This will be triggered by CameraModal after its fake progress
     onImageSelect(imageDataUrl);
+    console.log("Picture captured, image analysis should begin!", imageDataUrl?.substring(0, 32));
   };
 
   return (
