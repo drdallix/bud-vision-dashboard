@@ -52,7 +52,7 @@ export const convertStrainToDatabase = (strain: Strain, userId: string): Omit<Da
     strain_name: strain.name,
     strain_type: strain.type,
     thc: strain.thc,
-    cbd: null, // Default for recreational focus
+    cbd: null, // Set to null for recreational focus
     effects,
     flavors,
     terpenes: terpenes,
