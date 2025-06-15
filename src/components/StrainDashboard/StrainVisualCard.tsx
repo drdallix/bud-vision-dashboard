@@ -65,7 +65,7 @@ const StrainVisualCard = ({
         
         <div className={`p-2 rounded-lg border ${getSecondaryColor(strain.type)} mb-4`}>
           <div className="text-xs text-muted-foreground mb-1">THC</div>
-          <div className="font-bold text-lg text-black ">{thcMin}%–{thcMax}%</div>
+          <div className="font-bold text-lg text-gray-800 ">{thcMin}%–{thcMax}%</div>
         </div>
 
         <div className="text-sm text-muted-foreground">
