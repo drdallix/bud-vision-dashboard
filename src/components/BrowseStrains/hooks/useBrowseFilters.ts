@@ -17,24 +17,33 @@ export const useBrowseFilters = (strains: Strain[] = []) => {
   const [sortBy, setSortBy] = useState<string>('recent');
   const [priceFilter, setPriceFilter] = useState<string | null>(null);
 
-  // Only filter by search, type, etc. Don't call hooks in here!
+  // Filter and sort strains based on current filter state
   const filteredAndSortedStrains = useMemo(() => {
     // Guard against undefined or null strains array
     if (!strains || !Array.isArray(strains)) {
       return [];
     }
 
-    let filtered = strains
-      .filter(strain => {
-        const effectNames = strain.effectProfiles?.map(e => e.name) || [];
-        const flavorNames = strain.flavorProfiles?.map(f => f.name) || [];
-        const matchesSearch = strain.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            effectNames.some(effect => effect.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            flavorNames.some(flavor => flavor.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesType = filterType === 'all' || strain.type === filterType;
-        return matchesSearch && matchesType;
-      });
+    let filtered = strains.filter(strain => {
+      // Search filter
+      const effectNames = strain.effectProfiles?.map(e => e.name) || [];
+      const flavorNames = strain.flavorProfiles?.map(f => f.name) || [];
+      const matchesSearch = !searchTerm || (
+        strain.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        effectNames.some(effect => effect.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        flavorNames.some(flavor => flavor.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
 
+      // Type filter
+      const matchesType = filterType === 'all' || strain.type === filterType;
+
+      // Price filter (would need price data integration)
+      const matchesPrice = !priceFilter; // For now, always true until price integration
+
+      return matchesSearch && matchesType && matchesPrice;
+    });
+
+    // Sort the filtered results
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'recent':
@@ -48,12 +57,19 @@ export const useBrowseFilters = (strains: Strain[] = []) => {
         }
         case 'confidence':
           return b.confidence - a.confidence;
+        case 'price-asc':
+          // Would integrate with price data here
+          return 0;
+        case 'price-desc':
+          // Would integrate with price data here
+          return 0;
         default:
           return 0;
       }
     });
+
     return filtered;
-  }, [strains, searchTerm, filterType, sortBy]);
+  }, [strains, searchTerm, filterType, sortBy, priceFilter]);
 
   const updateFilters = (updates: {
     searchTerm?: string;
@@ -68,15 +84,27 @@ export const useBrowseFilters = (strains: Strain[] = []) => {
   };
 
   return {
+    // Current filter state
     searchTerm,
-    setSearchTerm,
     filterType,
-    setFilterType,
     sortBy,
-    setSortBy,
     priceFilter,
+    
+    // Individual setters (for backward compatibility)
+    setSearchTerm,
+    setFilterType,
+    setSortBy,
     setPriceFilter,
+    
+    // Unified update function
     updateFilters,
-    filteredStrains: filteredAndSortedStrains
+    
+    // Filtered results
+    filteredStrains: filteredAndSortedStrains,
+    
+    // Filter stats
+    totalCount: strains.length,
+    filteredCount: filteredAndSortedStrains.length,
+    hasActiveFilters: searchTerm !== '' || filterType !== 'all' || sortBy !== 'recent' || priceFilter !== null
   };
 };

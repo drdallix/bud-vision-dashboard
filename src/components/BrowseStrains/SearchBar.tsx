@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Mic, MicOff } from 'lucide-react';
+import { Search, Mic, MicOff, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -72,26 +72,42 @@ const SearchBar = ({ searchTerm, onSearchChange }: SearchBarProps) => {
     }
   }, [recognition, isListening, toast]);
 
+  const clearSearch = () => {
+    onSearchChange('');
+  };
+
   return (
     <div className="relative">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search strains, effects, or flavors..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-12 pr-12 h-12 text-lg rounded-full border-2 focus:border-green-500"
+          className="pl-10 pr-20 h-10 border-2 focus:border-green-500"
         />
-        <Button
-          onClick={toggleVoiceInput}
-          variant="ghost"
-          size="sm"
-          className={`absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 rounded-full ${
-            isListening ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100'
-          }`}
-        >
-          {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-        </Button>
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+          {searchTerm && (
+            <Button
+              onClick={clearSearch}
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 rounded-full hover:bg-gray-100"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+          <Button
+            onClick={toggleVoiceInput}
+            variant="ghost"
+            size="sm"
+            className={`h-6 w-6 p-0 rounded-full ${
+              isListening ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100'
+            }`}
+          >
+            {isListening ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+          </Button>
+        </div>
       </div>
       {isListening && (
         <div className="absolute top-full mt-2 left-0 right-0 text-center">
