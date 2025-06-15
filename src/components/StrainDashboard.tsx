@@ -75,13 +75,13 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
 
   const getScaleColor = (scale: number) => {
     const colors = {
-      1: 'bg-gray-200',
-      2: 'bg-blue-200', 
-      3: 'bg-green-300',
-      4: 'bg-yellow-400',
-      5: 'bg-red-400'
+      1: 'bg-gray-200 text-gray-800',
+      2: 'bg-blue-200 text-blue-800', 
+      3: 'bg-green-300 text-green-800',
+      4: 'bg-yellow-400 text-yellow-900',
+      5: 'bg-red-400 text-red-900'
     };
-    return colors[scale as keyof typeof colors] || 'bg-gray-200';
+    return colors[scale as keyof typeof colors] || 'bg-gray-200 text-gray-800';
   };
 
   return (
@@ -204,7 +204,7 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
                         <span className="text-sm font-medium">{terpene.name}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">{terpene.percentage}%</span>
-                          <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getScaleColor(scale)}`}>
+                          <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getScaleColor(scale)} border-current`}>
                             {scale}/5
                           </Badge>
                         </div>
@@ -214,7 +214,7 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
                           <div
                             key={i}
                             className={`h-2 w-full rounded-sm ${
-                              i < scale ? getScaleColor(scale) : 'bg-gray-100'
+                              i < scale ? getScaleColor(scale).split(' ')[0] : 'bg-gray-100'
                             }`}
                           />
                         ))}
