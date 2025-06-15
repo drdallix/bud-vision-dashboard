@@ -5,18 +5,12 @@ import { useToast } from '@/hooks/use-toast';
 import { StrainService } from '@/services/strainService';
 import { convertDatabaseScansToStrains } from '@/data/converters/strainConverters';
 import { Strain } from '@/types/strain';
-import { useEffect, useRef, useMemo, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useMemo, useCallback } from 'react';
 
 export const useStrainData = (includeAllStrains = false) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const channelRef = useRef<any>(null);
-  
-  // Create a unique subscription tracking key for this specific hook instance
-  const subscriptionKey = includeAllStrains ? 'all-strains' : `user-${user?.id || 'none'}`;
-  const isSubscribedRef = useRef<Set<string>>(new Set());
 
   // Memoize the query key to prevent unnecessary re-renders
   const queryKey = useMemo(() => 
@@ -39,63 +33,6 @@ export const useStrainData = (includeAllStrains = false) => {
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
-
-  // Cleanup function specific to this subscription
-  const cleanupChannel = useCallback(() => {
-    if (channelRef.current && isSubscribedRef.current.has(subscriptionKey)) {
-      console.log('Cleaning up channel for:', subscriptionKey);
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-      isSubscribedRef.current.delete(subscriptionKey);
-    }
-  }, [subscriptionKey]);
-
-  // Set up real-time subscription with proper isolation
-  useEffect(() => {
-    if (!includeAllStrains && !user) return;
-    if (isSubscribedRef.current.has(subscriptionKey)) {
-      console.log('Subscription already exists for:', subscriptionKey);
-      return; // Prevent duplicate subscriptions
-    }
-
-    // Clean up any existing channel first
-    cleanupChannel();
-
-    console.log('Setting up real-time subscription for:', subscriptionKey);
-
-    // Create a unique channel name to avoid conflicts
-    const channelName = `scans-${subscriptionKey}-${Date.now()}`;
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scans',
-          ...(includeAllStrains ? {} : { filter: `user_id=eq.${user!.id}` })
-        },
-        (payload) => {
-          console.log('Real-time strain update for', subscriptionKey, ':', payload.eventType);
-          
-          // Invalidate and refetch data immediately
-          queryClient.invalidateQueries({ queryKey });
-        }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status for', subscriptionKey, ':', status);
-        if (status === 'SUBSCRIBED') {
-          isSubscribedRef.current.add(subscriptionKey);
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          isSubscribedRef.current.delete(subscriptionKey);
-        }
-      });
-
-    channelRef.current = channel;
-
-    return cleanupChannel;
-  }, [user?.id, includeAllStrains, cleanupChannel, queryClient, queryKey, subscriptionKey]);
 
   // Show error toast only once per error
   useEffect(() => {
