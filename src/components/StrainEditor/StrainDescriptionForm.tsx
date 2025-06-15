@@ -132,7 +132,7 @@ const StrainDescriptionForm = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="p-2 sm:p-3 bg-gray-50 border rounded-lg text-xs sm:text-sm text-base ">
+          <div className="p-2 sm:p-3 bg-gray-50 border rounded-lg text-xs sm:text-sm text-black ">
             {strain.description || 'No description available'}
           </div>
         </CardContent>
