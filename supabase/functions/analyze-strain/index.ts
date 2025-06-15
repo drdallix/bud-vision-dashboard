@@ -42,15 +42,6 @@ function fallbackProfile(entries: string[], map: Record<string, {emoji: string, 
     color: map[name]?.color || '#10B981'
   }));
 }
-function injectTHC(description: string, thc: number) {
-  // Replace known THC patterns with the actual number, or inject it if missing.
-  const pattern = /(THC (level|content|percentage)[^\d]{0,5})\d{1,2}(\.\d+)?/gi;
-  if (pattern.test(description)) {
-    return description.replace(pattern, `$1${thc}`);
-  } else {
-    return `THC: ${thc}%. ${description}`;
-  }
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -66,8 +57,6 @@ serve(async (req) => {
     if (!openAIApiKey) throw new Error('OpenAI API key not configured');
 
     // ======= DETERMINISTIC THC GENERATION =======
-    // We'll always calculate the THC range FIRST, based only on the strain name for textQuery,
-    // or (for image) try passing a guessed strain name from package, or use a placeholder for now.
     let thcRange: [number, number] = [21, 26.5];
     let strainNameForTHC = textQuery || "Unknown";
     if (textQuery) {
@@ -76,10 +65,10 @@ serve(async (req) => {
     }
 
     // --- PRIMARY BASIC STRAIN ANALYSIS ---
-    // For text, pass in the THC range as a strict constraint.
     const messages = textQuery
       ? createTextAnalysisMessages(textQuery, thcRange)
       : createImageAnalysisMessages(imageData, strainNameForTHC, thcRange);
+
     const data = await callOpenAI(messages, openAIApiKey);
     const analysisText = data.choices[0].message.content;
     const strainData = parseOpenAIResponse(analysisText, textQuery);
@@ -91,9 +80,9 @@ serve(async (req) => {
     const deterministicTHC = Number(((thcMin + thcMax) / 2).toFixed(2));
     validatedStrain.thc = deterministicTHC;
 
-    // Update description (inject correct THC)
-    let updatedDescription = injectTHC(validatedStrain.description, deterministicTHC);
-    validatedStrain.description = updatedDescription;
+    // DO NOT inject or patch THC into the description at all.
+    // let updatedDescription = injectTHC(validatedStrain.description, deterministicTHC);
+    // validatedStrain.description = updatedDescription;
 
     // 2. EFFECT PROFILES
     let effectProfiles = [];
@@ -152,11 +141,10 @@ serve(async (req) => {
       } catch (cacheError) {
         console.error('Strain caching failed but not fatal:', cacheError);
       }
-      // ALSO INSERT into scans if userId is available
+      // Insert into scans if userId is available
       if (userId) {
         try {
           const supabase = createClient(supabaseUrl, supabaseKey);
-          // Compose scan object matching scans table structure
           const entry = {
             user_id: userId,
             strain_name: finalStrain.name,
@@ -172,14 +160,15 @@ serve(async (req) => {
             scanned_at: new Date().toISOString(),
             in_stock: true
           };
-          // Insert
           const { error } = await supabase.from('scans').insert([entry]);
           if (error) {
-            console.error('Error inserting scan into database:', error);
+            console.error('Error inserting scan into database:', error, entry, userId);
           }
         } catch (dbErr) {
-          console.error('Supabase DB insert failed:', dbErr);
+          console.error('Supabase DB insert failed:', dbErr, userId);
         }
+      } else {
+        console.error('No userId provided for scan DB insert');
       }
     }
 

@@ -13,7 +13,9 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
     2. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
 
     STRICT REQUIREMENT:
-    - The THC percentage for this strain must be between ${thcRangeHint ? `${thcRangeHint[0]}% and ${thcRangeHint[1]}%` : '21% and 26.5%'}. Do not use values outside this range in your returned JSON or in your description.
+    - The THC percentage for this strain must be between ${thcRangeHint ? `${thcRangeHint[0]}% and ${thcRangeHint[1]}%` : '21% and 26.5%'}. Do not use values outside this range in your returned JSON.
+
+    - Critically important: DO NOT mention or refer to the THC percent or value in the "description" field under any circumstance. The description must NOT mention the THC amount, percentage, or content.
 
     Cannabis Knowledge Guidelines:
     - Indica strains: typically 15-25% THC, 0-5% CBD, relaxing/sedating effects, earthy/sweet flavors
@@ -37,7 +39,7 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
         ...
       ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
       "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-      "description": "detailed description with corrected spelling/grammar, strain background, effects, and usage notes",
+      "description": "detailed description with corrected spelling/grammar, strain background, effects, and usage notes. DO NOT refer to THC percent.",
       "confidence": number (85 for text-generated strains)
     }
     
