@@ -36,7 +36,10 @@ const FilterControls = ({
         </SelectContent>
       </Select>
 
-      <Select value={priceFilter ?? ''} onValueChange={(val) => onPriceFilterChange(val === '' ? null : val)}>
+      <Select
+        value={priceFilter ?? undefined}
+        onValueChange={(val) => onPriceFilterChange(val === '' ? null : val)}
+      >
         <SelectTrigger className="h-8 w-32 text-xs">
           <span className="mr-1">$</span>
           <SelectValue placeholder="Any Price" />
@@ -70,3 +73,4 @@ const FilterControls = ({
 };
 
 export default FilterControls;
+
