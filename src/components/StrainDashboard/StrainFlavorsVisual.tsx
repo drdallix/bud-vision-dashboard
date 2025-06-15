@@ -5,10 +5,10 @@ import { ChefHat } from 'lucide-react';
 import { FlavorProfile } from '@/types/strain';
 
 interface StrainFlavorsVisualProps {
-  flavorProfiles: FlavorProfile[];
+  flavorProfiles?: FlavorProfile[]; // Make optional
 }
 
-const StrainFlavorsVisual = ({ flavorProfiles }: StrainFlavorsVisualProps) => {
+const StrainFlavorsVisual = ({ flavorProfiles = [] }: StrainFlavorsVisualProps) => {
   const getIntensityBars = (intensity: number) => (
     <div className="flex gap-1">
       {Array.from({ length: 5 }, (_, i) => (
@@ -26,6 +26,23 @@ const StrainFlavorsVisual = ({ flavorProfiles }: StrainFlavorsVisualProps) => {
     const labels = ['', 'Hint', 'Light', 'Noticeable', 'Bold', 'Dominant'];
     return labels[intensity] || 'Unknown';
   };
+
+  if (!flavorProfiles || flavorProfiles.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ChefHat className="h-5 w-5 text-orange-500" />
+            Flavor Profile
+          </CardTitle>
+          <CardDescription>Taste the experience before you try it</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-center">No flavor information available</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -72,3 +89,4 @@ const StrainFlavorsVisual = ({ flavorProfiles }: StrainFlavorsVisualProps) => {
 };
 
 export default StrainFlavorsVisual;
+
