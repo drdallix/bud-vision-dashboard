@@ -12,10 +12,11 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
     1. CORRECT SPELLING & GRAMMAR: Fix any spelling mistakes, punctuation errors, and grammatical issues in the provided text
     2. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
 
-    CRITICAL THC REQUIREMENT:
-    - You MUST use EXACTLY ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC percentage. This is a predetermined value based on our system's calculations.
-    - Do NOT use any other THC value. The exact value must be ${thcRangeHint ? `${thcRangeHint[0]}` : '21'}.
-    - Do NOT mention THC percentage in the description field under any circumstance.
+    CRITICAL REQUIREMENT - THC VALUE:
+    - You MUST use the exact value ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC field in your response
+    - This is a predetermined system value that cannot be changed
+    - NEVER mention, reference, or include any THC percentage information in the description field
+    - The description should focus only on effects, flavors, background, and usage
 
     Cannabis Knowledge Guidelines:
     - Indica strains: typically relaxing/sedating effects, earthy/sweet flavors
@@ -30,7 +31,7 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
     {
       "name": "corrected and properly formatted strain name",
       "type": "Indica" | "Sativa" | "Hybrid",
-      "thc": ${thcRangeHint ? thcRangeHint[0] : 21} (USE EXACTLY THIS VALUE),
+      "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
       "cbd": number (realistic for strain type, typically 0.1-5), 
       "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
       "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
@@ -39,11 +40,9 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
         ...
       ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
       "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-      "description": "detailed description with corrected spelling/grammar, strain background, effects, and usage notes. DO NOT mention THC percentage.",
+      "description": "detailed description focusing on strain background, effects, flavors, and usage notes. Do NOT include any potency or percentage information.",
       "confidence": 85
-    }
-    
-    REMEMBER: Use EXACTLY ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for THC value. No other value is acceptable.`
+    }`
   },
   {
     role: 'user',
@@ -56,11 +55,11 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     role: 'system',
     content: `You are an expert cannabis strain identifier and cannabis knowledge expert. Analyze the cannabis package image and extract information to identify the strain. 
 
-    CRITICAL THC REQUIREMENT:
-    - If you can read a THC percentage from the package, ignore it completely.
-    - You MUST use EXACTLY ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC percentage. This is predetermined by our system.
-    - Do NOT use any other THC value under any circumstances.
-    - Do NOT mention THC percentage in the description field.
+    CRITICAL REQUIREMENT - THC VALUE:
+    - Ignore any visible THC percentages on the package completely
+    - You MUST use the exact value ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC field
+    - This is a predetermined system value that overrides any package information
+    - NEVER mention, reference, or include any THC percentage information in the description field
 
     Look for visible information:
     - Strain name on the package (most important)
@@ -83,7 +82,7 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     {
       "name": "strain name from package (if visible) or educated guess",
       "type": "Indica" | "Sativa" | "Hybrid",
-      "thc": ${thcRangeHint ? thcRangeHint[0] : 21} (USE EXACTLY THIS VALUE),
+      "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
       "cbd": number (realistic, typically 0.1-5), 
       "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
       "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
@@ -92,18 +91,16 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
         ...
       ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
       "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-      "description": "detailed description with strain background, effects, and usage notes. DO NOT mention THC percentage.",
+      "description": "detailed description focusing on strain background, effects, flavors, and usage notes. Do NOT include any potency or percentage information.",
       "confidence": number (0-100, based on package clarity)
-    }
-    
-    CRITICAL: Use EXACTLY ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for THC. Ignore any THC values visible on the package.`
+    }`
   },
   {
     role: 'user',
     content: [
       {
         type: 'text',
-        text: 'Please analyze this cannabis package image and identify the strain. Use the predetermined THC value as specified in the system instructions.'
+        text: 'Please analyze this cannabis package image and identify the strain. Focus on strain characteristics without mentioning potency.'
       },
       {
         type: 'image_url',
