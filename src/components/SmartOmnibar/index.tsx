@@ -21,103 +21,67 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleGenerateStrain = async () => {
-    if (selectedImage) {
-      // Generate from image
-      setIsScanning(true);
-      
-      try {
-        toast({
-          title: "Analyzing package...",
-          description: "DoobieDB is reading package information.",
-        });
+  const handleGenerateStrain = async (imageData?: string, textQuery?: string) => {
+    const analysisType = imageData ? 'image' : 'text';
+    console.log(`Starting strain generation from ${analysisType}:`, textQuery || 'image data provided');
+    
+    setIsScanning(true);
+    
+    try {
+      toast({
+        title: imageData ? "Analyzing package..." : "Generating strain information...",
+        description: imageData 
+          ? "DoobieDB is reading package information."
+          : `Creating profile for: ${textQuery} (fixing spelling/grammar)`,
+      });
 
-        const aiResult = await analyzeStrainWithAI(selectedImage);
-        
-        const identifiedStrain: Strain = {
-          ...aiResult,
-          id: Date.now().toString(),
-          scannedAt: new Date().toISOString(),
-          imageUrl: selectedImage,
-          inStock: true,
-          userId: ''
-        };
-        
-        console.log('Generated strain from image:', identifiedStrain);
-        
-        onStrainGenerated(identifiedStrain);
-        setSelectedImage(null);
-        onSearchChange('');
-        
-        toast({
-          title: "Package analysis complete!",
-          description: `Generated: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`,
-        });
-        
-      } catch (error) {
-        console.error('Image analysis error:', error);
-        toast({
-          title: "Package scan failed",
-          description: "Unable to read package information. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsScanning(false);
-      }
-    } else if (searchTerm.trim()) {
-      // Generate from text query with spelling/grammar correction
-      setIsScanning(true);
+      const aiResult = await analyzeStrainWithAI(imageData, textQuery);
       
-      try {
-        toast({
-          title: "Generating strain information...",
-          description: `Creating profile for: ${searchTerm} (fixing spelling/grammar)`,
-        });
-
-        // Use text query for AI generation with spelling correction
-        const aiResult = await analyzeStrainWithAI(undefined, searchTerm.trim());
-        
-        const generatedStrain: Strain = {
-          ...aiResult,
-          id: Date.now().toString(),
-          scannedAt: new Date().toISOString(),
-          imageUrl: '',
-          inStock: true,
-          userId: ''
-        };
-        
-        console.log('Generated strain from text:', generatedStrain);
-        
-        onStrainGenerated(generatedStrain);
-        onSearchChange('');
-        
-        toast({
-          title: "Strain generated!",
-          description: `Created profile for: ${generatedStrain.name}`,
-        });
-        
-      } catch (error) {
-        console.error('Text generation error:', error);
-        toast({
-          title: "Generation failed",
-          description: "Unable to generate strain information. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsScanning(false);
-      }
+      const identifiedStrain: Strain = {
+        ...aiResult,
+        id: Date.now().toString(),
+        scannedAt: new Date().toISOString(),
+        imageUrl: imageData || '',
+        inStock: true,
+        userId: ''
+      };
+      
+      console.log(`Generated strain from ${analysisType}:`, identifiedStrain);
+      
+      onStrainGenerated(identifiedStrain);
+      setSelectedImage(null);
+      onSearchChange('');
+      
+      toast({
+        title: imageData ? "Package analysis complete!" : "Strain generated!",
+        description: imageData 
+          ? `Generated: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`
+          : `Created profile for: ${identifiedStrain.name}`,
+      });
+      
+    } catch (error) {
+      console.error(`${analysisType} analysis error:`, error);
+      toast({
+        title: imageData ? "Package scan failed" : "Generation failed",
+        description: imageData 
+          ? "Unable to read package information. Please try again."
+          : "Unable to generate strain information. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScanning(false);
     }
   };
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && !hasResults && (searchTerm.trim() || selectedImage)) {
-      handleGenerateStrain();
+    if (event.key === 'Enter' && !hasResults && searchTerm.trim()) {
+      handleGenerateStrain(undefined, searchTerm.trim());
     }
   };
 
   const handleSearchClick = () => {
-    if (!hasResults && (searchTerm.trim() || selectedImage)) {
-      handleGenerateStrain();
+    if (!hasResults && searchTerm.trim()) {
+      handleGenerateStrain(undefined, searchTerm.trim());
     }
   };
 
@@ -125,8 +89,11 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
     onSearchChange(transcript);
   }, [onSearchChange]);
 
-  const handleImageSelect = useCallback((imageUrl: string) => {
+  const handleImageSelect = useCallback(async (imageUrl: string) => {
+    console.log("Image selected, starting immediate analysis");
     setSelectedImage(imageUrl);
+    // Immediately start analysis for image (same as text/voice)
+    await handleGenerateStrain(imageUrl, undefined);
   }, []);
 
   const handleImageClear = useCallback(() => {

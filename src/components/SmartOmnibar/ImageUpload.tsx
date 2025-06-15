@@ -24,10 +24,15 @@ const ImageUpload = ({ onImageSelect, disabled = false }: ImageUploadProps) => {
   // After photo is captured & analysis starts
   // No preview, scan happens directly from CameraModal
   // The modal closes automatically after processing.
-  const handleCaptured = (imageDataUrl: string) => {
+  const handleCaptured = async (imageDataUrl: string) => {
     // This will be triggered by CameraModal after its fake progress
-    onImageSelect(imageDataUrl);
-    console.log("Picture captured, image analysis should begin!", imageDataUrl?.substring(0, 32));
+    console.log("Picture captured, starting immediate analysis!", imageDataUrl?.substring(0, 32));
+    
+    // Immediately trigger the strain analysis (like text/voice input does)
+    await onImageSelect(imageDataUrl);
+    
+    // Close camera modal after analysis starts
+    setCameraOpen(false);
   };
 
   return (
