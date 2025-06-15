@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, Leaf, Zap, Heart, Star } from 'lucide-react';
+import { Search, Filter, Leaf, Zap, Heart, Star, Package, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,13 +19,15 @@ interface FeaturedStrain {
   rating: number;
   image: string;
   description: string;
+  inStock: boolean;
+  lastUpdated: string;
 }
 
 const ShopMenu = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
 
-  // Featured strains for display
+  // Featured strains for display - now with stock status
   const featuredStrains: FeaturedStrain[] = [
     {
       id: '1',
@@ -38,7 +40,9 @@ const ShopMenu = () => {
       price: '$45/8th',
       rating: 4.8,
       image: '/placeholder.svg',
-      description: 'A balanced hybrid providing full-body relaxation with gentle cerebral invigoration.'
+      description: 'A balanced hybrid providing full-body relaxation with gentle cerebral invigoration.',
+      inStock: true,
+      lastUpdated: '2 hours ago'
     },
     {
       id: '2',
@@ -51,7 +55,9 @@ const ShopMenu = () => {
       price: '$50/8th',
       rating: 4.9,
       image: '/placeholder.svg',
-      description: 'Classic strain with complex aroma and balanced head and body effects.'
+      description: 'Classic strain with complex aroma and balanced head and body effects.',
+      inStock: true,
+      lastUpdated: '1 hour ago'
     },
     {
       id: '3',
@@ -64,7 +70,9 @@ const ShopMenu = () => {
       price: '$48/8th',
       rating: 4.7,
       image: '/placeholder.svg',
-      description: 'Potent indica delivering deep relaxation and stress relief.'
+      description: 'Potent indica delivering deep relaxation and stress relief.',
+      inStock: false,
+      lastUpdated: '30 minutes ago'
     },
     {
       id: '4',
@@ -77,7 +85,9 @@ const ShopMenu = () => {
       price: '$46/8th',
       rating: 4.6,
       image: '/placeholder.svg',
-      description: 'Energizing sativa perfect for daytime use and creative activities.'
+      description: 'Energizing sativa perfect for daytime use and creative activities.',
+      inStock: true,
+      lastUpdated: '45 minutes ago'
     },
     {
       id: '5',
@@ -90,7 +100,9 @@ const ShopMenu = () => {
       price: '$55/8th',
       rating: 4.9,
       image: '/placeholder.svg',
-      description: 'Premium hybrid with exceptional flavor and potent relaxing effects.'
+      description: 'Premium hybrid with exceptional flavor and potent relaxing effects.',
+      inStock: true,
+      lastUpdated: '15 minutes ago'
     },
     {
       id: '6',
@@ -103,7 +115,9 @@ const ShopMenu = () => {
       price: '$47/8th',
       rating: 4.5,
       image: '/placeholder.svg',
-      description: 'Iconic sativa with distinctive aroma and long-lasting energetic effects.'
+      description: 'Iconic sativa with distinctive aroma and long-lasting energetic effects.',
+      inStock: false,
+      lastUpdated: '3 hours ago'
     }
   ];
 
@@ -124,20 +138,32 @@ const ShopMenu = () => {
     return matchesSearch && matchesType;
   });
 
+  const availableStrains = filteredStrains.filter(strain => strain.inStock);
+  const totalInStock = featuredStrains.filter(strain => strain.inStock).length;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent mb-4">
-            Cannabis Strain Menu
+            DoobieDB Interactive Menu
           </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              {totalInStock} strains available today
+            </Badge>
+            <Badge variant="outline" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Updated in real-time
+            </Badge>
+          </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
-            Discover premium cannabis strains with detailed information about effects, flavors, and potency. 
-            Sign in to scan packages with AI identification.
+            Browse our current selection of premium cannabis strains. All information is maintained by our budtenders using DoobieDB's professional scanning system.
           </p>
           <Button asChild size="lg" className="mr-4">
-            <Link to="/auth">Sign In to Scan Packages</Link>
+            <Link to="/auth">Budtender Access</Link>
           </Button>
         </div>
 
@@ -182,12 +208,17 @@ const ShopMenu = () => {
           </div>
         </div>
 
-        {/* Strains Grid */}
+        {/* Available Strains Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-          {filteredStrains.map((strain) => (
-            <Card key={strain.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="aspect-video bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+          {availableStrains.map((strain) => (
+            <Card key={strain.id} className={`overflow-hidden transition-all ${strain.inStock ? 'hover:shadow-lg border-green-200' : 'opacity-50'}`}>
+              <div className="aspect-video bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center relative">
                 <Leaf className="h-16 w-16 text-green-600" />
+                {strain.inStock && (
+                  <Badge className="absolute top-2 right-2 bg-green-600 text-white">
+                    In Stock
+                  </Badge>
+                )}
               </div>
               
               <CardHeader className="pb-3">
@@ -206,6 +237,10 @@ const ShopMenu = () => {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-bold text-primary">{strain.price}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {strain.lastUpdated}
+                    </div>
                   </div>
                 </div>
                 <CardDescription className="text-sm">
@@ -268,33 +303,64 @@ const ShopMenu = () => {
                   </div>
                 </div>
 
-                <Button className="w-full" variant="outline">
-                  Learn More
+                <Button className="w-full" variant="outline" disabled={!strain.inStock}>
+                  {strain.inStock ? 'Ask Budtender' : 'Out of Stock'}
                 </Button>
               </CardContent>
             </Card>
           ))}
         </div>
 
+        {/* Out of Stock Items */}
+        {filteredStrains.filter(strain => !strain.inStock).length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-center mb-6 text-muted-foreground">Currently Out of Stock</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+              {filteredStrains.filter(strain => !strain.inStock).map((strain) => (
+                <Card key={strain.id} className="overflow-hidden opacity-60">
+                  <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
+                    <Leaf className="h-16 w-16 text-gray-400" />
+                    <Badge className="absolute top-2 right-2 bg-gray-500 text-white">
+                      Out of Stock
+                    </Badge>
+                  </div>
+                  
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl mb-1 text-muted-foreground">{strain.name}</CardTitle>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="text-muted-foreground">
+                        {strain.type}
+                      </Badge>
+                    </div>
+                    <CardDescription className="text-sm">
+                      Check back soon - updated by our budtenders
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Empty State */}
-        {filteredStrains.length === 0 && (
+        {availableStrains.length === 0 && (
           <div className="text-center py-12">
-            <Leaf className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No strains found</h3>
+            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No strains available</h3>
             <p className="text-muted-foreground">
-              Try adjusting your search or filter criteria
+              Please check back later or adjust your search criteria
             </p>
           </div>
         )}
 
         {/* CTA Section */}
         <div className="mt-16 text-center bg-gradient-to-r from-green-600 to-green-800 text-white rounded-lg p-8">
-          <h2 className="text-2xl font-bold mb-4">Ready to Identify Your Strains?</h2>
+          <h2 className="text-2xl font-bold mb-4">Professional Budtender Tools</h2>
           <p className="text-lg mb-6 opacity-90">
-            Sign up to use our AI-powered package scanner and build your personal strain library
+            Access DoobieDB's professional package scanning system to maintain accurate, real-time strain information for customers
           </p>
           <Button asChild size="lg" variant="secondary">
-            <Link to="/auth">Get Started</Link>
+            <Link to="/auth">Budtender Login</Link>
           </Button>
         </div>
       </div>

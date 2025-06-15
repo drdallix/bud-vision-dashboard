@@ -1,8 +1,9 @@
 
 import { useState, useCallback } from 'react';
-import { Search, Eye, Edit3 } from 'lucide-react';
+import { Search, Eye, Edit3, Package } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInventoryManagement } from '@/hooks/useInventoryManagement';
 import { useBrowseStrains } from '@/hooks/useBrowseStrains';
@@ -62,6 +63,10 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
     );
   }, []);
 
+  // Filter strains for customer view (only show in-stock items)
+  const displayStrains = user ? strains : strains.filter(strain => strain.inStock);
+  const inStockCount = strains.filter(strain => strain.inStock).length;
+
   // Show skeleton loading only on first load, not on navigation
   if (isLoading && strains.length === 0) {
     return (
@@ -110,9 +115,24 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
       {/* Header with mode toggle */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Browse Strains</h2>
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-2xl font-bold">
+              {user ? 'Inventory Management' : 'Today\'s Menu'}
+            </h2>
+            {!user && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Package className="h-3 w-3" />
+                {inStockCount} available
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground text-sm">
-            {editMode ? 'Manage inventory and stock status' : 'Explore available cannabis strains'}
+            {editMode 
+              ? 'Manage inventory and stock status for your dispensary' 
+              : user 
+                ? 'Browse strain database for customer recommendations'
+                : 'Browse our current selection of available cannabis strains'
+            }
           </p>
         </div>
         
@@ -122,9 +142,12 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
             <Switch
               checked={editMode}
               onCheckedChange={setEditMode}
-              aria-label="Toggle edit mode"
+              aria-label="Toggle inventory management mode"
             />
             <Edit3 className="h-4 w-4" />
+            <span className="text-sm text-muted-foreground">
+              {editMode ? 'Inventory Mode' : 'Browse Mode'}
+            </span>
           </div>
         )}
       </div>
@@ -138,7 +161,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
       />
 
       {/* Batch actions for edit mode */}
-      {editMode && (
+      {editMode && user && (
         <BatchActions
           selectedCount={selectedStrains.length}
           onInStock={() => handleBatchStockUpdate(true)}
@@ -150,11 +173,11 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
 
       {/* Strain Grid */}
       <div className="grid grid-cols-1 gap-4">
-        {strains.map((strain) => (
+        {displayStrains.map((strain) => (
           <StrainCard
             key={strain.id}
             strain={strain}
-            editMode={editMode}
+            editMode={editMode && user !== null}
             isSelected={selectedStrains.includes(strain.id)}
             canEdit={user !== null && strain.userId === user.id}
             onSelect={handleStrainSelect}
@@ -165,13 +188,18 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         ))}
       </div>
 
-      {strains.length === 0 && (
+      {displayStrains.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Search className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Results Found</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {user ? 'No Results Found' : 'No Strains Available'}
+            </h3>
             <p className="text-muted-foreground">
-              Try adjusting your search terms or filters.
+              {user 
+                ? 'Try adjusting your search terms or filters.'
+                : 'Check back later for updated inventory.'
+              }
             </p>
           </CardContent>
         </Card>

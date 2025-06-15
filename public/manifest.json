@@ -1,8 +1,8 @@
 
 {
-  "name": "Cannabis Strain Identifier",
-  "short_name": "Bud Vision",
-  "description": "AI-powered cannabis strain identification and analysis",
+  "name": "DoobieDB - Cannabis Knowledge Database",
+  "short_name": "DoobieDB",
+  "description": "Professional cannabis knowledge database for budtenders and interactive dispensary menu board",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

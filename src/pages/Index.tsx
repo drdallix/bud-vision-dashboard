@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Scan, FileSearch, LogIn, Plus, Settings } from 'lucide-react';
+import { Scan, Menu, LogIn, Plus, Settings, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -66,7 +66,7 @@ const Index = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Loading DoobieDB...</p>
         </div>
       </div>
     );
@@ -79,10 +79,13 @@ const Index = () => {
         <div className="flex justify-between items-start mb-6">
           <div className="text-center flex-1">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent mb-2">
-              Cannabis Strain Database
+              DoobieDB
             </h1>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Community-powered cannabis strain information platform
+              {user 
+                ? "Professional cannabis knowledge database for informed budtender recommendations" 
+                : "Interactive dispensary menu - explore today's available strains"
+              }
             </p>
           </div>
           
@@ -93,7 +96,7 @@ const Index = () => {
               <Link to="/auth">
                 <Button variant="outline" className="flex items-center gap-2">
                   <LogIn className="h-4 w-4" />
-                  Sign In
+                  Budtender Login
                 </Button>
               </Link>
             )}
@@ -106,18 +109,18 @@ const Index = () => {
           <div className="hidden md:block">
             <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:mx-auto">
               <TabsTrigger value="browse" className="flex items-center gap-2">
-                <FileSearch className="h-4 w-4" />
-                Browse Strains
+                <Menu className="h-4 w-4" />
+                {user ? 'Inventory' : 'Menu Board'}
               </TabsTrigger>
               {user && (
                 <TabsTrigger value="add" className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Strain
+                  <Scan className="h-4 w-4" />
+                  Quick Scan
                 </TabsTrigger>
               )}
               <TabsTrigger value="details" className="flex items-center gap-2">
-                <Scan className="h-4 w-4" />
-                Details
+                <Database className="h-4 w-4" />
+                Strain Info
               </TabsTrigger>
               {user && showSettings && (
                 <TabsTrigger value="settings" className="flex items-center gap-2">
@@ -137,16 +140,16 @@ const Index = () => {
 
           {user && (
             <TabsContent value="add" className="space-y-6">
-              {/* Omnibar Search for Add Strain */}
+              {/* Omnibar Search for Quick Scan */}
               <SearchBar 
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
               />
               
               <div>
-                <h2 className="text-2xl font-bold mb-2">Add New Strain</h2>
+                <h2 className="text-2xl font-bold mb-2">Quick Package Scan</h2>
                 <p className="text-muted-foreground text-sm mb-6">
-                  Use the camera scanner below to identify and add cannabis strains to the database
+                  Instantly scan any package in your dispensary to get comprehensive strain information for customer recommendations
                 </p>
               </div>
               
@@ -169,12 +172,12 @@ const Index = () => {
           )}
         </Tabs>
 
-        {/* Quick Stats for authenticated users */}
+        {/* Quick Stats for budtenders */}
         {user && scans.length > 0 && (
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Your Contributions</CardTitle>
+                <CardTitle className="text-sm font-medium">Scanned Today</CardTitle>
                 <Scan className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -184,8 +187,8 @@ const Index = () => {
             
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Most Common Type</CardTitle>
-                <FileSearch className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Most Popular Type</CardTitle>
+                <Menu className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -200,7 +203,7 @@ const Index = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Avg THC Level</CardTitle>
-                <FileSearch className="h-4 w-4 text-muted-foreground" />
+                <Database className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -223,8 +226,8 @@ const Index = () => {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <FileSearch className="h-5 w-5" />
-            <span>Browse</span>
+            <Menu className="h-5 w-5" />
+            <span>{user ? 'Inventory' : 'Menu'}</span>
           </button>
 
           {user && (
@@ -236,8 +239,8 @@ const Index = () => {
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Plus className="h-5 w-5" />
-              <span>Add</span>
+              <Scan className="h-5 w-5" />
+              <span>Scan</span>
             </button>
           )}
 
@@ -249,8 +252,8 @@ const Index = () => {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Scan className="h-5 w-5" />
-            <span>Details</span>
+            <Database className="h-5 w-5" />
+            <span>Info</span>
           </button>
         </div>
       </div>

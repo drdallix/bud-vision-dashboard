@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { FileSearch, Zap, Leaf, Heart, Beaker } from 'lucide-react';
+import { Database, Zap, Leaf, Heart, Beaker, Users } from 'lucide-react';
 
 interface Terpene {
   name: string;
@@ -37,10 +37,10 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
       <div className="max-w-4xl mx-auto">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <FileSearch className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No Strain Selected</h3>
+            <Database className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Strain Information</h3>
             <p className="text-muted-foreground max-w-md">
-              Scan a cannabis package or select a strain from your history to view detailed information.
+              Scan a cannabis package or select a strain from the menu to view detailed information for customer recommendations.
             </p>
           </CardContent>
         </Card>
@@ -55,6 +55,12 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
       case 'Hybrid': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
+
+  const getRecommendationContext = (type: string, effects: string[]) => {
+    const timeOfDay = type === 'Indica' ? 'evening/nighttime' : type === 'Sativa' ? 'daytime' : 'any time';
+    const primaryEffects = effects.slice(0, 2).join(' and ').toLowerCase();
+    return `Perfect for ${timeOfDay} use. Customers seeking ${primaryEffects} effects will appreciate this strain.`;
   };
 
   return (
@@ -80,8 +86,16 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
                   </Badge>
                 </div>
                 <p className="text-muted-foreground">{strain.description}</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                  <div className="flex items-start gap-2">
+                    <Users className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <p className="text-sm text-blue-800">
+                      <strong>Customer Recommendation:</strong> {getRecommendationContext(strain.type, strain.effects)}
+                    </p>
+                  </div>
+                </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Identified on {new Date(strain.scannedAt).toLocaleDateString()} with {strain.confidence}% confidence
+                  Scanned on {new Date(strain.scannedAt).toLocaleDateString()} • {strain.confidence}% identification confidence
                 </p>
               </div>
               
@@ -114,9 +128,9 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-yellow-500" />
-              Effects
+              Customer Effects
             </CardTitle>
-            <CardDescription>How this strain typically makes you feel</CardDescription>
+            <CardDescription>How customers typically feel</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -134,9 +148,9 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Leaf className="h-5 w-5 text-green-500" />
-              Flavors
+              Flavor Profile
             </CardTitle>
-            <CardDescription>Taste and aroma profile</CardDescription>
+            <CardDescription>Taste and aroma notes</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -154,9 +168,9 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Beaker className="h-5 w-5 text-blue-500" />
-              Terpenes
+              Terpene Profile
             </CardTitle>
-            <CardDescription>Active compounds and their effects</CardDescription>
+            <CardDescription>Active compounds & effects</CardDescription>
           </CardHeader>
           <CardContent>
             {strain.terpenes && strain.terpenes.length > 0 ? (
@@ -183,9 +197,9 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Heart className="h-5 w-5 text-red-500" />
-              Medical Uses
+              Therapeutic Uses
             </CardTitle>
-            <CardDescription>Potential therapeutic benefits</CardDescription>
+            <CardDescription>Potential medical benefits</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -202,9 +216,9 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
       {/* Cannabinoid Profile */}
       <Card>
         <CardHeader>
-          <CardTitle>Cannabinoid Profile</CardTitle>
+          <CardTitle>Complete Cannabinoid Analysis</CardTitle>
           <CardDescription>
-            Detailed breakdown of active compounds
+            Detailed breakdown for informed customer recommendations
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -212,41 +226,45 @@ const StrainDashboard = ({ strain }: StrainDashboardProps) => {
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">THC (Tetrahydrocannabinol)</span>
+                  <span className="font-medium">THC (Psychoactive)</span>
                   <span className="font-bold text-lg">{strain.thc}%</span>
                 </div>
                 <Progress value={strain.thc} max={35} className="h-3" />
                 <p className="text-sm text-muted-foreground mt-1">
-                  Primary psychoactive compound
+                  Primary psychoactive compound - responsible for euphoric effects
                 </p>
               </div>
               
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">CBD (Cannabidiol)</span>
+                  <span className="font-medium">CBD (Therapeutic)</span>
                   <span className="font-bold text-lg">{strain.cbd}%</span>
                 </div>
                 <Progress value={strain.cbd} max={25} className="h-3" />
                 <p className="text-sm text-muted-foreground mt-1">
-                  Non-psychoactive, therapeutic compound
+                  Non-psychoactive, therapeutic compound - provides wellness benefits
                 </p>
               </div>
             </div>
             
             <div className="space-y-4">
               <div className="bg-accent/30 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Strain Classification</h4>
+                <h4 className="font-medium mb-2">Budtender Notes</h4>
                 <p className="text-sm text-muted-foreground">
-                  This <strong>{strain.type}</strong> strain is known for its balanced effects, combining the best characteristics of its genetic lineage.
+                  This <strong>{strain.type}</strong> strain is ideal for customers seeking {strain.effects.slice(0, 2).join(' and ').toLowerCase()} effects. 
+                  The {strain.thc}% THC content provides {strain.thc > 20 ? 'strong' : strain.thc > 15 ? 'moderate' : 'mild'} potency.
                 </p>
               </div>
               
               <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
-                <h4 className="font-medium mb-2">Identification Confidence</h4>
+                <h4 className="font-medium mb-2">DoobieDB Confidence</h4>
                 <div className="flex items-center gap-2">
                   <Progress value={strain.confidence} className="flex-1 h-2" />
                   <span className="font-bold text-primary">{strain.confidence}%</span>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Package scan accuracy - reliable for customer recommendations
+                </p>
               </div>
             </div>
           </div>
