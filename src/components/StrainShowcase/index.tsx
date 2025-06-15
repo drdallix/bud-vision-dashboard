@@ -68,12 +68,14 @@ const StrainShowcase = () => {
           {inStockStrains.map((strain, i) => (
             <CarouselItem 
               key={strain.id} 
-              className={`transition-all duration-700 ease-in-out ${current === i ? "opacity-100 scale-100 z-10" : "opacity-50 scale-90 z-0 pointer-events-none"}`}
+              className={`transition-all duration-700 ease-in-out ${
+                current === i
+                  ? "opacity-100 scale-100 z-10"
+                  : "opacity-50 scale-90 z-0 pointer-events-none"
+              }`}
               aria-hidden={current !== i}
             >
-              {current === i && (
-                <ShowcaseSlide strain={strain} />
-              )}
+              <ShowcaseSlide strain={strain} />
             </CarouselItem>
           ))}
         </CarouselContent>
