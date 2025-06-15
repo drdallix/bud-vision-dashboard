@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
-import { getDeterministicTHC, getDeterministicTHCRange } from '@/utils/thcGenerator';
+import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 interface StrainCardProps {
   strain: Strain;

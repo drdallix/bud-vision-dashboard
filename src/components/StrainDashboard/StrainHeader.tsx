@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Users } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import StrainVisualCard from './StrainVisualCard';
-import { getDeterministicTHC, getDeterministicTHCRange } from '@/utils/thcGenerator';
+import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 interface StrainHeaderProps {
   strain: Strain;

@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
-import { getDeterministicTHC, getDeterministicTHCRange } from '@/utils/thcGenerator';
+import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 interface StrainVisualCardProps {
   strain: Strain;
