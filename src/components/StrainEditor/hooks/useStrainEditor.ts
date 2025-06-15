@@ -5,6 +5,7 @@ import { useStrainStore } from '@/stores/useStrainStore';
 import { useToast } from '@/hooks/use-toast';
 
 export interface StrainEditorErrors {
+  [key: string]: string | undefined;
   name?: string;
   type?: string;
   thc?: string;

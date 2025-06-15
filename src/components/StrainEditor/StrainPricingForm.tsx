@@ -16,7 +16,7 @@ interface StrainPricingFormProps {
 const VALID_PRICES = [30, 40, 50, 60, 80, 100, 120, 200, 300];
 
 const StrainPricingForm = ({ strainId, isLoading }: StrainPricingFormProps) => {
-  const { data: prices = [], isLoading: pricesLoading } = useStrainPrices(strainId);
+  const { prices = [], isLoading: pricesLoading } = useStrainPrices(strainId);
   const { addPrice, updatePrice, deletePrice, loading: priceActionLoading } = usePriceEditor(strainId);
 
   const [newPriceNow, setNewPriceNow] = React.useState<number | null>(null);
