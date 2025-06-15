@@ -70,8 +70,9 @@ const StrainCard = ({
     // If marking out of stock, fire & forget deleteAllForStrain (no blocking, no popup)
     if (wasInStock) {
       // Use import() to avoid SSR problems and keep bundle small
-      import('@/services/priceService').then(({ deleteAllForStrain }) => {
-        deleteAllForStrain(strain.id);
+      import('@/services/priceService').then((mod) => {
+        // Correction: Use PriceService static method from the module
+        mod.PriceService.deleteAllForStrain(strain.id);
       });
     }
     // No need to handle "back in stock" here (no action required)
