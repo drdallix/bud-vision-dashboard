@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
 import { useStrainData } from '@/data/hooks/useStrainData';
@@ -124,10 +125,30 @@ const StrainShowcase = () => {
 
   if (!filteredStrains.length) {
     return (
-      <div className="h-96 flex flex-col items-center justify-center text-muted-foreground bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
-        <span className="text-6xl mb-4 animate-bounce">🪴</span>
-        <div className="text-xl font-medium">No strains match your filters</div>
-        <div className="text-sm mt-2">Try adjusting your search criteria</div>
+      <div className="w-full max-w-6xl mx-auto space-y-6">
+        {/* Main Showcase - Empty State */}
+        <div className="relative">
+          <div className="shadow-2xl rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
+            <div className="h-96 flex flex-col items-center justify-center text-muted-foreground">
+              <span className="text-6xl mb-4 animate-bounce">🪴</span>
+              <div className="text-xl font-medium">No strains match your filters</div>
+              <div className="text-sm mt-2">Try adjusting your search criteria below</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Always show filters when there are no results */}
+        <div className="transition-all duration-500 opacity-100 transform-none">
+          <ShowcaseFilters
+            selectedTypes={selectedTypes}
+            setSelectedTypes={setSelectedTypes}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            minTHC={minTHC}
+            setMinTHC={setMinTHC}
+            strainCount={filteredStrains.length}
+          />
+        </div>
       </div>
     );
   }
@@ -139,19 +160,6 @@ const StrainShowcase = () => {
       onTouchStart={handleInteraction}
       onMouseMove={handleInteraction}
     >
-      {/* Filters */}
-      <div className={`transition-all duration-500 ${showControls ? 'opacity-100 transform-none' : 'opacity-60 -translate-y-2'}`}>
-        <ShowcaseFilters
-          selectedTypes={selectedTypes}
-          setSelectedTypes={setSelectedTypes}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          minTHC={minTHC}
-          setMinTHC={setMinTHC}
-          strainCount={filteredStrains.length}
-        />
-      </div>
-
       {/* Main Showcase */}
       <div className="relative">
         <div className="shadow-2xl rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
@@ -215,6 +223,23 @@ const StrainShowcase = () => {
           setSlideInterval={setSlideInterval}
           onNav={(index) => api?.scrollTo(index)}
           currentStrain={filteredStrains[current]}
+        />
+      </div>
+
+      {/* Filters - Now at the bottom with controls */}
+      <div className={`transition-all duration-500 ${
+        showControls 
+          ? 'opacity-100 transform-none' 
+          : 'opacity-0 translate-y-4 pointer-events-none'
+      }`}>
+        <ShowcaseFilters
+          selectedTypes={selectedTypes}
+          setSelectedTypes={setSelectedTypes}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          minTHC={minTHC}
+          setMinTHC={setMinTHC}
+          strainCount={filteredStrains.length}
         />
       </div>
     </div>
