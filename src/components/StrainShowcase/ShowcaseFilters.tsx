@@ -53,10 +53,10 @@ const ShowcaseFilters = ({
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border border-green-200/50 rounded-2xl p-4 md:p-6 shadow-lg animate-fade-in">
+    <div className="bg-theme-card backdrop-blur-sm border border-border rounded-2xl p-4 md:p-6 shadow-lg animate-fade-in">
       <div className="flex items-center gap-2 mb-4">
-        <Filter className="h-5 w-5 text-green-600" />
-        <h3 className="text-lg font-semibold text-gray-800">
+        <Filter className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-semibold text-foreground">
           Showcase Filters
         </h3>
         <Badge variant="secondary" className="ml-auto">
@@ -67,7 +67,7 @@ const ShowcaseFilters = ({
       <div className="grid md:grid-cols-3 gap-4 md:gap-6">
         {/* Strain Types */}
         <div className="space-y-3">
-          <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
             <span>🧬</span> Strain Types
           </label>
           <div className="flex flex-wrap gap-2">
@@ -79,7 +79,7 @@ const ShowcaseFilters = ({
                 onClick={() => toggleType(type)}
                 className={`transition-all duration-200 ${
                   selectedTypes.includes(type)
-                    ? 'bg-green-600 hover:bg-green-700 scale-105 shadow-md'
+                    ? 'bg-primary hover:bg-primary/90 scale-105 shadow-md'
                     : 'hover:scale-105'
                 }`}
               >
@@ -92,11 +92,11 @@ const ShowcaseFilters = ({
 
         {/* Sort Options */}
         <div className="space-y-3">
-          <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
             <SortAsc className="h-4 w-4" /> Sort By
           </label>
           <Select value={sortBy} onValueChange={(value: 'name' | 'thc' | 'recent') => setSortBy(value)}>
-            <SelectTrigger className="border-green-200 focus:border-green-400">
+            <SelectTrigger className="border-border focus:border-primary">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -105,14 +105,14 @@ const ShowcaseFilters = ({
               <SelectItem value="recent">⏰ Recently Added</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Currently: {getSortLabel(sortBy)}
           </p>
         </div>
 
         {/* THC Filter */}
         <div className="space-y-3">
-          <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
             <span>⚡</span> Min THC Level
           </label>
           <div className="px-2">
@@ -125,9 +125,9 @@ const ShowcaseFilters = ({
               className="w-full"
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-500">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>0%</span>
-            <Badge variant="outline" className="text-green-700 border-green-300">
+            <Badge variant="outline" className="text-primary border-primary/50">
               {minTHC}%+
             </Badge>
             <span>35%</span>

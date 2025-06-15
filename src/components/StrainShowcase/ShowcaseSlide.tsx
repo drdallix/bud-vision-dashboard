@@ -52,14 +52,14 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
       <div className="relative space-y-6">
         {/* Enhanced Header */}
         <div className="relative">
-          <Card className="border-0 bg-gradient-to-r from-white/90 to-white/70 backdrop-blur-sm shadow-xl">
+          <Card className="border-0 bg-theme-card shadow-xl">
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{getTypeEmoji(strain.type)}</span>
                     <div>
-                      <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                      <h1 className="text-2xl md:text-3xl font-bold text-foreground">
                         {strain.name}
                       </h1>
                       <Badge 
@@ -70,7 +70,7 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
                     </div>
                   </div>
                   
-                  <p className="text-gray-600 leading-relaxed max-w-2xl">
+                  <p className="text-muted-foreground leading-relaxed max-w-2xl">
                     {strain.description}
                   </p>
                 </div>
@@ -78,11 +78,11 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
                 <div className="text-right space-y-2">
                   <div className="flex items-center gap-2 justify-end">
                     <Zap className="h-4 w-4 text-yellow-500" />
-                    <span className="text-lg font-bold text-gray-800">
+                    <span className="text-lg font-bold text-foreground">
                       {strain.thc}% THC
                     </span>
                   </div>
-                  <Badge className="bg-green-100 text-green-800 border-green-200 animate-pulse">
+                  <Badge className="bg-green-100 text-green-800 border-green-200 animate-pulse dark:bg-green-900 dark:text-green-100 dark:border-green-700">
                     <Sparkles className="h-3 w-3 mr-1" />
                     In Stock
                   </Badge>
@@ -95,7 +95,7 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
         {/* Effects and Flavors Grid */}
         <div className="grid md:grid-cols-2 gap-6">
           <div className="transform hover:scale-105 transition-transform duration-300">
-            <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg overflow-hidden">
+            <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-lg overflow-hidden">
               <div className="p-1">
                 <StrainEffectsVisual effectProfiles={strain.effectProfiles} />
               </div>
@@ -103,7 +103,7 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
           </div>
           
           <div className="transform hover:scale-105 transition-transform duration-300">
-            <Card className="border-0 bg-gradient-to-br from-orange-50 to-yellow-50 shadow-lg overflow-hidden">
+            <Card className="border-0 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 shadow-lg overflow-hidden">
               <div className="p-1">
                 <StrainFlavorsVisual flavorProfiles={strain.flavorProfiles} />
               </div>
@@ -112,11 +112,11 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
         </div>
 
         {/* Confidence and Date */}
-        <div className="flex justify-between items-center text-sm text-gray-500 bg-white/50 rounded-lg p-3 backdrop-blur-sm">
+        <div className="flex justify-between items-center text-sm text-muted-foreground bg-theme-muted rounded-lg p-3 backdrop-blur-sm">
           <span>
             Scanned on {new Date(strain.scannedAt).toLocaleDateString()}
           </span>
-          <Badge variant="outline" className="text-green-700 border-green-300">
+          <Badge variant="outline" className="text-green-700 border-green-300 dark:text-green-300 dark:border-green-600">
             {strain.confidence}% confidence
           </Badge>
         </div>
