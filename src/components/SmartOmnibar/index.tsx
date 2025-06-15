@@ -1,14 +1,13 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Search, Sparkles, Mic, Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { analyzeStrainWithAI } from './AIAnalysis';
 import VoiceInput from './VoiceInput';
 import ImageUpload from './ImageUpload';
-import GenerateHint from './GenerateHint';
 import { useStrainData } from '@/data/hooks/useStrainData';
 import { Strain } from '@/types/strain';
 
@@ -26,20 +25,14 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
-  const { addStrainToCache } = useStrainData(false); // Get user-specific strain cache functions
+  const { addStrainToCache } = useStrainData(false);
 
   const handleGenerate = async () => {
-    if (!user) {
-      return;
-    }
-
-    if (!searchTerm.trim() && !uploadedImage) {
-      return;
-    }
+    if (!user) return;
+    if (!searchTerm.trim() && !uploadedImage) return;
 
     setIsGenerating(true);
     try {
-      // Note: AI analysis now handles database saving, so we don't save here
       const result = await analyzeStrainWithAI(uploadedImage, searchTerm.trim(), user.id);
       
       const strain: Strain = {
@@ -50,11 +43,7 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
         userId: user.id
       };
 
-      console.log('SmartOmnibar - strain generated:', strain);
-      
-      // Add to user's strain cache for immediate background update
       addStrainToCache(strain);
-      
       onStrainGenerated(strain);
       onSearchChange('');
       setUploadedImage(null);
@@ -90,90 +79,96 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
   };
 
   const canGenerate = user && (searchTerm.trim() || uploadedImage) && !isGenerating;
+  const showHint = !hasResults && searchTerm.trim().length > 0;
 
   return (
-    <div className="space-y-4">
-      <Card className="border-2 border-primary/20 shadow-lg">
-        <CardContent className="p-4">
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search strains or describe what you're looking for..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10 pr-4 h-12 text-base"
-              />
-            </div>
+    <div className="space-y-2">
+      {/* Main omnibar input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+        <Input
+          placeholder="Search strains or describe what you're looking for..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-10 pr-32 h-11 text-base border-2 focus:border-primary/50 transition-colors"
+        />
+        
+        {/* Action buttons inside input */}
+        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowVoiceInput(true)}
+            className="h-7 w-7 p-0 hover:bg-muted"
+          >
+            <Mic className="h-3.5 w-3.5" />
+          </Button>
 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-7 w-7 p-0 hover:bg-muted"
+          >
+            <Camera className="h-3.5 w-3.5" />
+          </Button>
+
+          <Button
+            onClick={handleGenerate}
+            disabled={!canGenerate}
+            size="sm"
+            className="h-7 px-2 cannabis-gradient text-white text-xs"
+          >
+            <Sparkles className="h-3 w-3 mr-1" />
+            {isGenerating ? '...' : 'AI'}
+          </Button>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+      </div>
+
+      {/* Image preview and hint row */}
+      {(uploadedImage || showHint || !user) && (
+        <div className="flex items-center justify-between min-h-[24px]">
+          <div className="flex items-center gap-2">
             {uploadedImage && (
               <div className="relative inline-block">
                 <img 
                   src={uploadedImage} 
-                  alt="Uploaded cannabis package" 
-                  className="w-20 h-20 object-cover rounded-lg border"
+                  alt="Package" 
+                  className="w-6 h-6 object-cover rounded border"
                 />
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                  className="absolute -top-1 -right-1 h-3 w-3 rounded-full p-0"
                   onClick={clearImage}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2 w-2" />
                 </Button>
               </div>
             )}
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowVoiceInput(true)}
-                className="flex items-center gap-2"
-              >
-                <Mic className="h-4 w-4" />
-                Voice
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2"
-              >
-                <Camera className="h-4 w-4" />
-                Upload
-              </Button>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              <Button
-                onClick={handleGenerate}
-                disabled={!canGenerate}
-                className="flex items-center gap-2 cannabis-gradient text-white"
-              >
-                <Sparkles className="h-4 w-4" />
-                {isGenerating ? 'Generating...' : 'Generate Info'}
-              </Button>
-            </div>
-
-            {!user && (
-              <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-2 rounded">
-                <Badge variant="outline">Sign in required</Badge>
-                <span>Sign in to generate strain information</span>
+            
+            {showHint && (
+              <div className="text-xs text-green-600">
+                💡 Press AI to analyze "{searchTerm}"
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
 
-      <GenerateHint searchTerm={searchTerm} hasResults={hasResults} />
+          {!user && (
+            <Badge variant="outline" className="text-xs">
+              Sign in to use AI
+            </Badge>
+          )}
+        </div>
+      )}
 
       <VoiceInput
         isOpen={showVoiceInput}
