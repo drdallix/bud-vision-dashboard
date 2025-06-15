@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,7 +67,9 @@ const Index = () => {
   }
 
   // Determine available tabs based on authentication
-  const tabKeys = user ? ['browse', 'details', ...(showSettings ? ['settings'] : [])] : ['browse', 'details', 'showcase'];
+  const tabKeys = user 
+    ? ['browse', 'details', 'showcase', ...(showSettings ? ['settings'] : [])]
+    : ['browse', 'details', 'showcase'];
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,11 +90,9 @@ const Index = () => {
             <StrainDashboard strain={currentStrain} />
           </TabsContent>
 
-          {!user && (
-            <TabsContent value="showcase" className="space-y-6">
-              <StrainShowcase />
-            </TabsContent>
-          )}
+          <TabsContent value="showcase" className="space-y-6">
+            <StrainShowcase />
+          </TabsContent>
 
           {user && showSettings && (
             <TabsContent value="settings" className="space-y-6">

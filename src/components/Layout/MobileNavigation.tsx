@@ -12,7 +12,7 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-      <div className={`grid ${user ? 'grid-cols-2' : 'grid-cols-3'} h-16`}>
+      <div className="grid grid-cols-3 h-16">
         <button
           onClick={() => onTabChange('browse')}
           className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
@@ -36,19 +36,18 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
           <Database className="h-5 w-5" />
           <span>Info</span>
         </button>
-        {!user && (
-          <button
-            onClick={() => onTabChange('showcase')}
-            className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
-              activeTab === 'showcase' 
-                ? 'text-green-600 bg-green-50' 
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span className="text-2xl">🎬</span>
-            <span>Showcase</span>
-          </button>
-        )}
+
+        <button
+          onClick={() => onTabChange('showcase')}
+          className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
+            activeTab === 'showcase' 
+              ? 'text-green-600 bg-green-50' 
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <span className="text-2xl">🎬</span>
+          <span>Showcase</span>
+        </button>
       </div>
     </div>
   );
