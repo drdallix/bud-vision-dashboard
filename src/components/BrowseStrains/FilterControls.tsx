@@ -37,15 +37,15 @@ const FilterControls = ({
       </Select>
 
       <Select
-        value={priceFilter ?? undefined}
-        onValueChange={(val) => onPriceFilterChange(val === '' ? null : val)}
+        value={priceFilter === null ? undefined : priceFilter}
+        onValueChange={(val) => onPriceFilterChange(val === undefined ? null : val)}
       >
         <SelectTrigger className="h-8 w-32 text-xs">
           <span className="mr-1">$</span>
           <SelectValue placeholder="Any Price" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Any Price</SelectItem>
+          <SelectItem value={undefined as unknown as string}>Any Price</SelectItem>
           {PRESET_PRICES.map((p) => (
             <SelectItem value={p.toString()} key={p}>
               ${p} / oz
