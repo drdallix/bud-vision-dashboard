@@ -1,10 +1,10 @@
-
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Users } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import StrainVisualCard from './StrainVisualCard';
+import { getDeterministicTHC } from '@/utils/thcGenerator';
 
 interface StrainHeaderProps {
   strain: Strain;
@@ -16,6 +16,8 @@ const StrainHeader = ({ strain }: StrainHeaderProps) => {
     const primaryEffects = effectProfiles.slice(0, 2).map(e => e.name).join(' and ').toLowerCase();
     return `Perfect for ${timeOfDay} use. Customers seeking ${primaryEffects} effects will appreciate this strain.`;
   };
+
+  const thcValue = getDeterministicTHC(strain.name);
 
   return (
     <Card>
@@ -45,9 +47,8 @@ const StrainHeader = ({ strain }: StrainHeaderProps) => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">THC</span>
-                <span className="text-sm font-bold">{strain.thc}%</span>
+                <span className="text-sm font-bold">{thcValue}%</span>
               </div>
-              <Progress value={strain.thc} max={35} className="h-2" />
             </div>
           </div>
         </div>

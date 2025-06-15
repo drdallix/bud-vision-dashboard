@@ -1,17 +1,18 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
+import { getDeterministicTHC } from '@/utils/thcGenerator';
 
 interface StrainCannabinoidsProps {
   strain: Strain;
 }
 
 const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
+  const thcValue = getDeterministicTHC(strain.name);
+
   const getPotencyLabel = (thc: number) => {
-    if (thc >= 28) return 'Very High Potency';
     if (thc >= 25) return 'High Potency';
-    if (thc >= 22) return 'Moderate-High Potency';
+    if (thc >= 23) return 'Moderate-High Potency';
     return 'Moderate Potency';
   };
 
@@ -38,15 +39,10 @@ const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="font-medium">THC (Psychoactive)</span>
-                <span className="font-bold text-lg text-green-600">{strain.thc}%</span>
-              </div>
-              <Progress value={strain.thc} max={35} className="h-4" />
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>Moderate (21%)</span>
-                <span>Very High (35%+)</span>
+                <span className="font-bold text-lg text-green-600">{thcValue}%</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                <strong>{getPotencyLabel(strain.thc)}</strong> - Primary compound responsible for euphoric recreational effects
+                <strong>{getPotencyLabel(thcValue)}</strong> - Primary compound responsible for euphoric recreational effects
               </p>
             </div>
           </div>
@@ -55,7 +51,7 @@ const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <h4 className="font-medium mb-2 text-green-800">Budtender Recommendation</h4>
               <p className="text-sm text-green-700">
-                {getRecommendation(strain.thc, strain.type)}
+                {getRecommendation(thcValue, strain.type)}
               </p>
             </div>
             

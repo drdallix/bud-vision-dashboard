@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
+import { getDeterministicTHC } from '@/utils/thcGenerator';
 
 interface StrainCardProps {
   strain: Strain;
@@ -55,6 +55,8 @@ const StrainCard = ({
     }
   };
 
+  const thcValue = getDeterministicTHC(strain.name);
+
   return (
     <Card 
       className={`transition-all duration-200 ${
@@ -91,8 +93,7 @@ const StrainCard = ({
             </div>
             
             <div className="mb-2">
-              <div className="text-xs text-muted-foreground">THC: {strain.thc}%</div>
-              <Progress value={strain.thc} max={35} className="h-1" />
+              <div className="text-xs text-muted-foreground">THC: {thcValue}%</div>
             </div>
             
             <div className="flex flex-wrap gap-1 mb-2">
