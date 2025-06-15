@@ -1,14 +1,18 @@
+
 import React, { useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Edit, DollarSign } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import { PricePoint } from '@/types/price';
 import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 import PriceBadges from './components/PriceBadges';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
+import { StrainEditModal } from '@/components/StrainEditor';
+
 interface StrainCardProps {
   strain: Strain;
   editMode: boolean;
@@ -21,6 +25,7 @@ interface StrainCardProps {
   prices: PricePoint[];
   pricesLoading: boolean;
 }
+
 const StrainCard = ({
   strain,
   editMode,
@@ -35,11 +40,11 @@ const StrainCard = ({
 }: StrainCardProps) => {
   // Local state to ensure immediate UI feedback
   const [localInStock, setLocalInStock] = useState(strain.inStock);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Use centralized THC calculation
-  const {
-    thcDisplay
-  } = useStrainTHC(strain.name);
+  const { thcDisplay } = useStrainTHC(strain.name);
+
   const getTypeColor = useCallback((type: string) => {
     switch (type) {
       case 'Indica':
@@ -52,6 +57,7 @@ const StrainCard = ({
         return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300';
     }
   }, []);
+
   const getStrainEmoji = (type: string) => {
     switch (type) {
       case 'Indica':
@@ -64,6 +70,7 @@ const StrainCard = ({
         return '🌿';
     }
   };
+
   const getGradientColor = (type: string) => {
     switch (type) {
       case 'Indica':
@@ -76,7 +83,6 @@ const StrainCard = ({
         return 'from-gray-500 to-gray-700';
     }
   };
-  const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
 
   // Function to handle switch with immediate UI feedback
   const handleStockSwitch = async () => {
@@ -101,61 +107,123 @@ const StrainCard = ({
   React.useEffect(() => {
     setLocalInStock(strain.inStock);
   }, [strain.inStock]);
+
   const displayInStock = localInStock;
-  return <Card className={`transition-all duration-200 ${!editMode ? 'cursor-pointer hover:shadow-md' : ''} ${!displayInStock ? 'opacity-60' : ''}`} onClick={() => !editMode && onStrainClick(strain)}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          {editMode && canEdit && <Checkbox checked={isSelected} onCheckedChange={checked => onSelect(strain.id, checked as boolean)} className="mt-1 flex-shrink-0" />}
-          
-          <div className={`w-16 h-16 rounded-lg bg-gradient-to-br ${getGradientColor(strain.type)} flex items-center justify-center flex-shrink-0 relative`}>
-            <div className="text-2xl opacity-20 absolute">🌿</div>
-            <div className="text-xl z-10">{getStrainEmoji(strain.type)}</div>
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold truncate text-lg">{strain.name}</h3>
-              <Badge className={`${getTypeColor(strain.type)} text-xs`}>
-                {strain.type}
-              </Badge>
-              {!displayInStock && <Badge variant="secondary" className="text-xs">
-                  Out of Stock
-                </Badge>}
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowEditModal(true);
+  };
+
+  const handleStrainSave = (updatedStrain: Strain) => {
+    // Update local state immediately
+    setLocalInStock(updatedStrain.inStock);
+    setShowEditModal(false);
+    
+    // Trigger a re-render by calling the parent's strain click handler
+    // This will refresh the data from the store
+    console.log('Strain updated:', updatedStrain.name);
+  };
+
+  return (
+    <>
+      <Card className={`transition-all duration-200 ${!editMode ? 'cursor-pointer hover:shadow-md' : ''} ${!displayInStock ? 'opacity-60' : ''}`} onClick={() => !editMode && onStrainClick(strain)}>
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            {editMode && canEdit && (
+              <Checkbox 
+                checked={isSelected} 
+                onCheckedChange={checked => onSelect(strain.id, checked as boolean)} 
+                className="mt-1 flex-shrink-0" 
+              />
+            )}
+            
+            <div className={`w-16 h-16 rounded-lg bg-gradient-to-br ${getGradientColor(strain.type)} flex items-center justify-center flex-shrink-0 relative`}>
+              <div className="text-2xl opacity-20 absolute">🌿</div>
+              <div className="text-xl z-10">{getStrainEmoji(strain.type)}</div>
             </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold truncate text-lg">{strain.name}</h3>
+                <Badge className={`${getTypeColor(strain.type)} text-xs`}>
+                  {strain.type}
+                </Badge>
+                {!displayInStock && (
+                  <Badge variant="secondary" className="text-xs">
+                    Out of Stock
+                  </Badge>
+                )}
+              </div>
 
-            {/* Price badges (show only if in stock) */}
-            {displayInStock && !pricesLoading && !!prices.length && <PriceBadges prices={prices} />}
+              {/* Price badges (show only if in stock) */}
+              {displayInStock && !pricesLoading && !!prices.length && (
+                <PriceBadges prices={prices} />
+              )}
 
-            <div className="mb-2">
-              <div className="text-xs text-muted-foreground">
-                THC: {thcDisplay}
+              <div className="mb-2">
+                <div className="text-xs text-muted-foreground">
+                  THC: {thcDisplay}
+                </div>
+              </div>
+              
+              <div className="flex gap-1 overflow-x-auto">
+                {strain.effectProfiles.slice(0, 3).map((effect, index) => (
+                  <Badge key={index} variant="outline" className="text-xs flex items-center gap-1 whitespace-nowrap" style={{
+                    backgroundColor: `${effect.color}20`,
+                    color: effect.color,
+                    borderColor: effect.color
+                  }}>
+                    <span>{effect.emoji}</span>
+                    {effect.name}
+                  </Badge>
+                ))}
+                {strain.effectProfiles.length > 3 && (
+                  <Badge variant="outline" className="text-xs whitespace-nowrap">
+                    +{strain.effectProfiles.length - 3}
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {new Date(strain.scannedAt).toLocaleDateString()}
+                </p>
+                
+                <div className="flex items-center gap-2">
+                  {editMode && canEdit && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleEditClick}
+                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Switch 
+                        checked={displayInStock} 
+                        onCheckedChange={handleStockSwitch} 
+                        disabled={inventoryLoading} 
+                      />
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-            
-            <div className="flex gap-1 overflow-x-auto">
-              {strain.effectProfiles.slice(0, 3).map((effect, index) => <Badge key={index} variant="outline" className="text-xs flex items-center gap-1 whitespace-nowrap" style={{
-              backgroundColor: `${effect.color}20`,
-              color: effect.color,
-              borderColor: effect.color
-            }}>
-                  <span>{effect.emoji}</span>
-                  {effect.name}
-                </Badge>)}
-              {strain.effectProfiles.length > 3 && <Badge variant="outline" className="text-xs whitespace-nowrap">
-                  +{strain.effectProfiles.length - 3}
-                </Badge>}
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                {new Date(strain.scannedAt).toLocaleDateString()}
-              </p>
-              
-              {editMode && canEdit && <Switch checked={displayInStock} onCheckedChange={handleStockSwitch} disabled={inventoryLoading} />}
-            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>;
+        </CardContent>
+      </Card>
+
+      {/* Edit Modal */}
+      <StrainEditModal
+        strain={strain}
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleStrainSave}
+      />
+    </>
+  );
 };
+
 export default StrainCard;
