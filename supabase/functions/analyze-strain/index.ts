@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, handleCorsPreflightRequest } from './cors.ts';
@@ -5,7 +6,7 @@ import { createTextAnalysisMessages, createImageAnalysisMessages, callOpenAI, cr
 import { parseOpenAIResponse, validateStrainData } from './validation.ts';
 import { cacheStrainData } from './cache.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
-import { getDeterministicTHCRange } from './thcGenerator';
+import { getDeterministicTHCRange } from './thcGenerator.ts';
 
 // Emoji/color mappings for fallback
 const EFFECT_MAP: Record<string, {emoji: string, color: string}> = {
@@ -34,6 +35,7 @@ const FLAVOR_MAP: Record<string, {emoji: string, color: string}> = {
   'Pungent': { emoji: '💨', color: '#6B7280' },
   'Spicy': { emoji: '🌶️', color: '#DC2626' }
 };
+
 function fallbackProfile(entries: string[], map: Record<string, {emoji: string, color: string}>, type: 'effect'|'flavor') {
   return entries.map(name => ({
     name,
@@ -50,6 +52,12 @@ serve(async (req) => {
 
   try {
     const { imageData, textQuery, userId } = await req.json();
+    console.log('Request received:', { 
+      hasImage: !!imageData, 
+      hasText: !!textQuery, 
+      userId: userId ? `${userId.substring(0, 8)}...` : 'none' 
+    });
+    
     if (!imageData && !textQuery) throw new Error('No image data or text query provided');
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -72,7 +80,6 @@ serve(async (req) => {
     const data = await callOpenAI(messages, openAIApiKey);
     const analysisText = data.choices[0].message.content;
     const strainData = parseOpenAIResponse(analysisText, textQuery);
-    // First validation (may update spelling, etc)
     let validatedStrain = validateStrainData(strainData, textQuery);
 
     // Always OVERWRITE thc value with our deterministic average for the strain name
@@ -80,22 +87,16 @@ serve(async (req) => {
     const deterministicTHC = Number(((thcMin + thcMax) / 2).toFixed(2));
     validatedStrain.thc = deterministicTHC;
 
-    // DO NOT inject or patch THC into the description at all.
-    // let updatedDescription = injectTHC(validatedStrain.description, deterministicTHC);
-    // validatedStrain.description = updatedDescription;
-
     // 2. EFFECT PROFILES
     let effectProfiles = [];
     try {
       const m2 = createEffectProfilesMessages(validatedStrain.name, validatedStrain.type, validatedStrain.effects);
       const effRes = await callOpenAI(m2, openAIApiKey);
       let effContent = effRes.choices[0].message.content.trim();
-      // Remove markdown code blocks if present (```json ... ```)
       if (effContent.startsWith("```")) {
         effContent = effContent.replace(/```[a-z]*\n?/i, '').replace(/```$/, '');
       }
       effectProfiles = JSON.parse(effContent);
-      // Guarantee emoji/color present:
       effectProfiles = effectProfiles.map((e: any) => ({
         ...e,
         emoji: e.emoji || EFFECT_MAP[e.name]?.emoji || '🌿',
@@ -112,7 +113,6 @@ serve(async (req) => {
       const m3 = createFlavorProfilesMessages(validatedStrain.name, validatedStrain.type, validatedStrain.flavors);
       const flavRes = await callOpenAI(m3, openAIApiKey);
       let flavContent = flavRes.choices[0].message.content.trim();
-      // Remove markdown code blocks if present
       if (flavContent.startsWith("```")) {
         flavContent = flavContent.replace(/```[a-z]*\n?/i, '').replace(/```$/, '');
       }
@@ -134,13 +134,14 @@ serve(async (req) => {
       flavorProfiles
     };
 
-    // Cache as before if available
+    // Cache strain data if supabase is available
     if (supabaseUrl && supabaseKey) {
       try {
         await cacheStrainData(finalStrain, supabaseUrl, supabaseKey);
       } catch (cacheError) {
         console.error('Strain caching failed but not fatal:', cacheError);
       }
+      
       // Insert into scans if userId is available
       if (userId) {
         try {
@@ -160,26 +161,58 @@ serve(async (req) => {
             scanned_at: new Date().toISOString(),
             in_stock: true
           };
-          const { error } = await supabase.from('scans').insert([entry]);
+          
+          console.log('Attempting to insert scan for user:', userId.substring(0, 8) + '...');
+          const { data: insertData, error } = await supabase.from('scans').insert([entry]).select();
+          
           if (error) {
-            console.error('Error inserting scan into database:', error, entry, userId);
+            console.error('Database insert error:', {
+              error: error.message,
+              code: error.code,
+              details: error.details,
+              hint: error.hint,
+              userId: userId.substring(0, 8) + '...',
+              strainName: entry.strain_name
+            });
+          } else {
+            console.log('Successfully inserted scan:', {
+              strainName: entry.strain_name,
+              insertedId: insertData?.[0]?.id,
+              userId: userId.substring(0, 8) + '...'
+            });
           }
         } catch (dbErr) {
-          console.error('Supabase DB insert failed:', dbErr, userId);
+          console.error('Supabase DB insert failed:', {
+            error: dbErr.message,
+            userId: userId.substring(0, 8) + '...',
+            strainName: finalStrain.name
+          });
         }
       } else {
-        console.error('No userId provided for scan DB insert');
+        console.warn('No userId provided for scan DB insert - strain will not be saved to database');
       }
+    } else {
+      console.warn('Supabase not configured - skipping database operations');
     }
+
+    console.log('Analysis complete:', {
+      strainName: finalStrain.name,
+      confidence: finalStrain.confidence,
+      userId: userId ? userId.substring(0, 8) + '...' : 'none'
+    });
 
     return new Response(JSON.stringify(finalStrain), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in analyze-strain chained:', error);
+    console.error('Error in analyze-strain function:', {
+      error: error.message,
+      stack: error.stack
+    });
+    
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to analyze strain (chained)',
+        error: 'Failed to analyze strain',
         details: error.message,
         fallbackStrain: {
           name: "Analysis Error",

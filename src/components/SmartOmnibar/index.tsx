@@ -3,11 +3,13 @@ import { useState, useCallback } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { Strain } from '@/types/strain';
 import VoiceInput from './VoiceInput';
 import ImageUpload from './ImageUpload';
 import { analyzeStrainWithAI } from './AIAnalysis';
 import GenerateHint from './GenerateHint';
+import { CacheService } from '@/services/cacheService';
 
 interface SmartOmnibarProps {
   searchTerm: string;
@@ -20,10 +22,20 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
   const [isScanning, setIsScanning] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleGenerateStrain = async (imageData?: string, textQuery?: string) => {
     const analysisType = imageData ? 'image' : 'text';
     console.log(`Starting strain generation from ${analysisType}:`, textQuery || 'image data provided');
+    
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to generate and save strain information.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsScanning(true);
     
@@ -35,7 +47,7 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
           : `Creating profile for: ${textQuery} (fixing spelling/grammar)`,
       });
 
-      const aiResult = await analyzeStrainWithAI(imageData, textQuery);
+      const aiResult = await analyzeStrainWithAI(imageData, textQuery, user.id);
       
       const identifiedStrain: Strain = {
         ...aiResult,
@@ -43,10 +55,26 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
         scannedAt: new Date().toISOString(),
         imageUrl: imageData || '',
         inStock: true,
-        userId: ''
+        userId: user.id
       };
       
       console.log(`Generated strain from ${analysisType}:`, identifiedStrain);
+      
+      // Save to local cache first
+      CacheService.saveScanToCache(identifiedStrain, 'pending');
+      
+      // Try to save to database
+      try {
+        await CacheService.saveToDatabase(identifiedStrain, user.id);
+        CacheService.updateCachedScanStatus(identifiedStrain.id, 'synced');
+        console.log('Successfully saved to database');
+      } catch (dbError) {
+        console.error('Database save failed, keeping in cache:', dbError);
+        toast({
+          title: "Saved locally",
+          description: "Analysis complete but saved offline. Will sync when connection improves.",
+        });
+      }
       
       onStrainGenerated(identifiedStrain);
       setSelectedImage(null);
@@ -58,6 +86,11 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
           ? `Generated: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`
           : `Created profile for: ${identifiedStrain.name}`,
       });
+
+      // Try to sync any pending scans
+      setTimeout(() => {
+        CacheService.syncPendingScans(user.id);
+      }, 1000);
       
     } catch (error) {
       console.error(`${analysisType} analysis error:`, error);
@@ -92,7 +125,6 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
   const handleImageSelect = useCallback(async (imageUrl: string) => {
     console.log("Image selected, starting immediate analysis");
     setSelectedImage(imageUrl);
-    // Immediately start analysis for image (same as text/voice)
     await handleGenerateStrain(imageUrl, undefined);
   }, []);
 
@@ -110,37 +142,33 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
           onClick={handleSearchClick}
         />
         <Input
-          placeholder="Search inventory, describe a strain, or upload package image..."
+          placeholder={user ? "Search inventory, describe a strain, or upload package image..." : "Sign in to search and save strains..."}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyPress={handleKeyPress}
           className="pl-12 pr-32 h-12 text-lg rounded-full border-2 focus:border-green-500"
-          disabled={isScanning}
+          disabled={isScanning || !user}
         />
         
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-          {/* Image upload component */}
           <ImageUpload
             selectedImage={selectedImage}
             onImageSelect={handleImageSelect}
             onImageClear={handleImageClear}
-            disabled={isScanning}
+            disabled={isScanning || !user}
           />
           
-          {/* Voice input component */}
           <VoiceInput
             onTranscript={handleVoiceTranscript}
-            disabled={isScanning}
+            disabled={isScanning || !user}
           />
           
-          {/* Loading spinner */}
           {isScanning && (
             <Loader2 className="h-4 w-4 animate-spin text-green-600" />
           )}
         </div>
       </div>
 
-      {/* Generate hint component */}
       <GenerateHint
         hasResults={hasResults}
         hasContent={hasContent}

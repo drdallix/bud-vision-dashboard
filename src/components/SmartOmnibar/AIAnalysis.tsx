@@ -2,15 +2,22 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Strain } from '@/types/strain';
 
-export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string) => {
+export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string, userId?: string) => {
   try {
     console.log('Calling AI strain analysis...', textQuery ? 'with text query' : 'with image');
     
+    const requestBody: any = { 
+      imageData: imageData || null,
+      textQuery: textQuery || null
+    };
+    
+    if (userId) {
+      requestBody.userId = userId;
+      console.log('Including userId in AI request:', userId);
+    }
+    
     const { data, error } = await supabase.functions.invoke('analyze-strain', {
-      body: { 
-        imageData: imageData || null,
-        textQuery: textQuery || null
-      }
+      body: requestBody
     });
 
     if (error) {

@@ -1,10 +1,11 @@
 
 import { useState, useRef } from 'react';
-import { Camera, Upload, Scan, Zap } from 'lucide-react';
+import { Camera, Upload, Scan, Zap, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Strain {
   id: string;
@@ -21,6 +22,11 @@ interface Strain {
   confidence: number;
 }
 
+interface CachedScan extends Strain {
+  syncStatus: 'pending' | 'synced' | 'failed';
+  attempts: number;
+}
+
 interface CameraScannerProps {
   onScanComplete: (strain: Strain) => void;
   isScanning: boolean;
@@ -29,15 +35,106 @@ interface CameraScannerProps {
 
 const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScannerProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'failed' | 'cached'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Local cache management
+  const saveScanToCache = (scan: Strain, syncStatus: 'pending' | 'synced' | 'failed' = 'pending') => {
+    try {
+      const cachedScans = getCachedScans();
+      const cachedScan: CachedScan = {
+        ...scan,
+        syncStatus,
+        attempts: 0
+      };
+      cachedScans.push(cachedScan);
+      localStorage.setItem('cachedScans', JSON.stringify(cachedScans));
+      console.log('Scan saved to local cache:', scan.name);
+    } catch (error) {
+      console.error('Failed to save scan to cache:', error);
+    }
+  };
+
+  const getCachedScans = (): CachedScan[] => {
+    try {
+      const cached = localStorage.getItem('cachedScans');
+      return cached ? JSON.parse(cached) : [];
+    } catch (error) {
+      console.error('Failed to get cached scans:', error);
+      return [];
+    }
+  };
+
+  const updateCachedScanStatus = (scanId: string, status: 'synced' | 'failed', attempts?: number) => {
+    try {
+      const cachedScans = getCachedScans();
+      const scanIndex = cachedScans.findIndex(scan => scan.id === scanId);
+      if (scanIndex !== -1) {
+        cachedScans[scanIndex].syncStatus = status;
+        if (attempts !== undefined) {
+          cachedScans[scanIndex].attempts = attempts;
+        }
+        localStorage.setItem('cachedScans', JSON.stringify(cachedScans));
+      }
+    } catch (error) {
+      console.error('Failed to update cached scan status:', error);
+    }
+  };
+
+  const syncPendingScans = async () => {
+    if (!user) return;
+
+    const cachedScans = getCachedScans();
+    const pendingScans = cachedScans.filter(scan => scan.syncStatus === 'pending' || scan.syncStatus === 'failed');
+
+    for (const scan of pendingScans) {
+      try {
+        await saveToDatabase(scan, user.id);
+        updateCachedScanStatus(scan.id, 'synced');
+        console.log('Successfully synced cached scan:', scan.name);
+      } catch (error) {
+        console.error('Failed to sync cached scan:', scan.name, error);
+        updateCachedScanStatus(scan.id, 'failed', (scan.attempts || 0) + 1);
+      }
+    }
+  };
+
+  const saveToDatabase = async (strain: Strain, userId: string) => {
+    const { error } = await supabase.from('scans').insert([{
+      user_id: userId,
+      strain_name: strain.name,
+      strain_type: strain.type,
+      thc: strain.thc,
+      cbd: strain.cbd,
+      effects: strain.effects,
+      flavors: strain.flavors,
+      terpenes: [], // Will be populated by edge function
+      medical_uses: strain.medicalUses,
+      description: strain.description,
+      confidence: strain.confidence,
+      scanned_at: strain.scannedAt,
+      in_stock: true
+    }]);
+
+    if (error) {
+      throw new Error(`Database save failed: ${error.message}`);
+    }
+  };
 
   const analyzeStrainWithAI = async (imageData: string) => {
     try {
       console.log('Calling AI strain analysis...');
       
+      const requestBody: any = { imageData };
+      if (user?.id) {
+        requestBody.userId = user.id;
+        console.log('Including userId in request:', user.id);
+      }
+      
       const { data, error } = await supabase.functions.invoke('analyze-strain', {
-        body: { imageData }
+        body: requestBody
       });
 
       if (error) {
@@ -47,10 +144,8 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
 
       console.log('AI analysis result:', data);
 
-      // Handle both success and error responses from the edge function
       if (data.error) {
         console.error('Edge function returned error:', data.error);
-        // Use fallback data if provided
         if (data.fallbackStrain) {
           return data.fallbackStrain;
         }
@@ -60,7 +155,6 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
       return data;
     } catch (error) {
       console.error('Error calling strain analysis:', error);
-      // Return fallback strain data to prevent app from breaking
       return {
         name: "Unknown Strain",
         type: "Hybrid" as const,
@@ -96,8 +190,18 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
       });
       return;
     }
+
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to save your scans.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsScanning(true);
+    setSaveStatus('saving');
     
     try {
       toast({
@@ -116,18 +220,45 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
       
       console.log('Final strain data:', identifiedStrain);
       
+      // Always save to local cache first
+      saveScanToCache(identifiedStrain, 'pending');
+      
+      // Try to save to database
+      let databaseSaveSuccess = false;
+      try {
+        await saveToDatabase(identifiedStrain, user.id);
+        updateCachedScanStatus(identifiedStrain.id, 'synced');
+        setSaveStatus('success');
+        databaseSaveSuccess = true;
+        console.log('Successfully saved to database');
+      } catch (dbError) {
+        console.error('Database save failed, keeping in cache:', dbError);
+        setSaveStatus('cached');
+        
+        toast({
+          title: "Saved locally",
+          description: "Analysis complete but saved offline. Will sync when connection improves.",
+        });
+      }
+      
       setIsScanning(false);
       onScanComplete(identifiedStrain);
       setSelectedImage(null);
       
-      toast({
-        title: "Package analysis complete!",
-        description: `Ready to recommend: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`,
-      });
+      if (databaseSaveSuccess) {
+        toast({
+          title: "Package analysis complete!",
+          description: `Saved to cloud: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`,
+        });
+      }
+
+      // Try to sync any pending scans
+      setTimeout(() => syncPendingScans(), 1000);
       
     } catch (error) {
       console.error('Scan error:', error);
       setIsScanning(false);
+      setSaveStatus('failed');
       
       toast({
         title: "Package scan failed",
@@ -141,6 +272,34 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
     fileInputRef.current?.click();
   };
 
+  const getSaveStatusIcon = () => {
+    switch (saveStatus) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'cached':
+        return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+      case 'failed':
+        return <AlertCircle className="h-4 w-4 text-red-600" />;
+      default:
+        return null;
+    }
+  };
+
+  const getSaveStatusText = () => {
+    switch (saveStatus) {
+      case 'saving':
+        return 'Saving...';
+      case 'success':
+        return 'Saved to cloud';
+      case 'cached':
+        return 'Saved locally (will sync)';
+      case 'failed':
+        return 'Save failed';
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
@@ -148,9 +307,20 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
           <CardTitle className="flex items-center justify-center gap-2">
             <Zap className="h-6 w-6 text-primary" />
             DoobieDB Package Scanner
+            {saveStatus !== 'idle' && (
+              <div className="flex items-center gap-1 text-sm">
+                {getSaveStatusIcon()}
+                <span>{getSaveStatusText()}</span>
+              </div>
+            )}
           </CardTitle>
           <CardDescription>
             Instantly scan any cannabis package in your dispensary. Get comprehensive strain information for informed customer recommendations in seconds.
+            {!user && (
+              <div className="mt-2 text-yellow-600 font-medium">
+                ⚠️ Sign in required to save scan results
+              </div>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -210,7 +380,7 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
             <Button 
               onClick={handleScan}
               className="flex-1 h-12 cannabis-gradient text-white"
-              disabled={!selectedImage || isScanning}
+              disabled={!selectedImage || isScanning || !user}
             >
               <Scan className="h-4 w-4 mr-2" />
               {isScanning ? 'Analyzing...' : 'Scan Package'}
@@ -237,6 +407,16 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
               <li>• Perfect for quick customer consultations</li>
             </ul>
           </div>
+
+          {/* Cache Status */}
+          {user && (
+            <div className="bg-blue-50 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-sm text-blue-800">
+                <CheckCircle className="h-4 w-4" />
+                <span>Local backup enabled - scans saved offline will sync automatically</span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
