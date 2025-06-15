@@ -1,4 +1,3 @@
-
 import { Pause, Play, ArrowLeft, ArrowRight, Settings, RotateCcw, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -51,11 +50,10 @@ const ShowcaseControls = ({
         )}
 
         {/* Main Controls */}
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-2">
           <Button 
             variant="outline" 
             size="icon"
-            className="hover:scale-110 transition-transform shadow-md"
             aria-label="Previous" 
             onClick={() => onNav(current === 0 ? total - 1 : current - 1)}
           >
@@ -65,11 +63,6 @@ const ShowcaseControls = ({
           <Button
             variant={paused ? "default" : "secondary"}
             size="icon"
-            className={`hover:scale-110 transition-all shadow-lg ${
-              paused 
-                ? 'bg-green-600 hover:bg-green-700' 
-                : 'bg-orange-500 hover:bg-orange-600'
-            }`}
             aria-label={paused ? "Play" : "Pause"}
             onClick={() => setPaused(!paused)}
           >
@@ -79,19 +72,15 @@ const ShowcaseControls = ({
           <Button 
             variant="outline" 
             size="icon"
-            className="hover:scale-110 transition-transform shadow-md"
             aria-label="Next" 
             onClick={() => onNav((current + 1) % total)}
           >
             <ArrowRight className="h-4 w-4" />
           </Button>
 
-          <div className="w-px h-8 bg-gray-300 mx-2"></div>
-
           <Button 
             variant="ghost" 
             size="icon"
-            className="hover:scale-110 transition-transform"
             aria-label="Reset to start" 
             onClick={resetToStart}
           >
@@ -101,7 +90,6 @@ const ShowcaseControls = ({
           <Button
             variant="ghost"
             size="icon"
-            className="hover:scale-110 transition-transform"
             aria-label="Settings"
             onClick={() => setShowSettings(!showSettings)}
           >
