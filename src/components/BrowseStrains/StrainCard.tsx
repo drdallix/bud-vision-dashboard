@@ -132,8 +132,8 @@ const StrainCard = ({
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-1 ">
-              {strain.effectProfiles.slice(0, 3).map((effect, index) => <Badge key={index} variant="outline" className="text-xs flex items-center gap-1" style={{
+            <div className="flex gap-1 overflow-x-auto">
+              {strain.effectProfiles.slice(0, 3).map((effect, index) => <Badge key={index} variant="outline" className="text-xs flex items-center gap-1 whitespace-nowrap" style={{
               backgroundColor: `${effect.color}20`,
               color: effect.color,
               borderColor: effect.color
@@ -141,7 +141,7 @@ const StrainCard = ({
                   <span>{effect.emoji}</span>
                   {effect.name}
                 </Badge>)}
-              {strain.effectProfiles.length > 3 && <Badge variant="outline" className="text-xs">
+              {strain.effectProfiles.length > 3 && <Badge variant="outline" className="text-xs whitespace-nowrap">
                   +{strain.effectProfiles.length - 3}
                 </Badge>}
             </div>
