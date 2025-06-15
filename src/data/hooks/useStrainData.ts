@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { StrainService } from '@/services/strainService';
 import { convertDatabaseScansToStrains } from '@/data/converters/strainConverters';
 import { Strain } from '@/types/strain';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useStrainData = (includeAllStrains = false) => {
@@ -14,7 +14,11 @@ export const useStrainData = (includeAllStrains = false) => {
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
 
-  const queryKey = includeAllStrains ? ['strains-all'] : ['strains-user', user?.id];
+  // Memoize the query key to prevent unnecessary re-renders
+  const queryKey = useMemo(() => 
+    includeAllStrains ? ['strains-all'] : ['strains-user', user?.id],
+    [includeAllStrains, user?.id]
+  );
 
   const { data: strains = [], isLoading, error } = useQuery({
     queryKey,
@@ -38,6 +42,7 @@ export const useStrainData = (includeAllStrains = false) => {
 
     // Clean up any existing channel
     if (channelRef.current) {
+      console.log('Cleaning up existing channel:', channelRef.current);
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
@@ -46,6 +51,8 @@ export const useStrainData = (includeAllStrains = false) => {
     const channelName = includeAllStrains 
       ? `strains-all-${Date.now()}` 
       : `strains-user-${user!.id}-${Date.now()}`;
+
+    console.log('Creating new channel:', channelName);
 
     const channel = supabase
       .channel(channelName)
@@ -70,11 +77,12 @@ export const useStrainData = (includeAllStrains = false) => {
 
     return () => {
       if (channelRef.current) {
+        console.log('Cleanup: removing channel:', channelRef.current);
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [queryClient, user?.id, includeAllStrains, queryKey]);
+  }, [queryClient, user?.id, includeAllStrains]); // Remove queryKey from dependencies
 
   // Show error toast only once per error
   useEffect(() => {
