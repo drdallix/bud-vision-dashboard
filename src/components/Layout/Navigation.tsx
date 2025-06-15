@@ -1,5 +1,5 @@
 
-import { Menu, Database, Settings } from 'lucide-react';
+import { Menu, Database } from 'lucide-react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -21,9 +21,15 @@ const Navigation = ({ showSettings }: NavigationProps) => {
           <Database className="h-4 w-4" />
           Strain Information
         </TabsTrigger>
+        {!user && (
+          <TabsTrigger value="showcase" className="flex items-center gap-2">
+            <span className="h-4 w-4 text-green-600">🎬</span>
+            Live Showcase
+          </TabsTrigger>
+        )}
         {user && showSettings && (
           <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+            <span className="h-4 w-4">⚙️</span>
             Settings & Data
           </TabsTrigger>
         )}

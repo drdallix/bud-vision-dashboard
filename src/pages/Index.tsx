@@ -11,6 +11,7 @@ import Header from '@/components/Layout/Header';
 import Navigation from '@/components/Layout/Navigation';
 import MobileNavigation from '@/components/Layout/MobileNavigation';
 import QuickStats from '@/components/Layout/QuickStats';
+import StrainShowcase from '@/components/StrainShowcase';
 import { Strain } from '@/types/strain';
 
 const Index = () => {
@@ -33,7 +34,6 @@ const Index = () => {
   }, []);
 
   const handleStrainGenerated = async (strain: Strain) => {
-    // Add required properties for the complete Strain type
     const completeStrain: Strain = {
       ...strain,
       inStock: true,
@@ -67,6 +67,9 @@ const Index = () => {
     );
   }
 
+  // Determine available tabs based on authentication
+  const tabKeys = user ? ['browse', 'details', ...(showSettings ? ['settings'] : [])] : ['browse', 'details', 'showcase'];
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 pb-20">
@@ -85,6 +88,12 @@ const Index = () => {
           <TabsContent value="details" className="space-y-6">
             <StrainDashboard strain={currentStrain} />
           </TabsContent>
+
+          {!user && (
+            <TabsContent value="showcase" className="space-y-6">
+              <StrainShowcase />
+            </TabsContent>
+          )}
 
           {user && showSettings && (
             <TabsContent value="settings" className="space-y-6">
