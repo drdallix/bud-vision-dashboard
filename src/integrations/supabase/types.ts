@@ -78,6 +78,7 @@ export type Database = {
           created_at: string
           description: string | null
           effects: string[] | null
+          emoji: string | null
           flavors: string[] | null
           id: string
           in_stock: boolean
@@ -95,6 +96,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           effects?: string[] | null
+          emoji?: string | null
           flavors?: string[] | null
           id?: string
           in_stock?: boolean
@@ -112,6 +114,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           effects?: string[] | null
+          emoji?: string | null
           flavors?: string[] | null
           id?: string
           in_stock?: boolean

@@ -1,4 +1,3 @@
-
 export interface Terpene {
   name: string;
   percentage: number;
@@ -33,6 +32,7 @@ export interface Strain {
   confidence: number;
   inStock: boolean;
   userId: string;
+  emoji?: string; // AI-generated emoji representing the strain's character
 }
 
 // Keep legacy properties for backward compatibility during migration
@@ -59,4 +59,5 @@ export type DatabaseScan = {
   scanned_at: string;
   created_at: string;
   in_stock: boolean;
+  emoji?: string | null; // AI-generated emoji
 };

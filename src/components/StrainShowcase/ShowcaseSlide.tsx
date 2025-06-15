@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Strain } from '@/types/strain';
 import StrainEffectsVisual from '@/components/StrainDashboard/StrainEffectsVisual';
 import StrainFlavorsVisual from '@/components/StrainDashboard/StrainFlavorsVisual';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Zap, Heart } from 'lucide-react';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ShowcaseSlideProps {
   strain: Strain;
@@ -18,8 +19,49 @@ interface ShowcaseSlideProps {
 
 const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProps) => {
   const [isLiked, setIsLiked] = useState(false);
+  const [strainEmoji, setStrainEmoji] = useState(strain.emoji || '🌿');
+  const [emojiLoading, setEmojiLoading] = useState(false);
   const { toast } = useToast();
   const { thcDisplay } = useStrainTHC(strain.name);
+
+  // Generate emoji if not present
+  useEffect(() => {
+    const generateEmojiIfNeeded = async () => {
+      if (!strain.emoji && !emojiLoading) {
+        setEmojiLoading(true);
+        try {
+          const response = await supabase.functions.invoke('generate-strain-emoji', {
+            body: {
+              strainName: strain.name,
+              strainType: strain.type,
+              description: strain.description,
+              effects: strain.effectProfiles?.map(e => e.name) || [],
+              flavors: strain.flavorProfiles?.map(f => f.name) || []
+            }
+          });
+
+          if (response.data?.emoji) {
+            const newEmoji = response.data.emoji;
+            setStrainEmoji(newEmoji);
+            
+            // Update the database with the new emoji
+            await supabase
+              .from('scans')
+              .update({ emoji: newEmoji })
+              .eq('id', strain.id);
+              
+            console.log('Generated and saved emoji for', strain.name, ':', newEmoji);
+          }
+        } catch (error) {
+          console.error('Failed to generate emoji:', error);
+        } finally {
+          setEmojiLoading(false);
+        }
+      }
+    };
+
+    generateEmojiIfNeeded();
+  }, [strain.id, strain.emoji, strain.name, strain.type, strain.description, strain.effectProfiles, strain.flavorProfiles, emojiLoading]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -27,15 +69,6 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
       case 'Sativa': return 'from-yellow-400 to-orange-500';
       case 'Hybrid': return 'from-green-500 to-blue-500';
       default: return 'from-gray-400 to-gray-600';
-    }
-  };
-
-  const getTypeEmoji = (type: string) => {
-    switch (type) {
-      case 'Indica': return '🌙';
-      case 'Sativa': return '☀️';
-      case 'Hybrid': return '🌓';
-      default: return '🌿';
     }
   };
 
@@ -70,33 +103,31 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
         <div className="relative">
           <Card className="border-0 bg-theme-card shadow-xl">
             <div className="p-4 md:p-6">
-              <div className="flex items-start justify-between mb-3 md:mb-4">
-                <div className="space-y-2 md:space-y-3 flex-1 min-w-0 pr-3">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <span className="text-2xl md:text-3xl flex-shrink-0">{getTypeEmoji(strain.type)}</span>
-                    <div className="min-w-0 flex-1">
-                      <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
-                        {strain.name}
-                      </h1>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge 
-                          className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-lg text-xs md:text-sm`}
-                        >
-                          {strain.type}
-                        </Badge>
-                        <Badge className="bg-green-100 text-green-800 border-green-200 animate-pulse dark:bg-green-900 dark:text-green-100 dark:border-green-700 text-xs md:text-sm">
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          In Stock
-                        </Badge>
-                      </div>
-                    </div>
+              <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                <span className="text-3xl md:text-4xl flex-shrink-0">
+                  {emojiLoading ? '⏳' : strainEmoji}
+                </span>
+                <div className="space-y-2 md:space-y-3 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                    <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
+                      {strain.name}
+                    </h1>
+                    <Badge 
+                      className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-lg text-xs md:text-sm`}
+                    >
+                      {strain.type}
+                    </Badge>
+                    <Badge className="bg-green-100 text-green-800 border-green-200 animate-pulse dark:bg-green-900 dark:text-green-100 dark:border-green-700 text-xs md:text-sm">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      In Stock
+                    </Badge>
                   </div>
                   
                   <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                     {strain.description}
                   </p>
                   
-                  {/* THC percentage moved here */}
+                  {/* THC percentage at bottom of description */}
                   <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                     <Zap className="h-4 w-4 text-yellow-500" />
                     <span className="text-base md:text-lg font-bold text-foreground">
@@ -105,24 +136,26 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
                     <span className="text-sm text-muted-foreground">THC</span>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleHeartClick}
-                    className={`h-10 w-10 md:h-12 md:w-12 ${
-                      isLiked 
-                        ? 'text-red-500 hover:text-red-600' 
-                        : 'text-gray-400 hover:text-red-500'
-                    } transition-colors`}
-                    title="Add to favorites"
-                  >
-                    <Heart 
-                      className={`h-5 w-5 md:h-6 md:w-6 ${isLiked ? 'fill-current' : ''}`} 
-                    />
-                  </Button>
-                </div>
+              {/* Heart button moved below header, not in corner */}
+              <div className="flex justify-center mb-4">
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  onClick={handleHeartClick}
+                  className={`${
+                    isLiked 
+                      ? 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100' 
+                      : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                  } transition-all duration-200 px-6 py-3 rounded-full`}
+                  title="Add to favorites"
+                >
+                  <Heart 
+                    className={`h-6 w-6 mr-2 ${isLiked ? 'fill-current' : ''}`} 
+                  />
+                  {isLiked ? 'Favorited' : 'Add to Favorites'}
+                </Button>
               </div>
             </div>
           </Card>
