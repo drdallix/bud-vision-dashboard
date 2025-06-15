@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,6 +56,12 @@ const Index = () => {
     setActiveTab('settings');
   };
 
+  // Determine available tabs based on authentication
+  const tabKeys = user 
+    ? ['browse', 'details', 'showcase', ...(showSettings ? ['settings'] : [])]
+    : ['browse', 'details', 'showcase'];
+
+  // Show loading state but still render the full component structure
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -65,11 +72,6 @@ const Index = () => {
       </div>
     );
   }
-
-  // Determine available tabs based on authentication
-  const tabKeys = user 
-    ? ['browse', 'details', 'showcase', ...(showSettings ? ['settings'] : [])]
-    : ['browse', 'details', 'showcase'];
 
   return (
     <div className="min-h-screen bg-background">
