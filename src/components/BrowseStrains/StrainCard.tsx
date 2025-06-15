@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +11,7 @@ import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 import PriceBadges from './components/PriceBadges';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
 import { StrainEditModal } from '@/components/StrainEditor';
+import QuickPriceModal from './components/QuickPriceModal';
 
 interface StrainCardProps {
   strain: Strain;
@@ -41,6 +41,7 @@ const StrainCard = ({
   // Local state to ensure immediate UI feedback
   const [localInStock, setLocalInStock] = useState(strain.inStock);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showQuickPrice, setShowQuickPrice] = useState(false);
 
   // Use centralized THC calculation
   const { thcDisplay } = useStrainTHC(strain.name);
@@ -149,6 +150,16 @@ const StrainCard = ({
                 <Badge className={`${getTypeColor(strain.type)} text-xs`}>
                   {strain.type}
                 </Badge>
+                {/* Quick price edit: always show small $ button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-0 text-green-600 hover:bg-green-100 inline-flex"
+                  title="Quick Price Edit"
+                  onClick={e => { e.stopPropagation(); setShowQuickPrice(true); }}
+                >
+                  <DollarSign className="h-4 w-4" />
+                </Button>
                 {!displayInStock && (
                   <Badge variant="secondary" className="text-xs">
                     Out of Stock
@@ -221,6 +232,13 @@ const StrainCard = ({
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
         onSave={handleStrainSave}
+      />
+
+      {/* Quick Price Modal */}
+      <QuickPriceModal
+        open={showQuickPrice}
+        onClose={() => setShowQuickPrice(false)}
+        strainId={strain.id}
       />
     </>
   );
