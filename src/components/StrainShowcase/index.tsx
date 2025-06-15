@@ -1,104 +1,220 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
-import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
 import { useStrainData } from '@/data/hooks/useStrainData';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
-import ShowcaseProgress from './ShowcaseProgress';
+import ShowcaseFilters from './ShowcaseFilters';
+import { Strain } from '@/types/strain';
 
 const StrainShowcase = () => {
   const { strains, isLoading } = useStrainData(true);
-  const inStockStrains = strains.filter((s) => s.inStock);
-
+  const [filteredStrains, setFilteredStrains] = useState<Strain[]>([]);
   const [current, setCurrent] = useState(0);
-  const [paused, setPaused] = useState(true); // Start paused by default
-  const [slideInterval, setSlideInterval] = useState(8500); // Configurable interval
+  const [paused, setPaused] = useState(true);
+  const [slideInterval, setSlideInterval] = useState(6000);
+  const [showControls, setShowControls] = useState(true);
+  const [api, setApi] = useState<CarouselApi>();
+  
+  // Filter and sort states
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['Indica', 'Sativa', 'Hybrid']);
+  const [sortBy, setSortBy] = useState<'name' | 'thc' | 'recent'>('name');
+  const [minTHC, setMinTHC] = useState(0);
 
-  // Auto-advance logic (only when not paused)
+  // Auto-hide controls timer
+  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  // Filter and sort strains
   useEffect(() => {
-    if (!inStockStrains.length || paused) return;
-    const t = setTimeout(() => {
-      setCurrent((c) => (c + 1) % inStockStrains.length);
+    let filtered = strains.filter(strain => 
+      strain.inStock && 
+      selectedTypes.includes(strain.type) &&
+      strain.thc >= minTHC
+    );
+
+    // Sort strains
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'thc':
+          return b.thc - a.thc;
+        case 'recent':
+          return new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime();
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+
+    setFilteredStrains(filtered);
+    setCurrent(0);
+    if (api) {
+      api.scrollTo(0);
+    }
+  }, [strains, selectedTypes, sortBy, minTHC, api]);
+
+  // Auto-advance logic
+  useEffect(() => {
+    if (!filteredStrains.length || paused) return;
+    const timer = setTimeout(() => {
+      if (api) {
+        api.scrollNext();
+      }
     }, slideInterval);
-    return () => clearTimeout(t);
-  }, [current, inStockStrains.length, paused, slideInterval]);
+    return () => clearTimeout(timer);
+  }, [current, filteredStrains.length, paused, slideInterval, api]);
 
-  // Pause on tab blur (mobile friendly)
+  // Auto-hide controls
+  const resetControlsTimer = useCallback(() => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (!paused) {
+        setShowControls(false);
+      }
+    }, 4000);
+  }, [paused]);
+
+  // Handle user interaction
+  const handleInteraction = useCallback(() => {
+    resetControlsTimer();
+  }, [resetControlsTimer]);
+
+  // Setup carousel events
   useEffect(() => {
-    const handleVisibility = () => setPaused(true); // Always pause when tab hidden
+    if (!api) return;
+
+    const onSelect = () => {
+      setCurrent(api.selectedScrollSnap());
+    };
+
+    api.on('select', onSelect);
+    onSelect();
+
+    return () => {
+      api.off('select', onSelect);
+    };
+  }, [api]);
+
+  // Pause on tab blur
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setPaused(true);
+      }
+    };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Keyboard navigation (left/right arrows)
+  // Reset controls timer when paused state changes
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') setCurrent((c) => c === 0 ? inStockStrains.length - 1 : c - 1);
-      if (e.key === 'ArrowRight') setCurrent((c) => (c + 1) % inStockStrains.length);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [inStockStrains.length]);
-
-  const goToSlide = (index: number) => {
-    setCurrent(index);
-  };
+    resetControlsTimer();
+  }, [paused, resetControlsTimer]);
 
   if (isLoading) {
-    return <div className="h-64 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
-    </div>;
+    return (
+      <div className="h-96 flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl animate-pulse">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-green-600 mx-auto"></div>
+          <p className="text-muted-foreground">Loading strains...</p>
+        </div>
+      </div>
+    );
   }
-  if (!inStockStrains.length) {
-    return <div className="h-64 flex flex-col items-center justify-center text-muted-foreground">
-      <span className="text-5xl mb-2">🪴</span>
-      <div>No strains currently in stock</div>
-    </div>
+
+  if (!filteredStrains.length) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center text-muted-foreground bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
+        <span className="text-6xl mb-4 animate-bounce">🪴</span>
+        <div className="text-xl font-medium">No strains match your filters</div>
+        <div className="text-sm mt-2">Try adjusting your search criteria</div>
+      </div>
+    );
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div 
+      className="w-full max-w-6xl mx-auto space-y-6"
+      onClick={handleInteraction}
+      onTouchStart={handleInteraction}
+      onMouseMove={handleInteraction}
+    >
+      {/* Filters */}
+      <div className={`transition-all duration-500 ${showControls ? 'opacity-100 transform-none' : 'opacity-60 -translate-y-2'}`}>
+        <ShowcaseFilters
+          selectedTypes={selectedTypes}
+          setSelectedTypes={setSelectedTypes}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          minTHC={minTHC}
+          setMinTHC={setMinTHC}
+          strainCount={filteredStrains.length}
+        />
+      </div>
+
       {/* Main Showcase */}
-      <div className="shadow-lg rounded-xl bg-background border relative p-4 sm:p-6 animate-fade-in">
-        <Carousel
-          orientation="horizontal"
-          opts={{
-            loop: true,
-            skipSnaps: true,
-            align: 'center'
-          }}
-        >
-          <CarouselContent>
-            {inStockStrains.map((strain, i) => (
-              <CarouselItem 
-                key={strain.id} 
-                className={`transition-all duration-500 ease-in-out ${
-                  current === i
-                    ? "opacity-100 scale-100"
-                    : "opacity-0 scale-95 absolute inset-0"
-                }`}
-                style={{ display: current === i ? 'block' : 'none' }}
-              >
-                <ShowcaseSlide strain={strain} />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-        
-        <ShowcaseProgress current={current} total={inStockStrains.length} />
+      <div className="relative">
+        <div className="shadow-2xl rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
+          <Carousel
+            setApi={setApi}
+            opts={{
+              loop: true,
+              skipSnaps: false,
+              align: 'center',
+              dragFree: true,
+            }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-2 md:-ml-4">
+              {filteredStrains.map((strain, index) => (
+                <CarouselItem key={strain.id} className="pl-2 md:pl-4">
+                  <div className="p-4 md:p-8">
+                    <ShowcaseSlide 
+                      strain={strain} 
+                      isActive={index === current}
+                      index={index}
+                    />
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
+        </div>
+
+        {/* Progress dots */}
+        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+          {filteredStrains.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => api?.scrollTo(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                index === current 
+                  ? 'bg-green-600 scale-150 shadow-lg' 
+                  : 'bg-gray-300 hover:bg-gray-400'
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Enhanced Controls */}
-      <ShowcaseControls
-        total={inStockStrains.length}
-        current={current}
-        paused={paused}
-        slideInterval={slideInterval}
-        setPaused={setPaused}
-        setSlideInterval={setSlideInterval}
-        onNav={(step) => setCurrent(step)}
-        onGoToSlide={goToSlide}
-      />
+      <div className={`transition-all duration-500 ${
+        showControls 
+          ? 'opacity-100 transform-none' 
+          : 'opacity-0 translate-y-4 pointer-events-none'
+      }`}>
+        <ShowcaseControls
+          total={filteredStrains.length}
+          current={current}
+          paused={paused}
+          slideInterval={slideInterval}
+          setPaused={setPaused}
+          setSlideInterval={setSlideInterval}
+          onNav={(index) => api?.scrollTo(index)}
+          currentStrain={filteredStrains[current]}
+        />
+      </div>
     </div>
   );
 };
