@@ -1,3 +1,4 @@
+
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -11,10 +12,11 @@ interface StrainHeaderProps {
 }
 
 const StrainHeader = ({ strain }: StrainHeaderProps) => {
-  const getRecommendationContext = (type: string, effectProfiles: { name: string }[]) => {
+  const getRecommendationContext = (type: string, effectProfiles: { name: string }[] = []) => {
     const timeOfDay = type === 'Indica' ? 'evening/nighttime' : type === 'Sativa' ? 'daytime' : 'any time';
     const primaryEffects = effectProfiles.slice(0, 2).map(e => e.name).join(' and ').toLowerCase();
-    return `Perfect for ${timeOfDay} use. Customers seeking ${primaryEffects} effects will appreciate this strain.`;
+    const effectsText = primaryEffects || 'relaxation';
+    return `Perfect for ${timeOfDay} use. Customers seeking ${effectsText} effects will appreciate this strain.`;
   };
 
   const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);

@@ -8,7 +8,7 @@ interface StrainEffectsVisualProps {
   effectProfiles: EffectProfile[];
 }
 
-const StrainEffectsVisual = ({ effectProfiles }: StrainEffectsVisualProps) => {
+const StrainEffectsVisual = ({ effectProfiles = [] }: StrainEffectsVisualProps) => {
   const getIntensityBars = (intensity: number) => (
     <div className="flex gap-1">
       {Array.from({ length: 5 }, (_, i) => (
@@ -26,6 +26,23 @@ const StrainEffectsVisual = ({ effectProfiles }: StrainEffectsVisualProps) => {
     const labels = ['', 'Subtle', 'Mild', 'Moderate', 'Strong', 'Intense'];
     return labels[intensity] || 'Unknown';
   };
+
+  if (!effectProfiles || effectProfiles.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-yellow-500" />
+            Effects Profile
+          </CardTitle>
+          <CardDescription>How this strain will make you feel</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-center">No effect information available</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
