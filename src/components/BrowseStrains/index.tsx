@@ -6,11 +6,9 @@ import { useStrainStore } from '@/stores/useStrainStore';
 import { useStrainFiltering } from '@/data/hooks/useStrainFiltering';
 import BrowseHeader from './components/BrowseHeader';
 import StrainGrid from './components/StrainGrid';
-import SearchBar from './SearchBar';
 import FilterControls from './FilterControls';
 import SmartOmnibar from '@/components/SmartOmnibar';
 import { Strain } from '@/types/strain';
-import { useState } from 'react';
 
 interface BrowseStrainsProps {
   onStrainSelect: (strain: Strain) => void;
@@ -83,12 +81,6 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         onSearchChange={(term) => updateFilters({ searchTerm: term })}
         onStrainGenerated={handleStrainGenerated}
         hasResults={hasResults}
-      />
-
-      {/* Traditional search bar as fallback */}
-      <SearchBar
-        searchTerm={searchTerm}
-        onSearchChange={(term) => updateFilters({ searchTerm: term })}
       />
 
       {/* Filter controls */}
