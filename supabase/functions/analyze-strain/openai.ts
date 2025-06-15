@@ -1,3 +1,4 @@
+
 interface OpenAIMessage {
   role: string;
   content: any;
@@ -172,5 +173,3 @@ export const callOpenAI = async (messages: OpenAIMessage[], openAIApiKey: string
 
   return response.json();
 };
-
-import { getDeterministicTHCRange } from "./thcGenerator";
