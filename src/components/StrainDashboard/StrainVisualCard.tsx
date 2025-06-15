@@ -3,9 +3,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
 import { getDeterministicTHCRange } from '@/utils/thcGenerator';
+
 interface StrainVisualCardProps {
   strain: Strain;
 }
+
 const StrainVisualCard = ({
   strain
 }: StrainVisualCardProps) => {
@@ -21,6 +23,7 @@ const StrainVisualCard = ({
         return '🌿';
     }
   };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'Indica':
@@ -33,33 +36,35 @@ const StrainVisualCard = ({
         return 'from-gray-500 to-gray-700';
     }
   };
+
   const getSecondaryColor = (type: string) => {
     switch (type) {
       case 'Indica':
-        return 'bg-purple-100 border-purple-200';
+        return 'bg-purple-800 border-purple-700';
       case 'Sativa':
-        return 'bg-green-100 border-green-200';
+        return 'bg-green-800 border-green-700';
       case 'Hybrid':
-        return 'bg-blue-100 border-blue-200';
+        return 'bg-blue-800 border-blue-700';
       default:
-        return 'bg-gray-100 border-gray-200';
+        return 'bg-gray-800 border-gray-700';
     }
   };
 
   const getTextColor = (type: string) => {
     switch (type) {
       case 'Indica':
-        return 'text-purple-900 dark:text-purple-100';
+        return 'text-purple-100';
       case 'Sativa':
-        return 'text-green-900 dark:text-green-100';
+        return 'text-green-100';
       case 'Hybrid':
-        return 'text-blue-900 dark:text-blue-100';
+        return 'text-blue-100';
       default:
-        return 'text-gray-900 dark:text-gray-100';
+        return 'text-gray-100';
     }
   };
 
   const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
+
   return <Card className="overflow-hidden">
       <div className={`h-32 bg-gradient-to-br ${getTypeColor(strain.type)} flex items-center justify-center relative`}>
         <div className="text-6xl opacity-20 absolute">🌿</div>
@@ -78,7 +83,7 @@ const StrainVisualCard = ({
         <h3 className="text-xl font-bold mb-2">{strain.name}</h3>
         
         <div className={`p-2 rounded-lg border ${getSecondaryColor(strain.type)} mb-4`}>
-          <div className="text-xs text-muted-foreground mb-1">THC</div>
+          <div className="text-xs text-gray-300 mb-1">THC</div>
           <div className={`font-bold text-lg ${getTextColor(strain.type)}`}>{thcMin}%–{thcMax}%</div>
         </div>
 
@@ -88,4 +93,5 @@ const StrainVisualCard = ({
       </CardContent>
     </Card>;
 };
+
 export default StrainVisualCard;
