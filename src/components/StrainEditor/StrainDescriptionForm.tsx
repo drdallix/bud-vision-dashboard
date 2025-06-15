@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Wand2, RefreshCw, History, Check, X } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface StrainDescriptionFormProps {
   strain: Strain;
@@ -33,21 +34,30 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
 
     setIsRegenerating(true);
     try {
-      // Call AI service to regenerate description
-      const response = await fetch('/api/regenerate-description', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      console.log('Calling regenerate-description edge function...');
+      
+      const { data, error } = await supabase.functions.invoke('regenerate-description', {
+        body: {
           strainName: strain.name,
           strainType: strain.type,
           currentDescription: strain.description,
           humanGuidance: humanGuidance,
           effects: strain.effectProfiles?.map(e => e.name) || [],
           flavors: strain.flavorProfiles?.map(f => f.name) || [],
-        }),
+        },
       });
 
-      const data = await response.json();
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      if (data?.error) {
+        console.error('Edge function returned error:', data.error);
+        throw new Error(data.error);
+      }
+
+      console.log('Generated description:', data.description);
       setProposedDescription(data.description);
       
       toast({
@@ -58,7 +68,7 @@ const StrainDescriptionForm = ({ strain, onUpdate, isLoading }: StrainDescriptio
       console.error('Error regenerating description:', error);
       toast({
         title: "Generation Failed",
-        description: "Failed to generate new description. Please try again.",
+        description: error.message || "Failed to generate new description. Please try again.",
         variant: "destructive",
       });
     } finally {
