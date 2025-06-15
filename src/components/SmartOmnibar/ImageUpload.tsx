@@ -1,7 +1,8 @@
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import CameraModal from '../CameraModal';
 
 interface ImageUploadProps {
   selectedImage: string | null;
@@ -12,8 +13,9 @@ interface ImageUploadProps {
 
 const ImageUpload = ({ selectedImage, onImageSelect, onImageClear, disabled = false }: ImageUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -25,22 +27,42 @@ const ImageUpload = ({ selectedImage, onImageSelect, onImageClear, disabled = fa
     }
   };
 
+  const handleCameraCapture = () => {
+    setCameraOpen(true);
+  };
+
   return (
     <>
       <Button
-        onClick={() => fileInputRef.current?.click()}
+        onClick={handleCameraCapture}
         variant="ghost"
         size="sm"
         className="h-8 w-8 p-0 rounded-full hover:bg-gray-100"
         disabled={disabled}
+        aria-label="Open Camera"
       >
         <Camera className="h-4 w-4" />
       </Button>
+      {/* Fallback: classic file input for gallery images */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
+      <CameraModal
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={onImageSelect}
+      />
 
       {/* Image preview */}
       {selectedImage && (
-        <div className="absolute top-full left-0 right-0 mt-2">
-          <div className="flex items-center gap-2 p-2 bg-accent/50 rounded-lg">
+        <div className="absolute top-full left-0 right-0 mt-2 z-20">
+          <div className="flex items-center gap-2 p-2 bg-accent/50 rounded-lg shadow">
             <img 
               src={selectedImage} 
               alt="Selected package" 
@@ -58,17 +80,9 @@ const ImageUpload = ({ selectedImage, onImageSelect, onImageClear, disabled = fa
           </div>
         </div>
       )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
     </>
   );
 };
 
 export default ImageUpload;
+
