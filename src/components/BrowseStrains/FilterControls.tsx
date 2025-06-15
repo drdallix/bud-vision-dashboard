@@ -22,7 +22,7 @@ const FilterControls = ({
   onPriceFilterChange,
 }: FilterControlsProps) => {
   return (
-    <div className="flex items-center gap-2 px-1">
+    <div className="flex flex-wrap items-center gap-2 px-1">
       <Select value={filterType} onValueChange={onFilterChange}>
         <SelectTrigger className="h-8 w-28 text-xs">
           <Filter className="h-3 w-3 mr-1" />
@@ -73,4 +73,3 @@ const FilterControls = ({
 };
 
 export default FilterControls;
-
