@@ -1,3 +1,4 @@
+
 import { Package, PackageX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -10,7 +11,7 @@ interface BatchActionsProps {
   onOutOfStock: () => void;
   onClear: () => void;
   loading: boolean;
-  onBatchPrice: (nowPrice: number, wasPrice?: number | null) => void;
+  onBatchPrice: (nowPrice: number, wasPrice?: number | null) => Promise<void>;
 }
 
 const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading, onBatchPrice }: BatchActionsProps) => {
@@ -64,9 +65,7 @@ const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading
       <BatchPriceModal
         open={showBatchPrice}
         setOpen={setShowBatchPrice}
-        onApply={(nowPrice, wasPrice) => {
-          onBatchPrice(nowPrice, wasPrice);
-        }}
+        onApply={onBatchPrice}
       />
     </div>
   );

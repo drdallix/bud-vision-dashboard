@@ -12,7 +12,7 @@ import StrainGrid from './components/StrainGrid';
 import { useBrowseFilters } from './hooks/useBrowseFilters';
 import { useStrainSelection } from './hooks/useStrainSelection';
 import { useInventoryActions } from './hooks/useInventoryActions';
-import { useStrainPrices } from './hooks/useStrainPrices';
+import { useStrainPrices } from '@/hooks/useStrainPrices';
 
 interface BrowseStrainsProps {
   onStrainSelect: (strain: Strain) => void;
