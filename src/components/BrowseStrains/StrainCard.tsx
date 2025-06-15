@@ -90,26 +90,22 @@ const StrainCard = ({
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div>
-                <div className="text-xs text-muted-foreground">THC: {strain.thc}%</div>
-                <Progress value={strain.thc} max={35} className="h-1" />
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">CBD: {strain.cbd}%</div>
-                <Progress value={strain.cbd} max={25} className="h-1" />
-              </div>
+            <div className="mb-2">
+              <div className="text-xs text-muted-foreground">THC: {strain.thc}%</div>
+              <Progress value={strain.thc} max={35} className="h-1" />
             </div>
             
             <div className="flex flex-wrap gap-1 mb-2">
-              {strain.effects.slice(0, 3).map((effect, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  {effect}
+              {strain.effectProfiles.slice(0, 3).map((effect, index) => (
+                <Badge key={index} variant="outline" className="text-xs flex items-center gap-1"
+                       style={{ backgroundColor: `${effect.color}20`, color: effect.color, borderColor: effect.color }}>
+                  <span>{effect.emoji}</span>
+                  {effect.name}
                 </Badge>
               ))}
-              {strain.effects.length > 3 && (
+              {strain.effectProfiles.length > 3 && (
                 <Badge variant="outline" className="text-xs">
-                  +{strain.effects.length - 3}
+                  +{strain.effectProfiles.length - 3}
                 </Badge>
               )}
             </div>

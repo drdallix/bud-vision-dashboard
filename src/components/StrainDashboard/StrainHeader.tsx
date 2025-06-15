@@ -11,9 +11,9 @@ interface StrainHeaderProps {
 }
 
 const StrainHeader = ({ strain }: StrainHeaderProps) => {
-  const getRecommendationContext = (type: string, effects: string[]) => {
+  const getRecommendationContext = (type: string, effectProfiles: { name: string }[]) => {
     const timeOfDay = type === 'Indica' ? 'evening/nighttime' : type === 'Sativa' ? 'daytime' : 'any time';
-    const primaryEffects = effects.slice(0, 2).join(' and ').toLowerCase();
+    const primaryEffects = effectProfiles.slice(0, 2).map(e => e.name).join(' and ').toLowerCase();
     return `Perfect for ${timeOfDay} use. Customers seeking ${primaryEffects} effects will appreciate this strain.`;
   };
 
@@ -33,7 +33,7 @@ const StrainHeader = ({ strain }: StrainHeaderProps) => {
                 <div className="flex items-start gap-2">
                   <Users className="h-4 w-4 text-blue-600 mt-0.5" />
                   <p className="text-sm text-blue-800">
-                    <strong>Customer Recommendation:</strong> {getRecommendationContext(strain.type, strain.effects)}
+                    <strong>Customer Recommendation:</strong> {getRecommendationContext(strain.type, strain.effectProfiles)}
                   </p>
                 </div>
               </div>
@@ -42,22 +42,12 @@ const StrainHeader = ({ strain }: StrainHeaderProps) => {
               </p>
             </div>
             
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">THC</span>
-                  <span className="text-sm font-bold">{strain.thc}%</span>
-                </div>
-                <Progress value={strain.thc} max={35} className="h-2" />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">THC</span>
+                <span className="text-sm font-bold">{strain.thc}%</span>
               </div>
-              
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">CBD</span>
-                  <span className="text-sm font-bold">{strain.cbd}%</span>
-                </div>
-                <Progress value={strain.cbd} max={25} className="h-2" />
-              </div>
+              <Progress value={strain.thc} max={35} className="h-2" />
             </div>
           </div>
         </div>

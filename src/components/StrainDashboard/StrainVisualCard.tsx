@@ -54,17 +54,10 @@ const StrainVisualCard = ({ strain }: StrainVisualCardProps) => {
       <CardContent className="p-4">
         <h3 className="text-xl font-bold mb-2">{strain.name}</h3>
         
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className={`p-2 rounded-lg border ${getSecondaryColor(strain.type)}`}>
-            <div className="text-xs text-muted-foreground mb-1">THC</div>
-            <div className="font-bold text-lg">{strain.thc}%</div>
-            <Progress value={strain.thc} max={35} className="h-1 mt-1" />
-          </div>
-          <div className={`p-2 rounded-lg border ${getSecondaryColor(strain.type)}`}>
-            <div className="text-xs text-muted-foreground mb-1">CBD</div>
-            <div className="font-bold text-lg">{strain.cbd}%</div>
-            <Progress value={strain.cbd} max={25} className="h-1 mt-1" />
-          </div>
+        <div className={`p-2 rounded-lg border ${getSecondaryColor(strain.type)} mb-4`}>
+          <div className="text-xs text-muted-foreground mb-1">THC</div>
+          <div className="font-bold text-lg">{strain.thc}%</div>
+          <Progress value={strain.thc} max={35} className="h-1 mt-1" />
         </div>
 
         <div className="text-sm text-muted-foreground">

@@ -100,13 +100,11 @@ export const convertStrainForDatabase = (strain: Strain, userId: string) => {
     strain_name: strain.name,
     strain_type: strain.type,
     thc: strain.thc,
-    cbd: null, // Remove CBD for recreational focus
     effects,
     flavors,
     terpenes: terpenes,
     medical_uses: [], // Remove medical uses for recreational focus
     description: strain.description,
-    image_url: null,
     confidence: strain.confidence,
     scanned_at: strain.scannedAt,
     in_stock: strain.inStock,

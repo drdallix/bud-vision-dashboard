@@ -38,7 +38,6 @@ export interface LegacyStrain extends Omit<Strain, 'effectProfiles' | 'flavorPro
   effects: string[];
   flavors: string[];
   medicalUses: string[];
-  cbd?: number; // Optional for migration
 }
 
 // Database return type from Supabase (matching the generated types)
@@ -48,13 +47,11 @@ export type DatabaseScan = {
   strain_name: string;
   strain_type: string;
   thc: number | null;
-  cbd: number | null;
   effects: string[] | null;
   flavors: string[] | null;
   terpenes: any | null;
   medical_uses: string[] | null;
   description: string | null;
-  image_url: string | null;
   confidence: number | null;
   scanned_at: string;
   created_at: string;
