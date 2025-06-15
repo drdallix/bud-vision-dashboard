@@ -1,6 +1,8 @@
-
 import { Package, PackageX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import BatchPriceModal from './components/BatchPriceModal';
+import { BadgeDollarSign } from 'lucide-react';
 
 interface BatchActionsProps {
   selectedCount: number;
@@ -8,9 +10,12 @@ interface BatchActionsProps {
   onOutOfStock: () => void;
   onClear: () => void;
   loading: boolean;
+  onBatchPrice: (nowPrice: number, wasPrice?: number | null) => void;
 }
 
-const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading }: BatchActionsProps) => {
+const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading, onBatchPrice }: BatchActionsProps) => {
+  const [showBatchPrice, setShowBatchPrice] = useState(false);
+
   if (selectedCount === 0) return null;
 
   return (
@@ -40,12 +45,29 @@ const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading
       </Button>
       <Button
         size="sm"
+        variant="outline"
+        className="h-7 px-2 text-xs"
+        onClick={() => setShowBatchPrice(true)}
+        disabled={loading}
+      >
+        <BadgeDollarSign className="h-3 w-3 mr-1" />
+        Set Price
+      </Button>
+      <Button
+        size="sm"
         variant="ghost"
         onClick={onClear}
         className="h-7 w-7 p-0"
       >
         <X className="h-3 w-3" />
       </Button>
+      <BatchPriceModal
+        open={showBatchPrice}
+        setOpen={setShowBatchPrice}
+        onApply={(nowPrice, wasPrice) => {
+          onBatchPrice(nowPrice, wasPrice);
+        }}
+      />
     </div>
   );
 };

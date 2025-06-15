@@ -129,7 +129,14 @@ const StrainCard = ({
               {editMode && canEdit && (
                 <Switch
                   checked={strain.inStock}
-                  onCheckedChange={() => onStockToggle(strain.id, strain.inStock)}
+                  onCheckedChange={async () => {
+                    onStockToggle(strain.id, strain.inStock);
+                    // If marking out of stock, delete all prices
+                    if (strain.inStock) {
+                      const { deleteAllForStrain } = require('@/services/priceService');
+                      await deleteAllForStrain(strain.id);
+                    }
+                  }}
                   disabled={inventoryLoading}
                 />
               )}
