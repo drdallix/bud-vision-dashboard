@@ -1,14 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
-import { getDeterministicTHC } from '@/utils/thcGenerator';
+import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 interface StrainCannabinoidsProps {
   strain: Strain;
 }
 
 const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
-  const thcValue = getDeterministicTHC(strain.name);
+  const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
+  const avgTHC = ((thcMin + thcMax) / 2);
 
   const getPotencyLabel = (thc: number) => {
     if (thc >= 25) return 'High Potency';
@@ -22,7 +23,7 @@ const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
                    type === 'Sativa' ? 'energy and creativity' : 
                    'balanced mind and body effects';
     
-    return `Perfect for ${tolerance} seeking ${effects}. The ${thc}% THC content delivers ${thc >= 25 ? 'powerful' : 'reliable'} recreational effects.`;
+    return `Perfect for ${tolerance} seeking ${effects}. The average ${thc}% THC content delivers ${thc >= 25 ? 'powerful' : 'reliable'} recreational effects.`;
   };
 
   return (
@@ -39,10 +40,11 @@ const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="font-medium">THC (Psychoactive)</span>
-                <span className="font-bold text-lg text-green-600">{thcValue}%</span>
+                <span className="font-bold text-lg text-green-600">{thcMin}%–{thcMax}%</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                <strong>{getPotencyLabel(thcValue)}</strong> - Primary compound responsible for euphoric recreational effects
+                <strong>{getPotencyLabel(avgTHC)}</strong> - Primary compound responsible for euphoric recreational effects<br />
+                (Range is deterministic by strain name)
               </p>
             </div>
           </div>
@@ -51,7 +53,7 @@ const StrainCannabinoids = ({ strain }: StrainCannabinoidsProps) => {
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <h4 className="font-medium mb-2 text-green-800">Budtender Recommendation</h4>
               <p className="text-sm text-green-700">
-                {getRecommendation(thcValue, strain.type)}
+                {getRecommendation(avgTHC, strain.type)}
               </p>
             </div>
             

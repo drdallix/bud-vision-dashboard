@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
-import { getDeterministicTHC } from '@/utils/thcGenerator';
+import { getDeterministicTHC, getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 interface StrainCardProps {
   strain: Strain;
@@ -55,7 +55,7 @@ const StrainCard = ({
     }
   };
 
-  const thcValue = getDeterministicTHC(strain.name);
+  const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
 
   return (
     <Card 
@@ -93,7 +93,9 @@ const StrainCard = ({
             </div>
             
             <div className="mb-2">
-              <div className="text-xs text-muted-foreground">THC: {thcValue}%</div>
+              <div className="text-xs text-muted-foreground">
+                THC: {thcMin}%–{thcMax}%
+              </div>
             </div>
             
             <div className="flex flex-wrap gap-1 mb-2">

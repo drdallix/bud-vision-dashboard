@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { convertDatabaseScanToStrain } from '@/utils/strainConverters';
 import { Strain, DatabaseScan } from '@/types/strain';
 import { useEffect, useMemo } from 'react';
+import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 export const useBrowseStrains = (searchTerm: string, filterType: string, sortBy: string) => {
   const { user } = useAuth();
@@ -95,8 +95,12 @@ export const useBrowseStrains = (searchTerm: string, filterType: string, sortBy:
             return new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime();
           case 'name':
             return a.name.localeCompare(b.name);
-          case 'thc':
-            return b.thc - a.thc;
+          case 'thc': {
+            // Sort by the average of the deterministic range!
+            const avgA = ((getDeterministicTHCRange(a.name)[0] + getDeterministicTHCRange(a.name)[1]) / 2);
+            const avgB = ((getDeterministicTHCRange(b.name)[0] + getDeterministicTHCRange(b.name)[1]) / 2);
+            return avgB - avgA; // highest average THC first
+          }
           case 'confidence':
             return b.confidence - a.confidence;
           default:

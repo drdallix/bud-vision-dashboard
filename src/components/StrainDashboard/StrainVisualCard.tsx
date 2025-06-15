@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Strain } from '@/types/strain';
-import { getDeterministicTHC } from '@/utils/thcGenerator';
+import { getDeterministicTHC, getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 interface StrainVisualCardProps {
   strain: Strain;
@@ -36,7 +36,7 @@ const StrainVisualCard = ({ strain }: StrainVisualCardProps) => {
     }
   };
 
-  const thcValue = getDeterministicTHC(strain.name);
+  const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
 
   return (
     <Card className="overflow-hidden">
@@ -58,7 +58,7 @@ const StrainVisualCard = ({ strain }: StrainVisualCardProps) => {
         
         <div className={`p-2 rounded-lg border ${getSecondaryColor(strain.type)} mb-4`}>
           <div className="text-xs text-muted-foreground mb-1">THC</div>
-          <div className="font-bold text-lg">{thcValue}%</div>
+          <div className="font-bold text-lg">{thcMin}%–{thcMax}%</div>
         </div>
 
         <div className="text-sm text-muted-foreground">

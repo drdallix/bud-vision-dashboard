@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Users } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import StrainVisualCard from './StrainVisualCard';
-import { getDeterministicTHC } from '@/utils/thcGenerator';
+import { getDeterministicTHC, getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 interface StrainHeaderProps {
   strain: Strain;
@@ -17,7 +17,7 @@ const StrainHeader = ({ strain }: StrainHeaderProps) => {
     return `Perfect for ${timeOfDay} use. Customers seeking ${primaryEffects} effects will appreciate this strain.`;
   };
 
-  const thcValue = getDeterministicTHC(strain.name);
+  const [thcMin, thcMax] = getDeterministicTHCRange(strain.name);
 
   return (
     <Card>
@@ -47,7 +47,7 @@ const StrainHeader = ({ strain }: StrainHeaderProps) => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">THC</span>
-                <span className="text-sm font-bold">{thcValue}%</span>
+                <span className="text-sm font-bold">{thcMin}%–{thcMax}%</span>
               </div>
             </div>
           </div>
