@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Leaf, Zap, Heart, Star, Package, Clock } from 'lucide-react';
@@ -52,7 +51,6 @@ const ShopMenu = () => {
       flavors: ['Earthy', 'Pine', 'Woody'],
       price: '$50/8th',
       rating: 4.9,
-      image: '/placeholder.svg',
       description: 'Classic strain with complex aroma and balanced head and body effects.',
       inStock: true,
       lastUpdated: '1 hour ago'
@@ -67,7 +65,6 @@ const ShopMenu = () => {
       flavors: ['Grape', 'Berry', 'Sweet'],
       price: '$48/8th',
       rating: 4.7,
-      image: '/placeholder.svg',
       description: 'Potent indica delivering deep relaxation and stress relief.',
       inStock: false,
       lastUpdated: '30 minutes ago'
@@ -82,7 +79,6 @@ const ShopMenu = () => {
       flavors: ['Citrus', 'Sweet', 'Tropical'],
       price: '$46/8th',
       rating: 4.6,
-      image: '/placeholder.svg',
       description: 'Energizing sativa perfect for daytime use and creative activities.',
       inStock: true,
       lastUpdated: '45 minutes ago'
@@ -97,7 +93,6 @@ const ShopMenu = () => {
       flavors: ['Sweet', 'Vanilla', 'Earthy'],
       price: '$55/8th',
       rating: 4.9,
-      image: '/placeholder.svg',
       description: 'Premium hybrid with exceptional flavor and potent relaxing effects.',
       inStock: true,
       lastUpdated: '15 minutes ago'
@@ -112,7 +107,6 @@ const ShopMenu = () => {
       flavors: ['Diesel', 'Citrus', 'Pungent'],
       price: '$47/8th',
       rating: 4.5,
-      image: '/placeholder.svg',
       description: 'Iconic sativa with distinctive aroma and long-lasting energetic effects.',
       inStock: false,
       lastUpdated: '3 hours ago'
