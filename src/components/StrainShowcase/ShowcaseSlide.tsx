@@ -69,13 +69,13 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
         {/* Enhanced Header - Full Width */}
         <div className="relative">
           <Card className="border-0 bg-theme-card shadow-xl">
-            <div className="p-3 md:p-6">
+            <div className="p-4 md:p-6">
               <div className="flex items-start justify-between mb-3 md:mb-4">
-                <div className="space-y-1 md:space-y-2 flex-1 min-w-0">
+                <div className="space-y-2 md:space-y-3 flex-1 min-w-0 pr-3">
                   <div className="flex items-center gap-2 md:gap-3">
                     <span className="text-2xl md:text-3xl flex-shrink-0">{getTypeEmoji(strain.type)}</span>
                     <div className="min-w-0 flex-1">
-                      <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground truncate">
+                      <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">
                         {strain.name}
                       </h1>
                       <div className="flex items-center gap-2 mt-1">
@@ -92,12 +92,21 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
                     </div>
                   </div>
                   
-                  <p className="text-sm md:text-base text-muted-foreground leading-relaxed mt-2 md:mt-3">
+                  <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                     {strain.description}
                   </p>
+                  
+                  {/* THC percentage moved here */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                    <Zap className="h-4 w-4 text-yellow-500" />
+                    <span className="text-base md:text-lg font-bold text-foreground">
+                      {thcDisplay}
+                    </span>
+                    <span className="text-sm text-muted-foreground">THC</span>
+                  </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2 ml-3 flex-shrink-0">
+                <div className="flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -113,16 +122,6 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
                       className={`h-5 w-5 md:h-6 md:w-6 ${isLiked ? 'fill-current' : ''}`} 
                     />
                   </Button>
-                  
-                  <div className="text-center">
-                    <div className="flex items-center gap-1 md:gap-2 justify-end">
-                      <Zap className="h-4 w-4 text-yellow-500" />
-                      <span className="text-base md:text-lg font-bold text-foreground">
-                        {thcDisplay}
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">THC</div>
-                  </div>
                 </div>
               </div>
             </div>
