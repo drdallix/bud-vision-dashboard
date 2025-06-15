@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
 import { useStrainData } from '@/data/hooks/useStrainData';
@@ -162,7 +161,10 @@ const StrainShowcase = () => {
               loop: true,
               skipSnaps: false,
               align: 'center',
-              dragFree: true,
+              dragFree: false,
+              containScroll: 'trimSnaps',
+              slidesToScroll: 1,
+              duration: 25,
             }}
             className="w-full"
           >
