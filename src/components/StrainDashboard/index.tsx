@@ -2,14 +2,13 @@
 import React, { useState } from 'react';
 import { Strain } from '@/types/strain';
 import StrainHeader from './StrainHeader';
-import StrainEffectsVisual from './StrainEffectsVisual';
-import StrainFlavorsVisual from './StrainFlavorsVisual';
+import StrainEffects from './StrainEffects';
+import StrainFlavors from './StrainFlavors';
 import StrainMedicalUses from './StrainMedicalUses';
 import StrainCannabinoids from './StrainCannabinoids';
 import StrainTerpenes from './StrainTerpenes';
 import { StrainEditModal } from '@/components/StrainEditor';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import QuickPrintButton from '@/components/QuickPrintButton';
 import { defaultConfig } from '@/components/PrintSettings';
 
@@ -49,19 +48,9 @@ const StrainDashboard: React.FC<StrainDashboardProps> = ({ strain }) => {
 
       <StrainCannabinoids strain={strain} />
 
-      {/* Use the visual components from showcase for better consistency */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-md">
-          <div className="p-4">
-            <StrainEffectsVisual effectProfiles={strain.effectProfiles} />
-          </div>
-        </Card>
-        
-        <Card className="border-0 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 shadow-md">
-          <div className="p-4">
-            <StrainFlavorsVisual flavorProfiles={strain.flavorProfiles} />
-          </div>
-        </Card>
+        <StrainEffects effects={strain.effectProfiles?.map(p => p.name) || []} />
+        <StrainFlavors flavors={strain.flavorProfiles?.map(p => p.name) || []} />
       </div>
 
       <StrainMedicalUses medicalUses={[]} />

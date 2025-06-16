@@ -1,164 +1,122 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
-import { useStrainStore } from '@/stores/useStrainStore';
-import { useAuth } from '@/contexts/AuthContext';
-import { ShowcaseFilters } from './ShowcaseFilters';
-import { ShowcaseCarousel } from './components/ShowcaseCarousel';
-import { ShowcaseControls } from './components/ShowcaseControls';
-import { FullscreenView } from './components/FullscreenView';
-import { EmptyState } from './components/EmptyState';
+import { TransitionMode } from './FullscreenTransitions';
+import { useAdvancedFilters } from '@/components/BrowseStrains/hooks/useAdvancedFilters';
+import MobileFilters from '@/components/BrowseStrains/MobileFilters';
 import { useShowcaseCarousel } from './hooks/useShowcaseCarousel';
-import { useRealtimeShowcaseFilters } from './hooks/useRealtimeShowcaseFilters';
-
+import { useFavoriteStrains } from '@/hooks/useFavoriteStrains';
+import ShowcaseCarousel from './components/ShowcaseCarousel';
+import FullscreenView from './components/FullscreenView';
+import EmptyState from './components/EmptyState';
+import FavoritesComparison from './components/FavoritesComparison';
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
 }
-
-const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
-  const { strains } = useStrainStore(true);
-  const { user } = useAuth();
-  const [filterType, setFilterType] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'thc' | 'recent'>('recent');
-  const [isPlaying, setIsPlaying] = useState(true);
+const StrainShowcase = ({
+  onStrainSelect
+}: StrainShowcaseProps) => {
+  const {
+    strains,
+    isLoading
+  } = useRealtimeStrainStore(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const { lastUpdateTime } = useRealtimeShowcaseFilters();
+  const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
 
-  const filteredStrains = React.useMemo(() => {
-    let filtered = strains;
+  // Favorites management
+  const {
+    favoriteStrains,
+    toggleFavorite,
+    isFavorite,
+    clearFavorites
+  } = useFavoriteStrains();
 
-    if (filterType !== 'all') {
-      filtered = filtered.filter(strain => strain.type === filterType);
-    }
+  // Use the same advanced filters as BrowseStrains
+  const {
+    searchTerm,
+    setSearchTerm,
+    filterType,
+    setFilterType,
+    sortBy,
+    setSortBy,
+    stockFilter,
+    setStockFilter,
+    selectedEffects,
+    selectedFlavors,
+    thcRange,
+    setThcRange,
+    handleEffectToggle,
+    handleFlavorToggle,
+    filteredStrains,
+    clearAllFilters,
+    hasActiveFilters
+  } = useAdvancedFilters(strains);
 
-    filtered = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'thc':
-          const thcA = a.thc || 0;
-          const thcB = b.thc || 0;
-          return thcB - thcA;
-        case 'recent':
-          return new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime();
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [strains, filterType, sortBy, lastUpdateTime]);
-
+  // Use the carousel hook
   const {
     currentIndex,
+    setCurrentIndex,
     carouselApi,
     setCarouselApi,
     handleNext,
     handlePrevious,
     handleNavigateToIndex
-  } = useShowcaseCarousel({ 
-    filteredStrains, 
-    isPlaying: isPlaying && !isFullscreen 
+  } = useShowcaseCarousel({
+    filteredStrains,
+    isPlaying
   });
-
-  useEffect(() => {
-    const storedFavorites = localStorage.getItem('favorites');
-    if (storedFavorites) {
-      setFavorites(JSON.parse(storedFavorites));
-    }
-  }, []);
-
-  const isFavorite = useCallback((strainId: string) => {
-    return favorites.includes(strainId);
-  }, [favorites]);
-
-  const handleToggleFavorite = (strain: Strain) => {
-    const newFavorites = isFavorite(strain.id)
-      ? favorites.filter(id => id !== strain.id)
-      : [...favorites, strain.id];
-
-    setFavorites(newFavorites);
-    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+  const currentStrain = filteredStrains[currentIndex];
+  const handleFullscreen = () => {
+    setIsFullscreen(true);
   };
+  const handleExitFullscreen = () => {
+    setIsFullscreen(false);
+  };
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>;
+  }
+  if (filteredStrains.length === 0) {
+    return <EmptyState strains={strains} filterType={filterType} sortBy={sortBy as 'name' | 'thc' | 'recent'} selectedEffects={selectedEffects} selectedFlavors={selectedFlavors} thcRange={thcRange} stockFilter={stockFilter} onFilterChange={setFilterType} onSortChange={setSortBy} onEffectToggle={handleEffectToggle} onFlavorToggle={handleFlavorToggle} onThcRangeChange={setThcRange} onStockFilterChange={setStockFilter} onClearAll={clearAllFilters} />;
+  }
+  if (isFullscreen && currentStrain) {
+    return <FullscreenView currentStrain={currentStrain} currentIndex={currentIndex} transitionMode={transitionMode} onExitFullscreen={handleExitFullscreen} filteredStrains={filteredStrains} isPlaying={isPlaying} setIsPlaying={setIsPlaying} onNext={handleNext} onPrevious={handlePrevious} onNavigateToIndex={handleNavigateToIndex} setTransitionMode={setTransitionMode} />;
+  }
+  return <div className="space-y-4">
+      <MobileFilters strains={strains} filterType={filterType} sortBy={sortBy as 'name' | 'thc' | 'recent'} selectedEffects={selectedEffects} selectedFlavors={selectedFlavors} thcRange={thcRange} stockFilter={stockFilter} onFilterChange={setFilterType} onSortChange={setSortBy} onEffectToggle={handleEffectToggle} onFlavorToggle={handleFlavorToggle} onThcRangeChange={setThcRange} onStockFilterChange={setStockFilter} onClearAll={clearAllFilters} />
 
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-foreground mb-4">
-          Strain Showcase
-        </h2>
-        <p className="text-muted-foreground">
-          Explore our curated selection of premium strains.
-        </p>
-      </div>
+      {/* Modified ShowcaseCarousel with favorites integration */}
+      <div className="space-y-4">
+        <ShowcaseCarousel filteredStrains={filteredStrains} currentIndex={currentIndex} setCarouselApi={setCarouselApi} onNavigateToIndex={handleNavigateToIndex} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />
 
-      <ShowcaseFilters
-        filterType={filterType}
-        onFilterChange={setFilterType}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        strainCount={filteredStrains.length}
-      />
-
-      {filteredStrains.length === 0 ? (
-        <EmptyState 
-          hasFilters={filterType !== 'all' || sortBy !== 'recent'} 
-          onClearFilters={() => {
-            setFilterType('all');
-            setSortBy('recent');
-          }}
-        />
-      ) : (
-        <div className="space-y-6">
-          {!isFullscreen ? (
-            <>
-              <ShowcaseCarousel
-                filteredStrains={filteredStrains}
-                currentIndex={currentIndex}
-                setCarouselApi={setCarouselApi}
-                onNavigateToIndex={handleNavigateToIndex}
-                isFavorite={isFavorite}
-                onToggleFavorite={handleToggleFavorite}
-              />
-              <ShowcaseControls
-                currentIndex={currentIndex}
-                totalStrains={filteredStrains.length}
-                isPlaying={false}
-                onNext={handleNext}
-                onPrevious={handlePrevious}
-                onPlayPause={() => {}}
-                onFullscreen={() => setIsFullscreen(true)}
-                showPlayback={false}
-              />
-            </>
-          ) : (
-            <FullscreenView
-              strains={filteredStrains}
-              currentIndex={currentIndex}
-              isPlaying={isPlaying}
-              onClose={() => setIsFullscreen(false)}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onPlayPause={() => setIsPlaying(!isPlaying)}
-              onStrainSelect={onStrainSelect}
-            />
-          )}
+        {/* Compact mobile-first controls */}
+        <div className="flex items-center justify-center gap-3 p-3 backdrop-blur-sm rounded-lg bg-teal-800">
+          <button onClick={handlePrevious} disabled={filteredStrains.length <= 1} className="p-2 rounded-full transition-colors active:scale-95 min-h-[44px] min-w-[44px] bg-sky-600 hover:bg-sky-500">
+            ←
+          </button>
+          
+          <button onClick={() => setIsPlaying(!isPlaying)} disabled={filteredStrains.length <= 1} className="p-2 rounded-full text-white transition-colors active:scale-95 min-h-[44px] min-w-[44px] bg-green-600 hover:bg-green-500">
+            {isPlaying ? '⏸️' : '▶️'}
+          </button>
+          
+          <button onClick={handleNext} disabled={filteredStrains.length <= 1} className="p-2 rounded-full transition-colors active:scale-95 min-h-[44px] min-w-[44px] bg-sky-600 hover:bg-sky-500">
+            →
+          </button>
+          
+          <button onClick={handleFullscreen} className="p-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors active:scale-95 min-h-[44px] min-w-[44px]" disabled={filteredStrains.length <= 1}>
+            ⛶
+          </button>
+          
+          <span className="text-sm ml-2 text-slate-50">
+            {currentIndex + 1} / {filteredStrains.length}
+          </span>
         </div>
-      )}
-
-      <div className="text-center text-muted-foreground mt-4">
-        {user ? (
-          <>
-            Favorited Strains: {favorites.length}
-          </>
-        ) : (
-          <>
-            Sign in to save your favorite strains!
-          </>
-        )}
       </div>
-    </div>
-  );
-};
 
+      {/* Favorites Comparison Table */}
+      <FavoritesComparison favoriteStrains={favoriteStrains} onRemoveFavorite={toggleFavorite} onClearAll={clearFavorites} />
+    </div>;
+};
 export default StrainShowcase;
