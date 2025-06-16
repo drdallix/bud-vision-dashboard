@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +15,12 @@ interface StrainDescriptionFormProps {
   strain: Strain;
   onUpdate: (field: string, value: any) => void;
   isLoading: boolean;
+}
+
+interface UpdateStrainResponse {
+  success: boolean;
+  error?: string;
+  strain?: any;
 }
 
 const StrainDescriptionForm = ({
@@ -163,12 +168,15 @@ const StrainDescriptionForm = ({
         throw error;
       }
 
-      if (!data?.success) {
-        console.error('Function returned error:', data?.error);
-        throw new Error(data?.error || 'Failed to update strain description');
+      // Type cast the response to our expected interface
+      const response = data as UpdateStrainResponse;
+
+      if (!response?.success) {
+        console.error('Function returned error:', response?.error);
+        throw new Error(response?.error || 'Failed to update strain description');
       }
 
-      console.log('Description updated successfully:', data);
+      console.log('Description updated successfully:', response);
 
       // Update local state
       onUpdate('description', finalDescription);
