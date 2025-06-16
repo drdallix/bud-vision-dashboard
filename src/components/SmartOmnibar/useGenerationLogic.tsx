@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { analyzeStrainWithAI } from './AIAnalysis';
 import { useStrainData } from '@/data/hooks/useStrainData';
+import { ensureStrainHasDefaultTone } from '@/services/toneService';
 import { Strain } from '@/types/strain';
 
 const generationSteps = [
@@ -12,6 +13,7 @@ const generationSteps = [
   "Calculating THC/CBD levels...",
   "Generating terpene profile...",
   "Creating strain description...",
+  "Setting up tone system...",
   "Finalizing results..."
 ];
 
@@ -96,6 +98,22 @@ export const useGenerationLogic = ({
         inStock: true,
         userId: user.id
       };
+
+      console.log('Generated strain before tone safety:', strain.name);
+
+      // NEW: Ensure tone safety before cache update
+      try {
+        const safeTonerData = await ensureStrainHasDefaultTone(strain, user.id);
+        console.log('Tone safety ensured for strain:', strain.name, safeTonerData);
+        
+        // Update strain description with the safe tone description if needed
+        if (safeTonerData.description && safeTonerData.description !== strain.description) {
+          strain.description = safeTonerData.description;
+        }
+      } catch (toneError) {
+        console.error('Tone safety setup failed, but continuing with strain generation:', toneError);
+        // Continue with strain generation even if tone setup fails
+      }
 
       // Complete the progress
       setProgress(100);

@@ -8,7 +8,8 @@ import { ToneDescriptionDisplay } from './ToneDescriptionDisplay';
 import { ToneActions } from './ToneActions';
 import { ToneQuickPreview } from './ToneQuickPreview';
 import { ToneGenerationStatus } from './ToneGenerationStatus';
-import { useToneLogic } from './useToneLogic';
+import { useSafeToneLogic } from './useSafeToneLogic';
+import ToneErrorBoundary from '@/components/ErrorBoundaries/ToneErrorBoundary';
 
 interface ToneShowcaseProps {
   strain: Strain;
@@ -16,6 +17,14 @@ interface ToneShowcaseProps {
 }
 
 export const ToneShowcase = ({ strain, onDescriptionChange }: ToneShowcaseProps) => {
+  return (
+    <ToneErrorBoundary strainName={strain.name}>
+      <ToneShowcaseInner strain={strain} onDescriptionChange={onDescriptionChange} />
+    </ToneErrorBoundary>
+  );
+};
+
+const ToneShowcaseInner = ({ strain, onDescriptionChange }: ToneShowcaseProps) => {
   const {
     availableTones,
     selectedToneId,
@@ -24,12 +33,58 @@ export const ToneShowcase = ({ strain, onDescriptionChange }: ToneShowcaseProps)
     isApplyingGlobally,
     globalProgress,
     currentDescription,
+    isLoading,
+    error,
     switchToTone,
     generateDescriptionForTone,
     applyToneToAllStrains,
     getCurrentToneName,
     hasStoredDescription
-  } = useToneLogic(strain, onDescriptionChange);
+  } = useSafeToneLogic(strain, onDescriptionChange);
+
+  // Show loading state while tone system initializes
+  if (isLoading) {
+    return (
+      <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Palette className="h-5 w-5 text-purple-600" />
+            Tone Control Center
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Initializing tone system...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error state if tone system failed to initialize
+  if (error) {
+    return (
+      <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-red-50/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Palette className="h-5 w-5 text-orange-600" />
+            Tone Control Center
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">
+              Tone system temporarily unavailable. Using default description.
+            </p>
+            <div className="p-4 bg-white rounded-lg border">
+              <p className="text-sm">{currentDescription}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
