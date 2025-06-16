@@ -35,7 +35,7 @@ export const useShowcaseCarousel = ({ filteredStrains, isPlaying }: UseShowcaseC
     };
   }, [carouselApi]);
 
-  // Auto-advance logic
+  // Enhanced auto-advance logic with real-time filter refresh
   useEffect(() => {
     if (!isPlaying || filteredStrains.length <= 1) return;
 
@@ -52,13 +52,16 @@ export const useShowcaseCarousel = ({ filteredStrains, isPlaying }: UseShowcaseC
     return () => clearInterval(interval);
   }, [isPlaying, filteredStrains.length, carouselApi]);
 
-  // Reset index when filters change
+  // Reset index when filters change (real-time synchronization)
   useEffect(() => {
-    setCurrentIndex(0);
-    if (carouselApi) {
-      carouselApi.scrollTo(0);
+    if (currentIndex >= filteredStrains.length && filteredStrains.length > 0) {
+      const newIndex = 0;
+      setCurrentIndex(newIndex);
+      if (carouselApi) {
+        carouselApi.scrollTo(newIndex);
+      }
     }
-  }, [filteredStrains.length, carouselApi]);
+  }, [filteredStrains.length, carouselApi, currentIndex]);
 
   const handleNext = useCallback(() => {
     const nextIndex = (currentIndex + 1) % filteredStrains.length;
