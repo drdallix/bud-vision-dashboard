@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
 import { TransitionMode } from './FullscreenTransitions';
