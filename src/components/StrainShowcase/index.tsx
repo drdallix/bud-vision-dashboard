@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
 import { useStrainData } from '@/data/hooks/useStrainData';
@@ -5,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
+import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
+import FullscreenControls from './FullscreenControls';
 import { Strain } from '@/types/strain';
 
 const StrainShowcase = () => {
@@ -19,6 +22,11 @@ const StrainShowcase = () => {
   const [slideInterval, setSlideInterval] = useState(6000);
   const [showControls, setShowControls] = useState(true);
   const [api, setApi] = useState<CarouselApi>();
+  
+  // Fullscreen specific states
+  const [showFullscreenControls, setShowFullscreenControls] = useState(false);
+  const [shuffleMode, setShuffleMode] = useState(false);
+  const fullscreenControlsTimeoutRef = useRef<NodeJS.Timeout>();
   
   // Filter and sort states
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['Indica', 'Sativa', 'Hybrid']);
@@ -70,16 +78,22 @@ const StrainShowcase = () => {
     }
   }, [strains, selectedTypes, sortBy, minTHC, api]);
 
-  // Auto-advance logic
+  // Auto-advance logic with shuffle mode
   useEffect(() => {
     if (!filteredStrains.length || paused) return;
     const timer = setTimeout(() => {
       if (api) {
-        api.scrollNext();
+        if (shuffleMode) {
+          // Random slide selection in shuffle mode
+          const randomIndex = Math.floor(Math.random() * filteredStrains.length);
+          api.scrollTo(randomIndex);
+        } else {
+          api.scrollNext();
+        }
       }
     }, slideInterval);
     return () => clearTimeout(timer);
-  }, [current, filteredStrains.length, paused, slideInterval, api]);
+  }, [current, filteredStrains.length, paused, slideInterval, api, shuffleMode]);
 
   // Auto-hide controls for signed-out users
   const resetControlsTimer = useCallback(() => {
@@ -98,10 +112,33 @@ const StrainShowcase = () => {
     }
   }, [paused, user]);
 
+  // Fullscreen controls auto-hide
+  const resetFullscreenControlsTimer = useCallback(() => {
+    setShowFullscreenControls(true);
+    if (fullscreenControlsTimeoutRef.current) {
+      clearTimeout(fullscreenControlsTimeoutRef.current);
+    }
+    
+    fullscreenControlsTimeoutRef.current = setTimeout(() => {
+      setShowFullscreenControls(false);
+    }, 3000);
+  }, []);
+
   // Handle user interaction
   const handleInteraction = useCallback(() => {
     resetControlsTimer();
   }, [resetControlsTimer]);
+
+  // Handle fullscreen mouse movement
+  const handleFullscreenMouseMove = useCallback((e: React.MouseEvent) => {
+    const { clientY, currentTarget } = e;
+    const windowHeight = (currentTarget as HTMLElement).clientHeight;
+    
+    // Show controls when mouse is in bottom 20% of screen
+    if (clientY > windowHeight * 0.8) {
+      resetFullscreenControlsTimer();
+    }
+  }, [resetFullscreenControlsTimer]);
 
   // Setup carousel events
   useEffect(() => {
@@ -187,10 +224,20 @@ const StrainShowcase = () => {
     );
   }
 
-  // Fullscreen mode - only show the carousel
+  // Fullscreen mode - immersive experience
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 z-50 bg-black">
+      <div 
+        className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 overflow-hidden"
+        onMouseMove={handleFullscreenMouseMove}
+      >
+        {/* Animated background elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+        </div>
+
         <Carousel
           setApi={setApi}
           opts={{
@@ -200,24 +247,45 @@ const StrainShowcase = () => {
             dragFree: false,
             containScroll: 'trimSnaps',
             slidesToScroll: 1,
-            duration: 25,
+            duration: shuffleMode ? Math.random() * 20 + 10 : 25,
           }}
           className="w-full h-full"
         >
           <CarouselContent className="-ml-1 md:-ml-2 h-full">
             {filteredStrains.map((strain, index) => (
               <CarouselItem key={strain.id} className="pl-1 md:pl-2 h-full">
-                <div className="h-full flex items-center justify-center">
-                  <ShowcaseSlide 
+                <div className="h-full flex items-center justify-center p-4">
+                  <FullscreenShowcaseSlide 
                     strain={strain} 
                     isActive={index === current}
                     index={index}
+                    shuffleMode={shuffleMode}
                   />
                 </div>
               </CarouselItem>
             ))}
           </CarouselContent>
         </Carousel>
+
+        {/* Fullscreen Controls */}
+        <div className={`absolute bottom-0 left-0 right-0 p-6 transition-all duration-500 ${
+          showFullscreenControls 
+            ? 'opacity-100 translate-y-0' 
+            : 'opacity-0 translate-y-full pointer-events-none'
+        }`}>
+          <FullscreenControls
+            total={filteredStrains.length}
+            current={current}
+            paused={paused}
+            shuffleMode={shuffleMode}
+            slideInterval={slideInterval}
+            setPaused={setPaused}
+            setShuffleMode={setShuffleMode}
+            setSlideInterval={setSlideInterval}
+            onNav={(index) => api?.scrollTo(index)}
+            currentStrain={filteredStrains[current]}
+          />
+        </div>
       </div>
     );
   }
