@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,11 +63,6 @@ const Index = () => {
     setSettingsOpen(true);
   };
 
-  const handleStrainSelect = (strain: Strain) => {
-    setCurrentStrain(strain);
-    setActiveTab('details');
-  };
-
   // Show loading state but still render the full component structure
   if (authLoading) {
     return (
@@ -88,7 +84,10 @@ const Index = () => {
           {user && <Navigation />}
 
           <TabsContent value="browse" className="space-y-6">
-            <BrowseStrains />
+            <BrowseStrains onStrainSelect={(strain) => {
+              setCurrentStrain(strain);
+              setActiveTab('details');
+            }} />
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">

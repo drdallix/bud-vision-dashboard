@@ -15,8 +15,7 @@ const BrowseStrains = () => {
   const { 
     strains, 
     isLoading,
-    updateStock,
-    pricesMap
+    updateStock
   } = useRealtimeStrainStore(false); // User's strains only
 
   const {
@@ -31,11 +30,10 @@ const BrowseStrains = () => {
 
   const {
     selectedStrains,
-    toggleSelection,
+    toggleStrainSelection,
     clearSelection,
     selectAll,
-    isAllSelected,
-    handleStrainSelect
+    isAllSelected
   } = useStrainSelection(filteredStrains);
 
   const { handleBatchStockUpdate, inventoryLoading } = useInventoryActions(false);
@@ -59,56 +57,43 @@ const BrowseStrains = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      <BrowseHeader 
-        selectedCount={selectedStrains.length}
-        totalCount={filteredStrains.length}
-        onSelectAll={selectAll}
-        onClearSelection={clearSelection}
-        onBatchStockUpdate={handleBatchStockUpdate}
-        selectedStrains={selectedStrains}
-        inventoryLoading={inventoryLoading}
-      />
+      <BrowseHeader strainCount={filteredStrains.length} />
       
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
           <SearchBar 
             searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
+            setSearchTerm={setSearchTerm}
           />
         </div>
         <FilterControls
           filterType={filterType}
-          onFilterChange={setFilterType}
+          setFilterType={setFilterType}
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          setSortBy={setSortBy}
         />
       </div>
 
       {selectedStrains.length > 0 && (
         <BatchActions
           selectedCount={selectedStrains.length}
-          onInStock={() => handleBatchStockChange(true)}
-          onOutOfStock={() => handleBatchStockChange(false)}
-          onClear={clearSelection}
-          loading={inventoryLoading}
-          onBatchPrice={async (nowPrice: number, wasPrice?: number | null) => {
-            // Handle batch price update
-            console.log('Batch price update:', { nowPrice, wasPrice });
-          }}
+          totalCount={filteredStrains.length}
+          onClearSelection={clearSelection}
+          onSelectAll={selectAll}
+          isAllSelected={isAllSelected}
+          onBatchStockUpdate={handleBatchStockChange}
+          isLoading={inventoryLoading}
+          showBatchActions={showBatchActions}
+          setShowBatchActions={setShowBatchActions}
         />
       )}
 
       <SafeStrainGrid
         strains={filteredStrains}
-        editMode={true}
+        isLoading={isLoading}
         selectedStrains={selectedStrains}
-        user={null} // Will be properly passed from parent
-        onSelect={handleStrainSelect}
+        onToggleSelection={toggleStrainSelection}
         onStockToggle={handleStockToggle}
-        onStrainClick={(strain) => console.log('Strain clicked:', strain)}
-        inventoryLoading={inventoryLoading}
-        pricesMap={pricesMap || {}}
-        pricesLoading={isLoading}
       />
     </div>
   );
