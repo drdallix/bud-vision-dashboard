@@ -34,8 +34,8 @@ export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
     scannedAt: scan.scanned_at,
     confidence: scan.confidence || 85,
     inStock: scan.in_stock,
-    userId: scan.user_id,
-    emoji: scan.emoji || undefined // Include the AI-generated emoji
+    userId: scan.user_id
+    // Note: Removed emoji field handling - now using static emojis based on type
   };
 };
 
@@ -57,6 +57,6 @@ export const convertStrainToDatabaseScan = (strain: Strain): Omit<DatabaseScan, 
     confidence: strain.confidence,
     scanned_at: strain.scannedAt,
     in_stock: strain.inStock,
-    emoji: strain.emoji || null // Include the emoji in database updates
+    emoji: null // No longer using AI-generated emojis
   };
 };

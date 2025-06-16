@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Zap, Heart } from 'lucide-react';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ShowcaseSlideProps {
   strain: Strain;
@@ -19,49 +18,8 @@ interface ShowcaseSlideProps {
 
 const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProps) => {
   const [isLiked, setIsLiked] = useState(false);
-  const [strainEmoji, setStrainEmoji] = useState(strain.emoji || '🌿');
-  const [emojiLoading, setEmojiLoading] = useState(false);
   const { toast } = useToast();
   const { thcDisplay } = useStrainTHC(strain.name);
-
-  // Generate emoji if not present
-  useEffect(() => {
-    const generateEmojiIfNeeded = async () => {
-      if (!strain.emoji && !emojiLoading) {
-        setEmojiLoading(true);
-        try {
-          const response = await supabase.functions.invoke('generate-strain-emoji', {
-            body: {
-              strainName: strain.name,
-              strainType: strain.type,
-              description: strain.description,
-              effects: strain.effectProfiles?.map(e => e.name) || [],
-              flavors: strain.flavorProfiles?.map(f => f.name) || []
-            }
-          });
-
-          if (response.data?.emoji) {
-            const newEmoji = response.data.emoji;
-            setStrainEmoji(newEmoji);
-            
-            // Update the database with the new emoji
-            await supabase
-              .from('scans')
-              .update({ emoji: newEmoji })
-              .eq('id', strain.id);
-              
-            console.log('Generated and saved emoji for', strain.name, ':', newEmoji);
-          }
-        } catch (error) {
-          console.error('Failed to generate emoji:', error);
-        } finally {
-          setEmojiLoading(false);
-        }
-      }
-    };
-
-    generateEmojiIfNeeded();
-  }, [strain.id, strain.emoji, strain.name, strain.type, strain.description, strain.effectProfiles, strain.flavorProfiles, emojiLoading]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -69,6 +27,15 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
       case 'Sativa': return 'from-yellow-400 to-orange-500';
       case 'Hybrid': return 'from-green-500 to-blue-500';
       default: return 'from-gray-400 to-gray-600';
+    }
+  };
+
+  const getStrainEmoji = (type: string) => {
+    switch (type) {
+      case 'Indica': return '🌙';
+      case 'Sativa': return '☀️';
+      case 'Hybrid': return '🌓';
+      default: return '🌿';
     }
   };
 
@@ -105,7 +72,7 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
             <div className="p-4 md:p-6">
               <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
                 <span className="text-3xl md:text-4xl flex-shrink-0">
-                  {emojiLoading ? '⏳' : strainEmoji}
+                  {getStrainEmoji(strain.type)}
                 </span>
                 <div className="space-y-2 md:space-y-3 flex-1 min-w-0">
                   <div className="flex items-center gap-2 md:gap-3 flex-wrap">
