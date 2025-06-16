@@ -26,7 +26,7 @@ export const createFallbackStrain = (textQuery?: string) => ({
   ],
   medicalUses: ["Pain Relief", "Stress Relief", "Anxiety", "Insomnia"],
   description: "A balanced hybrid strain with moderate THC levels. This strain typically provides a well-rounded experience combining relaxation with mental clarity. The earthy and sweet flavor profile makes it appealing to many users, while its therapeutic properties make it suitable for various medical applications including pain and stress management.",
-  confidence: textQuery ? 45 : 15 // Much lower confidence for fallback strains
+  confidence: textQuery ? 85 : 25
 });
 
 export const parseOpenAIResponse = (analysisText: string, textQuery?: string) => {
@@ -45,69 +45,6 @@ export const parseOpenAIResponse = (analysisText: string, textQuery?: string) =>
   }
 
   return strainData;
-};
-
-// Function to calculate realistic confidence based on various factors
-const calculateRealisticConfidence = (strainData: StrainData, textQuery?: string, hasImage?: boolean): number => {
-  let baseConfidence = 30; // Start with low base confidence
-  
-  // Image analysis vs text query
-  if (hasImage) {
-    baseConfidence += 25; // Images provide more data
-  } else if (textQuery) {
-    baseConfidence += 15; // Text queries are less reliable
-  }
-  
-  // Well-known strain names get higher confidence
-  const wellKnownStrains = [
-    'blue dream', 'og kush', 'white widow', 'ak-47', 'northern lights',
-    'sour diesel', 'girl scout cookies', 'granddaddy purple', 'green crack',
-    'pineapple express', 'jack herer', 'bubba kush', 'purple haze',
-    'amnesia haze', 'super silver haze', 'lemon skunk', 'cherry pie',
-    'gelato', 'wedding cake', 'gorilla glue', 'zkittles'
-  ];
-  
-  const strainName = (strainData.name || '').toLowerCase();
-  const isWellKnown = wellKnownStrains.some(known => 
-    strainName.includes(known) || known.includes(strainName)
-  );
-  
-  if (isWellKnown) {
-    baseConfidence += 20;
-  }
-  
-  // Realistic effects and flavors boost confidence slightly
-  const commonEffects = ['relaxed', 'happy', 'euphoric', 'uplifted', 'creative', 'focused', 'energetic', 'sleepy'];
-  const commonFlavors = ['earthy', 'sweet', 'citrus', 'pine', 'diesel', 'berry', 'vanilla', 'spicy'];
-  
-  const effectsMatch = (strainData.effects || []).filter(effect => 
-    commonEffects.includes(effect.toLowerCase())
-  ).length;
-  
-  const flavorsMatch = (strainData.flavors || []).filter(flavor => 
-    commonFlavors.includes(flavor.toLowerCase())
-  ).length;
-  
-  baseConfidence += Math.min(effectsMatch * 2, 10); // Max 10 bonus from effects
-  baseConfidence += Math.min(flavorsMatch * 2, 8);   // Max 8 bonus from flavors
-  
-  // THC levels within realistic ranges
-  const thc = Number(strainData.thc) || 0;
-  if (thc >= 15 && thc <= 30) {
-    baseConfidence += 8; // Realistic THC range
-  } else if (thc > 30 || thc < 5) {
-    baseConfidence -= 5; // Unrealistic THC levels lower confidence
-  }
-  
-  // Penalty for very generic descriptions
-  const description = (strainData.description || '').toLowerCase();
-  if (description.length < 50 || 
-      description.includes('balanced') && description.includes('effects') && description.includes('strain')) {
-    baseConfidence -= 5; // Generic descriptions are less reliable
-  }
-  
-  // Cap confidence at reasonable levels (AI should never be too confident)
-  return Math.min(Math.max(baseConfidence, 10), 75); // Min 10%, Max 75%
 };
 
 // Function to clean THC mentions from descriptions
@@ -134,11 +71,8 @@ const cleanTHCFromDescription = (description: string): string => {
   return cleaned || description; // Return original if cleaning resulted in empty string
 };
 
-export const validateStrainData = (strainData: StrainData, textQuery?: string, hasImage?: boolean) => {
+export const validateStrainData = (strainData: StrainData, textQuery?: string) => {
   const cleanedDescription = cleanTHCFromDescription(strainData.description || "");
-  
-  // Calculate realistic confidence
-  const realisticConfidence = calculateRealisticConfidence(strainData, textQuery, hasImage);
   
   return {
     name: strainData.name || (textQuery ? textQuery.replace(/[^\w\s]/g, '').trim() : "Unknown Strain"),
@@ -153,6 +87,6 @@ export const validateStrainData = (strainData: StrainData, textQuery?: string, h
     ],
     medicalUses: Array.isArray(strainData.medicalUses) ? strainData.medicalUses.slice(0, 6) : ["Pain Relief", "Stress Relief"],
     description: cleanedDescription || "AI-analyzed cannabis strain with balanced effects and therapeutic potential.",
-    confidence: realisticConfidence // Use the calculated realistic confidence
+    confidence: Math.min(Math.max(Number(strainData.confidence) || (textQuery ? 85 : 75), 0), 100)
   };
 };

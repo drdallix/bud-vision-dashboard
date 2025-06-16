@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Filter, ChevronDown, Settings } from 'lucide-react';
-import BulkToneManager from './BulkToneManager';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Filter, SortAsc } from 'lucide-react';
+
 interface ShowcaseFiltersProps {
   selectedTypes: string[];
   setSelectedTypes: (types: string[]) => void;
@@ -16,6 +14,7 @@ interface ShowcaseFiltersProps {
   setMinTHC: (thc: number) => void;
   strainCount: number;
 }
+
 const ShowcaseFilters = ({
   selectedTypes,
   setSelectedTypes,
@@ -23,9 +22,10 @@ const ShowcaseFilters = ({
   setSortBy,
   minTHC,
   setMinTHC,
-  strainCount
+  strainCount,
 }: ShowcaseFiltersProps) => {
-  const [showBulkManager, setShowBulkManager] = useState(false);
+  const types = ['Indica', 'Sativa', 'Hybrid'];
+
   const toggleType = (type: string) => {
     if (selectedTypes.includes(type)) {
       setSelectedTypes(selectedTypes.filter(t => t !== type));
@@ -33,74 +33,109 @@ const ShowcaseFilters = ({
       setSelectedTypes([...selectedTypes, type]);
     }
   };
-  const strainTypes = ['Indica', 'Sativa', 'Hybrid'];
-  return <div className="space-y-4">
-      <Card className="border-green-200/50 bg-white/90 backdrop-blur-sm shadow-xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center justify-between">
-            <div className="flex items-center gap-2 text-black ">
-              <Filter className="h-5 w-5 text-green-600" />
-              Showcase Filters
-            </div>
-            <Badge variant="secondary" className="text-sm">
-              {strainCount} strains
+
+  const getTypeEmoji = (type: string) => {
+    switch (type) {
+      case 'Indica': return '🌙';
+      case 'Sativa': return '☀️';
+      case 'Hybrid': return '🌓';
+      default: return '🌿';
+    }
+  };
+
+  const getSortLabel = (sort: string) => {
+    switch (sort) {
+      case 'name': return 'Alphabetical';
+      case 'thc': return 'THC Level';
+      case 'recent': return 'Recently Added';
+      default: return 'Name';
+    }
+  };
+
+  return (
+    <div className="bg-theme-card backdrop-blur-sm border border-border rounded-2xl p-4 md:p-6 shadow-lg animate-fade-in">
+      <div className="flex items-center gap-2 mb-4">
+        <Filter className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-semibold text-foreground">
+          Showcase Filters
+        </h3>
+        <Badge variant="secondary" className="ml-auto">
+          {strainCount} strains
+        </Badge>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4 md:gap-6">
+        {/* Strain Types */}
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <span>🧬</span> Strain Types
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {types.map((type) => (
+              <Button
+                key={type}
+                variant={selectedTypes.includes(type) ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleType(type)}
+                className={`transition-all duration-200 ${
+                  selectedTypes.includes(type)
+                    ? 'bg-primary hover:bg-primary/90 scale-105 shadow-md'
+                    : 'hover:scale-105'
+                }`}
+              >
+                <span className="mr-1">{getTypeEmoji(type)}</span>
+                {type}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sort Options */}
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <SortAsc className="h-4 w-4" /> Sort By
+          </label>
+          <Select value={sortBy} onValueChange={(value: 'name' | 'thc' | 'recent') => setSortBy(value)}>
+            <SelectTrigger className="border-border focus:border-primary">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">🔤 Alphabetical</SelectItem>
+              <SelectItem value="thc">💪 THC Level</SelectItem>
+              <SelectItem value="recent">⏰ Recently Added</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Currently: {getSortLabel(sortBy)}
+          </p>
+        </div>
+
+        {/* THC Filter */}
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <span>⚡</span> Min THC Level
+          </label>
+          <div className="px-2">
+            <Slider
+              value={[minTHC]}
+              onValueChange={([value]) => setMinTHC(value)}
+              max={35}
+              min={0}
+              step={1}
+              className="w-full"
+            />
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>0%</span>
+            <Badge variant="outline" className="text-primary border-primary/50">
+              {minTHC}%+
             </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 text-black ">
-          {/* Strain Types */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Strain Types:</label>
-            <div className="flex flex-wrap gap-2">
-              {strainTypes.map(type => <Button key={type} variant={selectedTypes.includes(type) ? "default" : "outline"} size="sm" onClick={() => toggleType(type)} className="text-sm">
-                  {type}
-                </Button>)}
-            </div>
+            <span>35%</span>
           </div>
-
-          {/* Sort Options */}
-          <div className="space-y-3 text-white ">
-            <label className="text-sm font-medium text-black ">Sort By:</label>
-            <Select value={sortBy} onValueChange={(value: 'name' | 'thc' | 'recent') => setSortBy(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Alphabetical</SelectItem>
-                <SelectItem value="thc">THC Content</SelectItem>
-                <SelectItem value="recent">Recently Added</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* THC Filter */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Minimum THC:</label>
-              <Badge variant="outline">{minTHC}%</Badge>
-            </div>
-            <Slider value={[minTHC]} onValueChange={value => setMinTHC(value[0])} max={35} min={0} step={1} className="w-full" />
-          </div>
-
-          {/* Admin Controls */}
-          <div className="pt-4 border-t border-border/50">
-            <Collapsible open={showBulkManager} onOpenChange={setShowBulkManager}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-between p-0 h-auto">
-                  <div className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    <span className="text-sm font-medium">Admin Tools</span>
-                  </div>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${showBulkManager ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-4">
-                <BulkToneManager />
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </CardContent>
-      </Card>
-    </div>;
+        </div>
+      </div>
+    </div>
+  );
 };
+
 export default ShowcaseFilters;

@@ -76,7 +76,10 @@ const Index = () => {
           <Navigation />
 
           <TabsContent value="browse" className="space-y-6">
-            <BrowseStrains />
+            <BrowseStrains onStrainSelect={(strain) => {
+              setCurrentStrain(strain);
+              setActiveTab('details');
+            }} />
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">

@@ -23,6 +23,7 @@ export interface Strain {
   name: string;
   type: 'Indica' | 'Sativa' | 'Hybrid';
   thc: number; // Always 21% or higher for recreational focus
+  cbd?: number; // Optional CBD percentage
   effectProfiles: EffectProfile[];
   flavorProfiles: FlavorProfile[];
   terpenes?: Terpene[];
@@ -48,6 +49,7 @@ export type DatabaseScan = {
   strain_name: string;
   strain_type: string;
   thc: number | null;
+  cbd?: number | null;
   effects: string[] | null;
   flavors: string[] | null;
   terpenes: any | null;
