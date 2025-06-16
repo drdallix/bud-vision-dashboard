@@ -38,7 +38,7 @@ const ShowcaseFilters = ({
       <Card className="border-green-200/50 bg-white/90 backdrop-blur-sm shadow-xl">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-black ">
               <Filter className="h-5 w-5 text-green-600" />
               Showcase Filters
             </div>
