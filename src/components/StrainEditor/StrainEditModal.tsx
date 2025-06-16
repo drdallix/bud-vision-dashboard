@@ -17,7 +17,7 @@ interface StrainEditModalProps {
   onSave: (strain: Strain) => void;
 }
 
-export const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps) => {
+const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps) => {
   const [editedStrain, setEditedStrain] = useState<Strain>(strain);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -81,17 +81,17 @@ export const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditMod
           <div className="space-y-6">
             <StrainBasicInfoForm 
               strain={editedStrain} 
-              onChange={setEditedStrain} 
+              onStrainChange={setEditedStrain} 
             />
             
             <StrainDescriptionForm 
               strain={editedStrain} 
-              onChange={setEditedStrain} 
+              onStrainChange={setEditedStrain} 
             />
             
             <StrainProfilesForm 
               strain={editedStrain} 
-              onChange={setEditedStrain} 
+              onStrainChange={setEditedStrain} 
             />
 
             <div className="flex justify-end space-x-2 pt-4 border-t">
@@ -108,3 +108,5 @@ export const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditMod
     </Dialog>
   );
 };
+
+export default StrainEditModal;
