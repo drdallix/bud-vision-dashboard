@@ -84,7 +84,6 @@ export type Database = {
       }
       scans: {
         Row: {
-          cbd: number | null
           confidence: number | null
           created_at: string
           description: string | null
@@ -102,7 +101,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          cbd?: number | null
           confidence?: number | null
           created_at?: string
           description?: string | null
@@ -120,7 +118,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          cbd?: number | null
           confidence?: number | null
           created_at?: string
           description?: string | null
@@ -136,6 +133,33 @@ export type Database = {
           terpenes?: Json | null
           thc?: number | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      strain_tone_descriptions: {
+        Row: {
+          created_at: string
+          generated_description: string
+          id: string
+          strain_id: string
+          tone_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_description: string
+          id?: string
+          strain_id: string
+          tone_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_description?: string
+          id?: string
+          strain_id?: string
+          tone_id?: string
+          updated_at?: string
         }
         Relationships: []
       }

@@ -1,14 +1,15 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Wand2, RefreshCw, History, Check, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Wand2, RefreshCw, History, Check, X, Mic } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { ToneService, UserTone } from '@/services/toneService';
 
 interface StrainDescriptionFormProps {
   strain: Strain;
@@ -26,8 +27,41 @@ const StrainDescriptionForm = ({
   const [proposedDescription, setProposedDescription] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [availableTones, setAvailableTones] = useState<UserTone[]>([]);
+  const [selectedToneId, setSelectedToneId] = useState<string>('');
+  const [currentTone, setCurrentTone] = useState<UserTone | null>(null);
+  const [tonesLoading, setTonesLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      loadTones();
+    }
+  }, [user]);
+
+  const loadTones = async () => {
+    try {
+      setTonesLoading(true);
+      const [tones, defaultTone] = await Promise.all([
+        ToneService.getUserTones(user!.id),
+        ToneService.getUserDefaultTone(user!.id)
+      ]);
+      
+      setAvailableTones(tones);
+      setCurrentTone(defaultTone);
+      setSelectedToneId(defaultTone?.id || '');
+    } catch (error) {
+      console.error('Error loading tones:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load tone settings.",
+        variant: "destructive"
+      });
+    } finally {
+      setTonesLoading(false);
+    }
+  };
 
   const handleRegenerateDescription = async () => {
     if (!humanGuidance.trim()) {
@@ -41,7 +75,7 @@ const StrainDescriptionForm = ({
 
     setIsRegenerating(true);
     try {
-      console.log('Calling regenerate-description edge function...');
+      console.log('Calling regenerate-description edge function with tone...');
       const { data, error } = await supabase.functions.invoke('regenerate-description', {
         body: {
           strainName: strain.name,
@@ -49,7 +83,8 @@ const StrainDescriptionForm = ({
           currentDescription: strain.description,
           humanGuidance: humanGuidance,
           effects: strain.effectProfiles?.map(e => e.name) || [],
-          flavors: strain.flavorProfiles?.map(f => f.name) || []
+          flavors: strain.flavorProfiles?.map(f => f.name) || [],
+          toneId: selectedToneId || currentTone?.id
         }
       });
 
@@ -63,7 +98,7 @@ const StrainDescriptionForm = ({
         throw new Error(data.error);
       }
 
-      console.log('Generated description:', data.description);
+      console.log('Generated description with tone:', data.description);
       setProposedDescription(data.description);
       toast({
         title: "Description Generated",
@@ -72,7 +107,6 @@ const StrainDescriptionForm = ({
     } catch (error) {
       console.error('Error regenerating description:', error);
       
-      // Handle specific error types
       if (error.message?.includes('rate limit')) {
         toast({
           title: "Rate Limit Exceeded",
@@ -105,7 +139,6 @@ const StrainDescriptionForm = ({
     try {
       console.log('Attempting to update strain description for strain ID:', strain.id);
       
-      // Update in database using the scans table - now all authenticated users can edit any strain
       const { error } = await supabase
         .from('scans')
         .update({ 
@@ -120,7 +153,6 @@ const StrainDescriptionForm = ({
 
       console.log('Description updated successfully in database');
 
-      // Update local state
       onUpdate('description', proposedDescription);
       setProposedDescription('');
       setHumanGuidance('');
@@ -155,6 +187,31 @@ const StrainDescriptionForm = ({
         <Wand2 className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
         <h3 className="text-base sm:text-lg font-semibold">Description Management</h3>
       </div>
+
+      {/* Current Tone Display */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Mic className="h-4 w-4 text-blue-600" />
+            Current Tone
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {tonesLoading ? (
+            <div className="animate-pulse text-sm text-muted-foreground">Loading tone...</div>
+          ) : currentTone ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{currentTone.name}</Badge>
+                {!currentTone.user_id && <Badge variant="outline" className="text-xs">System</Badge>}
+              </div>
+              <p className="text-xs text-muted-foreground">{currentTone.description}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No tone selected</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Current Description */}
       <Card>
@@ -192,9 +249,34 @@ const StrainDescriptionForm = ({
             disabled={isLoading || isRegenerating} 
           />
           
+          {/* Tone Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Use Tone (optional):</label>
+            <Select 
+              value={selectedToneId} 
+              onValueChange={setSelectedToneId}
+              disabled={tonesLoading || isRegenerating}
+            >
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Use current default tone" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Use current default tone</SelectItem>
+                {availableTones.map((tone) => (
+                  <SelectItem key={tone.id} value={tone.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{tone.name}</span>
+                      {!tone.user_id && <Badge variant="outline" className="text-xs">System</Badge>}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <Button 
             onClick={handleRegenerateDescription} 
-            disabled={!humanGuidance.trim() || isLoading || isRegenerating} 
+            disabled={!humanGuidance.trim() || isLoading || isRegenerating || tonesLoading} 
             className="w-full text-sm" 
             size="sm"
           >
@@ -219,6 +301,11 @@ const StrainDescriptionForm = ({
           <CardHeader className="pb-3 sm:pb-6">
             <CardTitle className="text-sm sm:text-base text-purple-900">
               Proposed New Description
+              {selectedToneId && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {availableTones.find(t => t.id === selectedToneId)?.name || 'Custom Tone'}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4">
@@ -260,6 +347,7 @@ const StrainDescriptionForm = ({
             <li>• Mention unique characteristics or effects</li>
             <li>• Include customer feedback or observations</li>
             <li>• Note any medical uses or warnings</li>
+            <li>• Choose different tones for different audiences</li>
           </ul>
         </CardContent>
       </Card>
