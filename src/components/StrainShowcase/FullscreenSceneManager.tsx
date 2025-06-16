@@ -1,7 +1,7 @@
 
 import { ReactNode } from 'react';
 import { Strain } from '@/types/strain';
-import { TransitionMode } from './FullscreenTransitions';
+import { TransitionMode, getStrainTransitionMode } from './FullscreenTransitions';
 
 interface SceneConfig {
   backgroundGradient: string;
@@ -36,22 +36,13 @@ const STRAIN_SCENES: Record<string, SceneConfig> = {
 };
 
 interface FullscreenSceneManagerProps {
-  strains: Strain[];
-  currentIndex: number;
-  transitionMode: TransitionMode;
-  onStrainClick?: (strain: Strain) => void;
-  children?: ReactNode;
+  strain: Strain;
+  mode: TransitionMode;
+  children: ReactNode;
 }
 
-const FullscreenSceneManager = ({ 
-  strains, 
-  currentIndex, 
-  transitionMode, 
-  onStrainClick,
-  children 
-}: FullscreenSceneManagerProps) => {
-  const currentStrain = strains[currentIndex];
-  const scene = STRAIN_SCENES[currentStrain.type] || STRAIN_SCENES.Hybrid;
+const FullscreenSceneManager = ({ strain, mode, children }: FullscreenSceneManagerProps) => {
+  const scene = STRAIN_SCENES[strain.type] || STRAIN_SCENES.Hybrid;
   
   return (
     <div className={`relative w-full h-full bg-gradient-to-br ${scene.backgroundGradient} overflow-hidden`}>
@@ -102,7 +93,6 @@ const FullscreenSceneManager = ({
         }}
       />
 
-      {/* Render children content */}
       {children}
     </div>
   );

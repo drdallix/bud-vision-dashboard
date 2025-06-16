@@ -52,11 +52,7 @@ const FullscreenShowcaseSlide = ({
   };
 
   return (
-    <FullscreenSceneManager 
-      strains={[strain]} 
-      currentIndex={0} 
-      transitionMode={currentMode}
-    >
+    <FullscreenSceneManager strain={strain} mode={currentMode}>
       <div className={`h-full flex flex-col transition-all duration-1000 ease-out ${
         isActive ? 'opacity-100 scale-100' : 'opacity-30 scale-95'
       }`}>

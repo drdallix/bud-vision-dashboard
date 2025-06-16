@@ -6,7 +6,7 @@ import StrainFlavorsVisual from '@/components/StrainDashboard/StrainFlavorsVisua
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Zap, Heart, Info } from 'lucide-react';
+import { Sparkles, Zap, Heart } from 'lucide-react';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,10 +14,9 @@ interface ShowcaseSlideProps {
   strain: Strain;
   isActive?: boolean;
   index?: number;
-  onStrainClick?: (strain: Strain) => void;
 }
 
-const ShowcaseSlide = ({ strain, isActive = true, index = 0, onStrainClick }: ShowcaseSlideProps) => {
+const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProps) => {
   const [isLiked, setIsLiked] = useState(false);
   const { toast } = useToast();
   const { thcDisplay } = useStrainTHC(strain.name);
@@ -47,12 +46,6 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0, onStrainClick }: Sh
       description: `${strain.name} ${isLiked ? 'removed from' : 'added to'} your favorites`,
       duration: 2000,
     });
-  };
-
-  const handleInfoClick = () => {
-    if (onStrainClick) {
-      onStrainClick(strain);
-    }
   };
 
   return (
@@ -112,8 +105,8 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0, onStrainClick }: Sh
                 </div>
               </div>
 
-              {/* Action buttons moved below header */}
-              <div className="flex justify-center gap-4 mb-4">
+              {/* Heart button moved below header, not in corner */}
+              <div className="flex justify-center mb-4">
                 <Button
                   variant="ghost"
                   size="lg"
@@ -130,19 +123,6 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0, onStrainClick }: Sh
                   />
                   {isLiked ? 'Favorited' : 'Add to Favorites'}
                 </Button>
-                
-                {onStrainClick && (
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={handleInfoClick}
-                    className="px-6 py-3 rounded-full hover:bg-blue-50 hover:border-blue-300"
-                    title="View strain details"
-                  >
-                    <Info className="h-6 w-6 mr-2" />
-                    View Details
-                  </Button>
-                )}
               </div>
             </div>
           </Card>
