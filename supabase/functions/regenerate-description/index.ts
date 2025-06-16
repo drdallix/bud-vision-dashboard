@@ -1,111 +1,60 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
+    const { strainName, strainType, currentDescription, humanGuidance, effects, flavors } = await req.json()
 
-    const { 
-      strainName, 
-      strainType, 
-      currentDescription, 
-      humanGuidance, 
-      effects, 
-      flavors,
-      toneId
-    } = await req.json();
+    console.log('Regenerate description request:', { strainName, strainType, currentDescription, humanGuidance, effects, flavors })
 
-    console.log('Received request with tone_id:', toneId);
-
-    // Get user's authentication
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      throw new Error('Authentication required');
+    // Validate required inputs
+    if (!strainName || !humanGuidance) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: strainName and humanGuidance are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Fetch tone information
-    let tonePrompt = 'Write in a professional, informative tone suitable for a medical dispensary. Be factual and helpful without being overly technical. Focus on benefits and effects in a clear, trustworthy manner.';
-    
-    if (toneId) {
-      console.log('Fetching tone with ID:', toneId);
-      const { data: tone, error: toneError } = await supabaseClient
-        .from('user_tones')
-        .select('persona_prompt, name')
-        .eq('id', toneId)
-        .single();
-
-      if (toneError) {
-        console.error('Error fetching tone:', toneError);
-      } else if (tone) {
-        tonePrompt = tone.persona_prompt;
-        console.log('Using tone:', tone.name);
-      }
-    } else {
-      // Try to get user's default tone
-      console.log('No tone_id provided, checking for user default tone');
-      const { data: profile, error: profileError } = await supabaseClient
-        .from('profiles')
-        .select('default_tone_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!profileError && profile?.default_tone_id) {
-        console.log('Found default tone ID:', profile.default_tone_id);
-        const { data: defaultTone, error: defaultToneError } = await supabaseClient
-          .from('user_tones')
-          .select('persona_prompt, name')
-          .eq('id', profile.default_tone_id)
-          .single();
-
-        if (!defaultToneError && defaultTone) {
-          tonePrompt = defaultTone.persona_prompt;
-          console.log('Using default tone:', defaultTone.name);
-        }
-      }
-    }
-
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
+      console.error('OPENAI_API_KEY is not set')
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Build the system prompt with tone guidance
-    const systemPrompt = `${tonePrompt}
+    const prompt = `You are a cannabis expert writing product descriptions for a dispensary. 
 
-You are writing a product description for a cannabis strain. Consider the provided effects, flavors, and any human guidance to create an engaging, accurate description.
-
-Guidelines:
-- Keep descriptions between 50-150 words
-- Focus on the strain's unique characteristics
-- Incorporate the effects and flavors naturally
-- Address any specific corrections or requests in the human guidance
-- Maintain the specified tone throughout`;
-
-    // Build the user prompt
-    const userPrompt = `Strain: ${strainName} (${strainType})
+Strain: ${strainName}
+Type: ${strainType}
 Current Description: ${currentDescription || 'None'}
-Effects: ${effects?.join(', ') || 'Not specified'}
-Flavors: ${flavors?.join(', ') || 'Not specified'}
-Human Guidance: ${humanGuidance}
+Effects: ${effects?.join(', ') || 'None specified'}
+Flavors: ${flavors?.join(', ') || 'None specified'}
 
-Please generate an improved description that addresses the human guidance while incorporating the strain's effects and flavors.`;
+Human Guidance/Corrections: ${humanGuidance}
 
-    console.log('Calling OpenAI with tone-aware prompts');
+Based on the human guidance provided, please regenerate an improved product description that:
+1. Incorporates the specific feedback and corrections mentioned
+2. Is professional and appealing to customers
+3. Is 2-3 sentences long
+4. Mentions key effects and flavors when relevant
+5. Addresses any specific concerns or additions mentioned in the guidance
+
+Write only the new description, nothing else.`
+
+    console.log('Sending request to OpenAI...')
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -116,42 +65,55 @@ Please generate an improved description that addresses the human guidance while 
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          {
+            role: 'system',
+            content: 'You are a professional cannabis copywriter. Write concise, accurate product descriptions.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
         ],
+        max_tokens: 200,
         temperature: 0.7,
-        max_tokens: 300,
       }),
-    });
+    })
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API error:', response.status, errorData);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
+      const errorText = await response.text()
+      console.error('OpenAI API error:', errorText)
+      
+      // Handle rate limiting specifically
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'OpenAI API rate limit exceeded. Please try again in a moment.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      throw new Error(`OpenAI API error: ${response.status}`)
     }
 
-    const data = await response.json();
-    const generatedDescription = data.choices[0]?.message?.content;
+    const data = await response.json()
+    console.log('OpenAI response received:', data)
 
-    if (!generatedDescription) {
-      throw new Error('No description generated by OpenAI');
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response from OpenAI API')
     }
 
-    console.log('Successfully generated description with tone');
+    const description = data.choices[0].message.content.trim()
+    console.log('Generated description:', description)
 
     return new Response(
-      JSON.stringify({ description: generatedDescription.trim() }),
+      JSON.stringify({ description }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    )
 
   } catch (error) {
-    console.error('Error in regenerate-description function:', error);
+    console.error('Error in regenerate-description function:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+      JSON.stringify({ error: error.message || 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-});
+})

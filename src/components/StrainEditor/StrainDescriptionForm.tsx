@@ -1,26 +1,19 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wand2, History } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Wand2, RefreshCw, History, Check, X } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ToneService, UserTone } from '@/services/toneService';
-import CurrentToneDisplay from './CurrentToneDisplay';
-import GuidanceInput from './GuidanceInput';
-import DescriptionReviewCard from './DescriptionReviewCard';
 
 interface StrainDescriptionFormProps {
   strain: Strain;
   onUpdate: (field: string, value: any) => void;
   isLoading: boolean;
-}
-
-interface UpdateStrainResponse {
-  success: boolean;
-  error?: string;
-  strain?: any;
 }
 
 const StrainDescriptionForm = ({
@@ -33,41 +26,8 @@ const StrainDescriptionForm = ({
   const [proposedDescription, setProposedDescription] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [availableTones, setAvailableTones] = useState<UserTone[]>([]);
-  const [selectedToneId, setSelectedToneId] = useState<string>('default');
-  const [currentTone, setCurrentTone] = useState<UserTone | null>(null);
-  const [tonesLoading, setTonesLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      loadTones();
-    }
-  }, [user]);
-
-  const loadTones = async () => {
-    try {
-      setTonesLoading(true);
-      const [tones, defaultTone] = await Promise.all([
-        ToneService.getUserTones(user!.id),
-        ToneService.getUserDefaultTone(user!.id)
-      ]);
-      
-      setAvailableTones(tones);
-      setCurrentTone(defaultTone);
-      setSelectedToneId('default');
-    } catch (error) {
-      console.error('Error loading tones:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load tone settings.",
-        variant: "destructive"
-      });
-    } finally {
-      setTonesLoading(false);
-    }
-  };
 
   const handleRegenerateDescription = async () => {
     if (!humanGuidance.trim()) {
@@ -81,7 +41,7 @@ const StrainDescriptionForm = ({
 
     setIsRegenerating(true);
     try {
-      console.log('Calling regenerate-description edge function with tone...');
+      console.log('Calling regenerate-description edge function...');
       const { data, error } = await supabase.functions.invoke('regenerate-description', {
         body: {
           strainName: strain.name,
@@ -89,8 +49,7 @@ const StrainDescriptionForm = ({
           currentDescription: strain.description,
           humanGuidance: humanGuidance,
           effects: strain.effectProfiles?.map(e => e.name) || [],
-          flavors: strain.flavorProfiles?.map(f => f.name) || [],
-          toneId: selectedToneId === 'default' ? currentTone?.id : selectedToneId
+          flavors: strain.flavorProfiles?.map(f => f.name) || []
         }
       });
 
@@ -104,7 +63,7 @@ const StrainDescriptionForm = ({
         throw new Error(data.error);
       }
 
-      console.log('Generated description with tone:', data.description);
+      console.log('Generated description:', data.description);
       setProposedDescription(data.description);
       toast({
         title: "Description Generated",
@@ -113,6 +72,7 @@ const StrainDescriptionForm = ({
     } catch (error) {
       console.error('Error regenerating description:', error);
       
+      // Handle specific error types
       if (error.message?.includes('rate limit')) {
         toast({
           title: "Rate Limit Exceeded",
@@ -131,7 +91,7 @@ const StrainDescriptionForm = ({
     }
   };
 
-  const handleApproveDescription = async (finalDescription: string) => {
+  const handleApproveDescription = async () => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -141,45 +101,27 @@ const StrainDescriptionForm = ({
       return;
     }
 
-    // Validate that strain.id is a valid UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(strain.id)) {
-      console.error('Invalid strain ID format:', strain.id);
-      toast({
-        title: "Invalid Strain ID",
-        description: "The strain ID format is invalid. Please refresh and try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsSaving(true);
     try {
-      console.log('Calling update_strain_description function for strain ID:', strain.id);
+      console.log('Attempting to update strain description for strain ID:', strain.id);
       
-      const { data, error } = await supabase.rpc('update_strain_description', {
-        p_strain_id: strain.id,
-        p_description: finalDescription,
-        p_user_id: user.id
-      });
+      // Update in database using the scans table - now all authenticated users can edit any strain
+      const { error } = await supabase
+        .from('scans')
+        .update({ 
+          description: proposedDescription 
+        })
+        .eq('id', strain.id);
 
       if (error) {
-        console.error('Supabase RPC error:', error);
+        console.error('Database update error:', error);
         throw error;
       }
 
-      // Type cast the response to our expected interface
-      const response = data as UpdateStrainResponse;
-
-      if (!response?.success) {
-        console.error('Function returned error:', response?.error);
-        throw new Error(response?.error || 'Failed to update strain description');
-      }
-
-      console.log('Description updated successfully:', response);
+      console.log('Description updated successfully in database');
 
       // Update local state
-      onUpdate('description', finalDescription);
+      onUpdate('description', proposedDescription);
       setProposedDescription('');
       setHumanGuidance('');
       
@@ -214,8 +156,6 @@ const StrainDescriptionForm = ({
         <h3 className="text-base sm:text-lg font-semibold">Description Management</h3>
       </div>
 
-      <CurrentToneDisplay currentTone={currentTone} isLoading={tonesLoading} />
-
       {/* Current Description */}
       <Card>
         <CardHeader className="pb-3 sm:pb-6">
@@ -238,27 +178,78 @@ const StrainDescriptionForm = ({
         </CardContent>
       </Card>
 
-      <GuidanceInput
-        humanGuidance={humanGuidance}
-        onGuidanceChange={setHumanGuidance}
-        availableTones={availableTones}
-        selectedToneId={selectedToneId}
-        onToneChange={setSelectedToneId}
-        onRegenerate={handleRegenerateDescription}
-        isLoading={isLoading}
-        isRegenerating={isRegenerating}
-        tonesLoading={tonesLoading}
-      />
+      {/* Human Guidance Input */}
+      <Card>
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-sm sm:text-base">Budtender Guidance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 sm:space-y-4">
+          <Textarea 
+            value={humanGuidance} 
+            onChange={(e) => setHumanGuidance(e.target.value)} 
+            placeholder="Provide corrections, additional information, or specific changes you want made to the description..." 
+            className="min-h-[80px] sm:min-h-[100px] text-sm" 
+            disabled={isLoading || isRegenerating} 
+          />
+          
+          <Button 
+            onClick={handleRegenerateDescription} 
+            disabled={!humanGuidance.trim() || isLoading || isRegenerating} 
+            className="w-full text-sm" 
+            size="sm"
+          >
+            {isRegenerating ? (
+              <>
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Regenerate Description
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
-      <DescriptionReviewCard
-        proposedDescription={proposedDescription}
-        selectedToneId={selectedToneId}
-        availableTones={availableTones}
-        onApprove={handleApproveDescription}
-        onReject={handleRejectDescription}
-        isLoading={isLoading}
-        isSaving={isSaving}
-      />
+      {/* Proposed Description Review */}
+      {proposedDescription && (
+        <Card className="border-purple-200">
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-sm sm:text-base text-purple-900">
+              Proposed New Description
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 sm:space-y-4">
+            <div className="p-2 sm:p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs sm:text-sm text-black">
+              {proposedDescription}
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                onClick={handleApproveDescription} 
+                className="flex-1 bg-green-600 hover:bg-green-700 text-sm" 
+                disabled={isLoading || isSaving} 
+                size="sm"
+              >
+                <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                {isSaving ? 'Saving...' : 'Approve & Apply'}
+              </Button>
+              <Button 
+                onClick={handleRejectDescription} 
+                variant="outline" 
+                className="flex-1 text-red-600 border-red-300 hover:bg-red-50 text-sm" 
+                disabled={isLoading || isSaving} 
+                size="sm"
+              >
+                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                Reject
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Guidelines */}
       <Card className="bg-blue-50 border-blue-200">
@@ -269,7 +260,6 @@ const StrainDescriptionForm = ({
             <li>• Mention unique characteristics or effects</li>
             <li>• Include customer feedback or observations</li>
             <li>• Note any medical uses or warnings</li>
-            <li>• Choose different tones for different audiences</li>
           </ul>
         </CardContent>
       </Card>

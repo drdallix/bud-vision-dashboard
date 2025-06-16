@@ -48,7 +48,6 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
-          default_tone_id: string | null
           email: string | null
           full_name: string | null
           id: string
@@ -57,7 +56,6 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
-          default_tone_id?: string | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -66,24 +64,16 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
-          default_tone_id?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_default_tone_id_fkey"
-            columns: ["default_tone_id"]
-            isOneToOne: false
-            referencedRelation: "user_tones"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       scans: {
         Row: {
+          cbd: number | null
           confidence: number | null
           created_at: string
           description: string | null
@@ -101,6 +91,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cbd?: number | null
           confidence?: number | null
           created_at?: string
           description?: string | null
@@ -118,6 +109,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cbd?: number | null
           confidence?: number | null
           created_at?: string
           description?: string | null
@@ -136,75 +128,12 @@ export type Database = {
         }
         Relationships: []
       }
-      strain_tone_descriptions: {
-        Row: {
-          created_at: string
-          generated_description: string
-          id: string
-          strain_id: string
-          tone_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          generated_description: string
-          id?: string
-          strain_id: string
-          tone_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          generated_description?: string
-          id?: string
-          strain_id?: string
-          tone_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      user_tones: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          is_default: boolean | null
-          name: string
-          persona_prompt: string
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_default?: boolean | null
-          name: string
-          persona_prompt: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_default?: boolean | null
-          name?: string
-          persona_prompt?: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      update_strain_description: {
-        Args: { p_strain_id: string; p_description: string; p_user_id?: string }
-        Returns: Json
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
