@@ -118,7 +118,7 @@ export const useStrainEditor = (
           cbd: editedStrain.cbd,
           effects: editedStrain.effectProfiles?.map(e => e.name) || [],
           flavors: editedStrain.flavorProfiles?.map(f => f.name) || [],
-          medical_uses: editedStrain.medicalUses || [],
+          medical_uses: [], // Keep empty array for legacy compatibility
           in_stock: editedStrain.inStock,
           confidence: editedStrain.confidence
         })
