@@ -40,21 +40,6 @@ const Index = () => {
     }
   }, []);
 
-  // Listen for strain selection events from showcase
-  useEffect(() => {
-    const handleStrainSelected = (event: CustomEvent) => {
-      const strain = event.detail as Strain;
-      setCurrentStrain(strain);
-      setActiveTab('details');
-    };
-
-    window.addEventListener('strainSelected', handleStrainSelected as EventListener);
-    
-    return () => {
-      window.removeEventListener('strainSelected', handleStrainSelected as EventListener);
-    };
-  }, []);
-
   const handleStrainGenerated = async (strain: Strain) => {
     const completeStrain: Strain = {
       ...strain,
