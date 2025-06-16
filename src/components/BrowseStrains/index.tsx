@@ -59,6 +59,12 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
     onStrainSelect(strain);
   };
 
+  // Create wrapper function to match StrainGrid's expected signature
+  const handleToggleStrain = (strainId: string) => {
+    const isSelected = selectedStrains.includes(strainId);
+    toggleSelection(strainId, !isSelected);
+  };
+
   const hasResults = filteredStrains && filteredStrains.length > 0;
 
   console.log('BrowseStrains render:', {
@@ -109,7 +115,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         strains={filteredStrains || []}
         editMode={selectedStrains.length > 0}
         selectedStrains={selectedStrains}
-        onToggleStrain={toggleSelection}
+        onToggleStrain={handleToggleStrain}
         pricesMap={pricesMap || {}}
         pricesLoading={pricesLoading}
       />
