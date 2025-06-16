@@ -53,8 +53,10 @@ export const TRANSITION_MODES: Record<TransitionMode, TransitionConfig> = {
 export const getStrainTransitionMode = (strainType: string): TransitionMode => {
   switch (strainType) {
     case 'Indica': return 'zen';
-    case 'Sativa': return 'dynamic';
+    case 'Indica-Dominant': return 'zen';
     case 'Hybrid': return 'elegant';
+    case 'Sativa-Dominant': return 'dynamic';
+    case 'Sativa': return 'dynamic';
     default: return 'elegant';
   }
 };

@@ -35,6 +35,9 @@ const StrainCardHeader = ({
   onQuickPriceClick,
   getTypeColor
 }: StrainCardHeaderProps) => {
+  // Format type for display (handle long names)
+  const displayType = strainType.replace('-', '-\n');
+  
   return (
     <div className="flex items-center justify-between mb-1">
       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -46,7 +49,7 @@ const StrainCardHeader = ({
           />
         )}
         <h3 className="font-semibold truncate text-lg">{strainName}</h3>
-        <Badge className={`${getTypeColor(strainType)} text-xs flex-shrink-0`}>
+        <Badge className={`${getTypeColor(strainType)} text-xs flex-shrink-0 whitespace-nowrap`}>
           {strainType}
         </Badge>
         {!localInStock && (

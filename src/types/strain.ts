@@ -1,3 +1,4 @@
+
 export interface Terpene {
   name: string;
   percentage: number;
@@ -21,7 +22,7 @@ export interface FlavorProfile {
 export interface Strain {
   id: string;
   name: string;
-  type: 'Indica' | 'Sativa' | 'Hybrid';
+  type: 'Indica' | 'Indica-Dominant' | 'Hybrid' | 'Sativa-Dominant' | 'Sativa';
   thc: number; // Always 21% or higher for recreational focus
   cbd?: number; // Optional CBD percentage
   effectProfiles: EffectProfile[];

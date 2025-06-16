@@ -1,4 +1,3 @@
-
 interface StrainData {
   name?: string;
   type?: string;
@@ -74,9 +73,13 @@ const cleanTHCFromDescription = (description: string): string => {
 export const validateStrainData = (strainData: StrainData, textQuery?: string) => {
   const cleanedDescription = cleanTHCFromDescription(strainData.description || "");
   
+  // Validate strain type against 5-level system
+  const validTypes = ['Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', 'Sativa'];
+  const strainType = validTypes.includes(strainData.type || '') ? strainData.type : 'Hybrid';
+  
   return {
     name: strainData.name || (textQuery ? textQuery.replace(/[^\w\s]/g, '').trim() : "Unknown Strain"),
-    type: ['Indica', 'Sativa', 'Hybrid'].includes(strainData.type || '') ? strainData.type : 'Hybrid',
+    type: strainType,
     thc: Math.min(Math.max(Number(strainData.thc) || 20, 0), 35),
     cbd: Math.min(Math.max(Number(strainData.cbd) || 1, 0), 25),
     effects: Array.isArray(strainData.effects) ? strainData.effects.slice(0, 8) : ["Relaxed", "Happy", "Euphoric"],

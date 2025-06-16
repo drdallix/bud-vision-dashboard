@@ -46,10 +46,14 @@ const StrainCard = ({
     switch (type) {
       case 'Indica':
         return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-300';
-      case 'Sativa':
-        return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300';
+      case 'Indica-Dominant':
+        return 'bg-purple-50 text-purple-700 border-purple-150 dark:bg-purple-800 dark:text-purple-200';
       case 'Hybrid':
         return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300';
+      case 'Sativa-Dominant':
+        return 'bg-green-50 text-green-700 border-green-150 dark:bg-green-800 dark:text-green-200';
+      case 'Sativa':
+        return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300';
     }

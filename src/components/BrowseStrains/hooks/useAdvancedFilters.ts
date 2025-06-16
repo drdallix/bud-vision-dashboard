@@ -39,7 +39,7 @@ export const useAdvancedFilters = (strains: Strain[] = []) => {
         if (!matchesSearch) return false;
       }
 
-      // Type filter
+      // Type filter - now supports all 5 types
       if (filterType !== 'all' && strain.type !== filterType) {
         return false;
       }

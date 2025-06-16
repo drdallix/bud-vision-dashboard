@@ -17,8 +17,10 @@ const StrainBasicInfoForm = ({ strain, errors, onUpdate, isLoading }: StrainBasi
   const getTypeEmoji = (type: string) => {
     switch (type) {
       case 'Indica': return '🌙';
-      case 'Sativa': return '☀️';
+      case 'Indica-Dominant': return '🌜';
       case 'Hybrid': return '🌓';
+      case 'Sativa-Dominant': return '🌛';
+      case 'Sativa': return '☀️';
       default: return '🌿';
     }
   };
@@ -26,11 +28,15 @@ const StrainBasicInfoForm = ({ strain, errors, onUpdate, isLoading }: StrainBasi
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'Indica': return 'border-purple-300 bg-purple-50';
-      case 'Sativa': return 'border-green-300 bg-green-50';
+      case 'Indica-Dominant': return 'border-purple-200 bg-purple-25';
       case 'Hybrid': return 'border-blue-300 bg-blue-50';
+      case 'Sativa-Dominant': return 'border-green-200 bg-green-25';
+      case 'Sativa': return 'border-green-300 bg-green-50';
       default: return 'border-gray-300 bg-gray-50';
     }
   };
+
+  const strainTypes = ['Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', 'Sativa'];
 
   return (
     <div className="space-y-6">
@@ -72,20 +78,20 @@ const StrainBasicInfoForm = ({ strain, errors, onUpdate, isLoading }: StrainBasi
           value={strain.type}
           onValueChange={(value) => onUpdate('type', value)}
           disabled={isLoading}
-          className="grid grid-cols-3 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
         >
-          {['Indica', 'Sativa', 'Hybrid'].map((type) => (
+          {strainTypes.map((type) => (
             <div key={type} className="flex items-center space-x-2">
               <RadioGroupItem value={type} id={type} />
               <Label 
                 htmlFor={type} 
-                className={`flex-1 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                className={`flex-1 p-3 border-2 rounded-lg cursor-pointer transition-colors text-sm ${
                   strain.type === type ? getTypeColor(type) : 'border-gray-200'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{getTypeEmoji(type)}</span>
-                  <span className="font-medium">{type}</span>
+                  <span className="font-medium text-xs">{type}</span>
                 </div>
               </Label>
             </div>

@@ -19,12 +19,12 @@ const STRAIN_SCENES: Record<string, SceneConfig> = {
     glowEffect: 'shadow-purple-500/20',
     emoji: '🌙'
   },
-  Sativa: {
-    backgroundGradient: 'from-yellow-900 via-orange-900 to-red-900',
-    accentColor: 'yellow-400',
-    particleColor: 'text-yellow-300',
-    glowEffect: 'shadow-yellow-500/20',
-    emoji: '☀️'
+  'Indica-Dominant': {
+    backgroundGradient: 'from-purple-800 via-blue-800 to-indigo-800',
+    accentColor: 'purple-300',
+    particleColor: 'text-purple-200',
+    glowEffect: 'shadow-purple-400/20',
+    emoji: '🌜'
   },
   Hybrid: {
     backgroundGradient: 'from-green-900 via-teal-900 to-blue-900',
@@ -32,6 +32,20 @@ const STRAIN_SCENES: Record<string, SceneConfig> = {
     particleColor: 'text-emerald-300',
     glowEffect: 'shadow-emerald-500/20',
     emoji: '🌿'
+  },
+  'Sativa-Dominant': {
+    backgroundGradient: 'from-green-800 via-yellow-800 to-orange-800',
+    accentColor: 'green-300',
+    particleColor: 'text-green-200',
+    glowEffect: 'shadow-green-400/20',
+    emoji: '🌛'
+  },
+  Sativa: {
+    backgroundGradient: 'from-yellow-900 via-orange-900 to-red-900',
+    accentColor: 'yellow-400',
+    particleColor: 'text-yellow-300',
+    glowEffect: 'shadow-yellow-500/20',
+    emoji: '☀️'
   }
 };
 
