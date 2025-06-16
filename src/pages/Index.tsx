@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useScans } from '@/hooks/useScans';
 import StrainDashboard from '@/components/StrainDashboard';
 import BrowseStrains from '@/components/BrowseStrains';
-import SettingsPage from '@/components/Settings';
+import SettingsDialog from '@/components/SettingsDialog';
 import InstallBanner from '@/components/InstallBanner';
 import Header from '@/components/Layout/Header';
 import Navigation from '@/components/Layout/Navigation';
@@ -17,7 +17,7 @@ import { Strain } from '@/types/strain';
 const Index = () => {
   const [activeTab, setActiveTab] = useState('browse');
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   
   const { user, loading: authLoading } = useAuth();
   const { scans, addScan } = useScans();
@@ -52,14 +52,8 @@ const Index = () => {
   };
 
   const handleSettingsClick = () => {
-    setShowSettings(true);
-    setActiveTab('settings');
+    setSettingsOpen(true);
   };
-
-  // Determine available tabs based on authentication
-  const tabKeys = user 
-    ? ['browse', 'details', 'showcase', ...(showSettings ? ['settings'] : [])]
-    : ['browse', 'details', 'showcase'];
 
   // Show loading state but still render the full component structure
   if (authLoading) {
@@ -79,7 +73,7 @@ const Index = () => {
         <Header onSettingsClick={handleSettingsClick} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <Navigation showSettings={showSettings} />
+          <Navigation />
 
           <TabsContent value="browse" className="space-y-6">
             <BrowseStrains onStrainSelect={(strain) => {
@@ -95,12 +89,6 @@ const Index = () => {
           <TabsContent value="showcase" className="space-y-6">
             <StrainShowcase />
           </TabsContent>
-
-          {user && showSettings && (
-            <TabsContent value="settings" className="space-y-6">
-              <SettingsPage scanHistory={scans} onDataRestore={handleDataRestore} />
-            </TabsContent>
-          )}
         </Tabs>
 
         {user && <QuickStats scans={scans} />}
@@ -110,6 +98,15 @@ const Index = () => {
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
       />
+
+      {user && (
+        <SettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          scanHistory={scans}
+          onDataRestore={handleDataRestore}
+        />
+      )}
       
       <InstallBanner />
     </div>

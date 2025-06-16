@@ -32,6 +32,12 @@ const UserNav = ({ onSettingsClick }: UserNavProps) => {
     setIsLoading(false);
   };
 
+  const handleSettingsClick = () => {
+    if (onSettingsClick) {
+      onSettingsClick();
+    }
+  };
+
   if (!user) return null;
 
   const userInitials = user.email?.charAt(0).toUpperCase() || 'U';
@@ -58,7 +64,7 @@ const UserNav = ({ onSettingsClick }: UserNavProps) => {
           <User className="mr-2 h-4 w-4" />
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onSettingsClick}>
+        <DropdownMenuItem onClick={handleSettingsClick}>
           <Settings className="mr-2 h-4 w-4" />
           Settings & Data
         </DropdownMenuItem>
