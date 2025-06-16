@@ -8,16 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import ToneEditor from './ToneEditor';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface Tone {
-  id: string;
-  name: string;
-  description: string;
-  persona_prompt: string;
-  is_default: boolean;
-  user_id: string | null;
-  created_at: string;
-}
+type Tone = Tables<'user_tones'>;
 
 const ToneManager = () => {
   const [tones, setTones] = useState<Tone[]>([]);
@@ -37,23 +30,14 @@ const ToneManager = () => {
 
   const fetchTones = async () => {
     try {
-      // Use raw SQL query to fetch tones since the table isn't in the generated types yet
       const { data, error } = await supabase
-        .rpc('get_user_tones', { user_uuid: user?.id });
+        .from('user_tones')
+        .select('*')
+        .or(`user_id.is.null,user_id.eq.${user?.id}`)
+        .order('created_at', { ascending: true });
 
-      if (error) {
-        // Fallback to direct query if function doesn't exist
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('user_tones' as any)
-          .select('*')
-          .or(`user_id.is.null,user_id.eq.${user?.id}`)
-          .order('created_at', { ascending: true });
-
-        if (fallbackError) throw fallbackError;
-        setTones(fallbackData || []);
-      } else {
-        setTones(data || []);
-      }
+      if (error) throw error;
+      setTones(data || []);
     } catch (error) {
       console.error('Error fetching tones:', error);
       toast({
@@ -70,7 +54,7 @@ const ToneManager = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('default_tone_id' as any)
+        .select('default_tone_id')
         .eq('id', user?.id)
         .single();
 
@@ -85,7 +69,7 @@ const ToneManager = () => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ default_tone_id: toneId } as any)
+        .update({ default_tone_id: toneId })
         .eq('id', user?.id);
 
       if (error) throw error;
@@ -121,7 +105,7 @@ const ToneManager = () => {
 
     try {
       const { error } = await supabase
-        .from('user_tones' as any)
+        .from('user_tones')
         .delete()
         .eq('id', tone.id);
 
@@ -131,7 +115,7 @@ const ToneManager = () => {
       if (defaultToneId === tone.id) {
         await supabase
           .from('profiles')
-          .update({ default_tone_id: null } as any)
+          .update({ default_tone_id: null })
           .eq('id', user?.id);
         setDefaultToneId(null);
       }

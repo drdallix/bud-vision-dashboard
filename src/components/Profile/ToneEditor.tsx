@@ -8,16 +8,9 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface Tone {
-  id: string;
-  name: string;
-  description: string;
-  persona_prompt: string;
-  is_default: boolean;
-  user_id: string | null;
-  created_at: string;
-}
+type Tone = Tables<'user_tones'>;
 
 interface ToneEditorProps {
   open: boolean;
@@ -37,7 +30,7 @@ const ToneEditor = ({ open, onOpenChange, tone, onSave }: ToneEditorProps) => {
   useEffect(() => {
     if (tone) {
       setName(tone.name);
-      setDescription(tone.description);
+      setDescription(tone.description || '');
       setPersonaPrompt(tone.persona_prompt);
     } else {
       setName('');
@@ -70,7 +63,7 @@ const ToneEditor = ({ open, onOpenChange, tone, onSave }: ToneEditorProps) => {
       if (tone) {
         // Update existing tone
         result = await supabase
-          .from('user_tones' as any)
+          .from('user_tones')
           .update(toneData)
           .eq('id', tone.id)
           .select()
@@ -78,7 +71,7 @@ const ToneEditor = ({ open, onOpenChange, tone, onSave }: ToneEditorProps) => {
       } else {
         // Create new tone
         result = await supabase
-          .from('user_tones' as any)
+          .from('user_tones')
           .insert(toneData)
           .select()
           .single();
