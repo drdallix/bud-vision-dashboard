@@ -12,11 +12,12 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ShowcaseSlideProps {
   strain: Strain;
+  onStrainClick?: (strain: Strain) => void;
   isActive?: boolean;
   index?: number;
 }
 
-const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProps) => {
+const ShowcaseSlide = ({ strain, onStrainClick, isActive = true, index = 0 }: ShowcaseSlideProps) => {
   const [isLiked, setIsLiked] = useState(false);
   const { toast } = useToast();
   const { thcDisplay } = useStrainTHC(strain.name);
@@ -48,9 +49,15 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
     });
   };
 
+  const handleStrainClick = () => {
+    if (onStrainClick) {
+      onStrainClick(strain);
+    }
+  };
+
   return (
     <div 
-      className={`transition-all duration-700 ease-out ${
+      className={`transition-all duration-700 ease-out cursor-pointer ${
         isActive 
           ? 'opacity-100 scale-100 transform-none' 
           : 'opacity-60 scale-95'
@@ -58,6 +65,7 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
       style={{
         animationDelay: `${index * 0.1}s`
       }}
+      onClick={handleStrainClick}
     >
       {/* Floating background elements */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
@@ -110,7 +118,10 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
                 <Button
                   variant="ghost"
                   size="lg"
-                  onClick={handleHeartClick}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHeartClick();
+                  }}
                   className={`${
                     isLiked 
                       ? 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100' 

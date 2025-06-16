@@ -8,6 +8,7 @@ import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
 import FullscreenSceneManager from './FullscreenSceneManager';
 import SlideNavigation from './SlideNavigation';
+import { TransitionMode } from './FullscreenTransitions';
 
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
@@ -21,7 +22,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'thc'>('recent');
-  const [transitionMode, setTransitionMode] = useState<'fade' | 'slide'>('fade');
+  const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
 
   // Filter strains based on type
   const filteredStrains = strains.filter(strain => {
@@ -103,8 +104,12 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
           <FullscreenSceneManager
             strain={currentStrain}
             mode={transitionMode}
-            onStrainClick={handleStrainClick}
-          />
+          >
+            <ShowcaseSlide
+              strain={currentStrain}
+              onStrainClick={handleStrainClick}
+            />
+          </FullscreenSceneManager>
         ) : (
           <ShowcaseSlide
             strain={currentStrain}
@@ -118,22 +123,29 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
           onNext={handleNext}
           onPrevious={handlePrevious}
           onFullscreen={() => setIsFullscreen(true)}
-          transitionMode={transitionMode}
-          onTransitionChange={setTransitionMode}
+          transitionMode="fade"
+          onTransitionChange={() => {}}
           disabled={filteredStrains.length <= 1}
+          total={filteredStrains.length}
+          current={currentIndex}
+          onNav={setCurrentIndex}
+          currentStrain={currentStrain}
         />
       </div>
 
       <ShowcaseProgress
         total={filteredStrains.length}
         current={currentIndex}
-        onNav={(index) => setCurrentIndex(index)}
+        onNav={setCurrentIndex}
       />
 
       <SlideNavigation
         strains={filteredStrains}
         currentIndex={currentIndex}
         onSelect={setCurrentIndex}
+        total={filteredStrains.length}
+        current={currentIndex}
+        onNav={setCurrentIndex}
       />
 
       {isFullscreen && (
@@ -141,8 +153,12 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
           <FullscreenSceneManager
             strain={currentStrain}
             mode={transitionMode}
-            onStrainClick={handleStrainClick}
-          />
+          >
+            <ShowcaseSlide
+              strain={currentStrain}
+              onStrainClick={handleStrainClick}
+            />
+          </FullscreenSceneManager>
           <button
             onClick={() => setIsFullscreen(false)}
             className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 z-10"

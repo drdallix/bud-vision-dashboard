@@ -6,39 +6,28 @@ import { Slider } from '@/components/ui/slider';
 import { Filter, SortAsc } from 'lucide-react';
 
 interface ShowcaseFiltersProps {
-  selectedTypes: string[];
-  setSelectedTypes: (types: string[]) => void;
+  filterType: string;
+  onFilterChange: (type: string) => void;
   sortBy: 'name' | 'thc' | 'recent';
-  setSortBy: (sort: 'name' | 'thc' | 'recent') => void;
-  minTHC: number;
-  setMinTHC: (thc: number) => void;
+  onSortChange: (sort: 'name' | 'thc' | 'recent') => void;
   strainCount: number;
 }
 
 const ShowcaseFilters = ({
-  selectedTypes,
-  setSelectedTypes,
+  filterType,
+  onFilterChange,
   sortBy,
-  setSortBy,
-  minTHC,
-  setMinTHC,
+  onSortChange,
   strainCount,
 }: ShowcaseFiltersProps) => {
-  const types = ['Indica', 'Sativa', 'Hybrid'];
-
-  const toggleType = (type: string) => {
-    if (selectedTypes.includes(type)) {
-      setSelectedTypes(selectedTypes.filter(t => t !== type));
-    } else {
-      setSelectedTypes([...selectedTypes, type]);
-    }
-  };
+  const types = ['all', 'Indica', 'Sativa', 'Hybrid'];
 
   const getTypeEmoji = (type: string) => {
     switch (type) {
       case 'Indica': return '🌙';
       case 'Sativa': return '☀️';
       case 'Hybrid': return '🌓';
+      case 'all': return '🌿';
       default: return '🌿';
     }
   };
@@ -48,7 +37,7 @@ const ShowcaseFilters = ({
       case 'name': return 'Alphabetical';
       case 'thc': return 'THC Level';
       case 'recent': return 'Recently Added';
-      default: return 'Name';
+      default: return 'Recent';
     }
   };
 
@@ -64,7 +53,7 @@ const ShowcaseFilters = ({
         </Badge>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
         {/* Strain Types */}
         <div className="space-y-3">
           <label className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -74,17 +63,17 @@ const ShowcaseFilters = ({
             {types.map((type) => (
               <Button
                 key={type}
-                variant={selectedTypes.includes(type) ? "default" : "outline"}
+                variant={filterType === type ? "default" : "outline"}
                 size="sm"
-                onClick={() => toggleType(type)}
+                onClick={() => onFilterChange(type)}
                 className={`transition-all duration-200 ${
-                  selectedTypes.includes(type)
+                  filterType === type
                     ? 'bg-primary hover:bg-primary/90 scale-105 shadow-md'
                     : 'hover:scale-105'
                 }`}
               >
                 <span className="mr-1">{getTypeEmoji(type)}</span>
-                {type}
+                {type === 'all' ? 'All' : type}
               </Button>
             ))}
           </div>
@@ -95,7 +84,7 @@ const ShowcaseFilters = ({
           <label className="text-sm font-medium text-foreground flex items-center gap-2">
             <SortAsc className="h-4 w-4" /> Sort By
           </label>
-          <Select value={sortBy} onValueChange={(value: 'name' | 'thc' | 'recent') => setSortBy(value)}>
+          <Select value={sortBy} onValueChange={(value: 'name' | 'thc' | 'recent') => onSortChange(value)}>
             <SelectTrigger className="border-border focus:border-primary">
               <SelectValue />
             </SelectTrigger>
@@ -108,30 +97,6 @@ const ShowcaseFilters = ({
           <p className="text-xs text-muted-foreground">
             Currently: {getSortLabel(sortBy)}
           </p>
-        </div>
-
-        {/* THC Filter */}
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-foreground flex items-center gap-2">
-            <span>⚡</span> Min THC Level
-          </label>
-          <div className="px-2">
-            <Slider
-              value={[minTHC]}
-              onValueChange={([value]) => setMinTHC(value)}
-              max={35}
-              min={0}
-              step={1}
-              className="w-full"
-            />
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>0%</span>
-            <Badge variant="outline" className="text-primary border-primary/50">
-              {minTHC}%+
-            </Badge>
-            <span>35%</span>
-          </div>
         </div>
       </div>
     </div>

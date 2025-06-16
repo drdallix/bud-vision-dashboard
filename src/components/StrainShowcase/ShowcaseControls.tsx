@@ -8,24 +8,39 @@ import SlideNavigation from './SlideNavigation';
 import SettingsPanel from './SettingsPanel';
 
 interface ShowcaseControlsProps {
-  total: number;
-  current: number;
-  paused: boolean;
-  slideInterval: number;
-  setPaused: (val: boolean) => void;
-  setSlideInterval: (val: number) => void;
-  onNav: (index: number) => void;
+  isPlaying: boolean;
+  onPlayPause: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onFullscreen: () => void;
+  transitionMode: 'fade' | 'slide';
+  onTransitionChange: (mode: 'fade' | 'slide') => void;
+  disabled: boolean;
+  total?: number;
+  current?: number;
+  onNav?: (index: number) => void;
   currentStrain?: Strain;
 }
 
 const ShowcaseControls = ({
-  total, current, paused, slideInterval, setPaused, setSlideInterval, onNav, currentStrain,
+  isPlaying,
+  onPlayPause,
+  onNext,
+  onPrevious,
+  onFullscreen,
+  transitionMode,
+  onTransitionChange,
+  disabled,
+  total = 0,
+  current = 0,
+  onNav = () => {},
+  currentStrain,
 }: ShowcaseControlsProps) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [slideInterval, setSlideInterval] = useState(5000);
 
   const resetToStart = () => {
     onNav(0);
-    setPaused(true);
   };
 
   return (
@@ -44,9 +59,9 @@ const ShowcaseControls = ({
         <PlaybackControls
           current={current}
           total={total}
-          paused={paused}
+          paused={!isPlaying}
           showSettings={showSettings}
-          setPaused={setPaused}
+          setPaused={(paused) => onPlayPause()}
           onNav={onNav}
           onReset={resetToStart}
           onToggleSettings={() => setShowSettings(!showSettings)}
@@ -62,11 +77,11 @@ const ShowcaseControls = ({
         {/* Settings Panel */}
         {showSettings && (
           <SettingsPanel
-            paused={paused}
+            paused={!isPlaying}
             slideInterval={slideInterval}
             total={total}
             current={current}
-            setPaused={setPaused}
+            setPaused={(paused) => onPlayPause()}
             setSlideInterval={setSlideInterval}
           />
         )}
