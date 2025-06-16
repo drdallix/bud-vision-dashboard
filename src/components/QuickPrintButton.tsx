@@ -2,87 +2,92 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Printer, Copy, Image, Download } from 'lucide-react';
+import { Printer, Copy, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Strain } from '@/types/strain';
-import { PrintConfig, defaultConfig } from '@/components/PrintSettings';
-import { generateStrainText, generateStrainImage, downloadImage, copyToClipboard } from '@/utils/printGenerator';
+import { PrintConfig, defaultPrintConfig } from '@/types/printConfig';
+import { generateOutput, copyToClipboard, downloadText, formatFilename } from '@/utils/outputGenerators';
 
 interface QuickPrintButtonProps {
   strain: Strain;
   config?: PrintConfig;
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg';
+  allStrains?: Strain[]; // For menu generation
 }
 
-const QuickPrintButton = ({ strain, config = defaultConfig, variant = 'outline', size = 'sm' }: QuickPrintButtonProps) => {
-  const [isGenerating, setIsGenerating] = useState(false);
+const QuickPrintButton = ({ 
+  strain, 
+  config = defaultPrintConfig, 
+  variant = 'outline', 
+  size = 'sm',
+  allStrains = []
+}: QuickPrintButtonProps) => {
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const handleTextExport = async () => {
+  const handleCopy = async () => {
     try {
-      const text = generateStrainText(strain, config);
-      const success = await copyToClipboard(text);
+      const output = generateOutput(config.defaultCopyMode, strain, config, allStrains);
+      const success = await copyToClipboard(output);
       
       if (success) {
         toast({
           title: "Copied to clipboard",
-          description: `${strain.name} strain info copied as text.`,
+          description: `${strain.name} copied as ${config.defaultCopyMode.replace('-', ' ')}.`,
         });
       } else {
-        toast({
-          title: "Copy failed",
-          description: "Could not copy to clipboard. Please try again.",
-          variant: "destructive",
-        });
+        throw new Error('Clipboard access failed');
       }
     } catch (error) {
       toast({
-        title: "Export failed",
-        description: "Could not generate text export.",
+        title: "Copy failed",
+        description: "Could not copy to clipboard. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const handleImageExport = async () => {
-    setIsGenerating(true);
+  const handleExport = async () => {
+    setIsProcessing(true);
     try {
-      const imageDataUrl = await generateStrainImage(strain, config);
-      const filename = `${strain.name.replace(/[^a-z0-9]/gi, '_')}_strain_${config.printStyle}.png`;
-      downloadImage(imageDataUrl, filename);
+      const output = generateOutput(config.defaultExportMode, strain, config, allStrains);
+      const filename = formatFilename(config.defaultFilename, strain.name);
+      const extension = config.defaultExportMode === 'json' ? '.json' : '.txt';
+      
+      downloadText(output, `${filename}${extension}`);
       
       toast({
-        title: "Image downloaded",
-        description: `${strain.name} strain info saved as ${config.printStyle} PNG.`,
+        title: "File downloaded",
+        description: `${strain.name} exported as ${config.defaultExportMode.replace('-', ' ')}.`,
       });
     } catch (error) {
       toast({
         title: "Export failed",
-        description: "Could not generate image export.",
+        description: "Could not generate export file.",
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setIsProcessing(false);
     }
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={size} disabled={isGenerating}>
+        <Button variant={variant} size={size} disabled={isProcessing}>
           <Printer className="h-4 w-4" />
           {size !== 'sm' && <span className="ml-2">Print</span>}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleTextExport}>
+        <DropdownMenuItem onClick={handleCopy}>
           <Copy className="h-4 w-4 mr-2" />
-          Copy as Text
+          Copy ({config.defaultCopyMode.replace('-', ' ')})
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleImageExport} disabled={isGenerating}>
-          <Image className="h-4 w-4 mr-2" />
-          {isGenerating ? 'Generating...' : `Download as ${config.printStyle === 'showcase' ? 'Showcase' : 'Receipt'} PNG`}
+        <DropdownMenuItem onClick={handleExport} disabled={isProcessing}>
+          <Download className="h-4 w-4 mr-2" />
+          {isProcessing ? 'Exporting...' : `Export (${config.defaultExportMode.replace('-', ' ')})`}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
