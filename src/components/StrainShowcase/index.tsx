@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Strain } from '@/types/strain';
 import { useStrainStore } from '@/stores/useStrainStore';
 import { useAuth } from '@/contexts/AuthContext';
-import ShowcaseFilters from './ShowcaseFilters';
-import ShowcaseCarousel from './components/ShowcaseCarousel';
-import ShowcaseControls from './components/ShowcaseControls';
-import FullscreenView from './components/FullscreenView';
-import EmptyState from './components/EmptyState';
+import { ShowcaseFilters } from './ShowcaseFilters';
+import { ShowcaseCarousel } from './components/ShowcaseCarousel';
+import { ShowcaseControls } from './components/ShowcaseControls';
+import { FullscreenView } from './components/FullscreenView';
+import { EmptyState } from './components/EmptyState';
 import { useShowcaseCarousel } from './hooks/useShowcaseCarousel';
 import { useRealtimeShowcaseFilters } from './hooks/useRealtimeShowcaseFilters';
 

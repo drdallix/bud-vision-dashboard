@@ -8,51 +8,41 @@ import { AnimationSettings } from '../AnimationSettings';
 import { loadAnimationSettings } from '@/services/animationSettingsService';
 
 interface FullscreenViewProps {
-  strains: Strain[];
+  currentStrain: Strain;
   currentIndex: number;
+  transitionMode: TransitionMode;
+  onExitFullscreen: () => void;
+  filteredStrains: Strain[];
   isPlaying: boolean;
-  onClose: () => void;
+  setIsPlaying: (playing: boolean) => void;
   onNext: () => void;
   onPrevious: () => void;
-  onPlayPause: () => void;
-  onStrainSelect?: (strain: Strain) => void;
+  onNavigateToIndex: (index: number) => void;
+  setTransitionMode: (mode: TransitionMode) => void;
 }
 
 const FullscreenView = ({ 
-  strains,
+  currentStrain, 
   currentIndex, 
+  transitionMode, 
+  onExitFullscreen,
+  filteredStrains,
   isPlaying,
-  onClose,
+  setIsPlaying,
   onNext,
   onPrevious,
-  onPlayPause,
-  onStrainSelect
+  onNavigateToIndex,
+  setTransitionMode
 }: FullscreenViewProps) => {
-  const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings | null>(null);
-  
-  const currentStrain = strains[currentIndex];
 
   useEffect(() => {
     const loadSettings = async () => {
       const settings = await loadAnimationSettings();
       setAnimationSettings(settings);
-      setTransitionMode(settings.transitionMode);
     };
     loadSettings();
   }, []);
-
-  const handleNavigateToIndex = (index: number) => {
-    if (index === currentIndex + 1) {
-      onNext();
-    } else if (index === currentIndex - 1) {
-      onPrevious();
-    }
-  };
-
-  if (!currentStrain) {
-    return null;
-  }
 
   return (
     <div className="fixed inset-0 bg-black z-50 overflow-hidden">
@@ -69,7 +59,7 @@ const FullscreenView = ({
 
       {/* Exit button - always visible */}
       <button
-        onClick={onClose}
+        onClick={onExitFullscreen}
         className="fixed top-6 right-6 text-white bg-black/50 hover:bg-black/70 rounded-full p-3 z-50 transition-colors backdrop-blur-sm"
         aria-label="Exit fullscreen"
       >
@@ -80,13 +70,13 @@ const FullscreenView = ({
 
       {/* Fullscreen controls */}
       <FullscreenControls
-        total={strains.length}
+        total={filteredStrains.length}
         current={currentIndex}
         paused={!isPlaying}
         slideInterval={5000}
-        setPaused={(paused) => onPlayPause()}
+        setPaused={(paused) => setIsPlaying(!paused)}
         setSlideInterval={() => {}} // Handled by AnimationSettings
-        onNav={handleNavigateToIndex}
+        onNav={onNavigateToIndex}
         currentStrain={currentStrain}
         transitionMode={transitionMode}
         setTransitionMode={setTransitionMode}
