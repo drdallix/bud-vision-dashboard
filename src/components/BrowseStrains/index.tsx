@@ -59,7 +59,15 @@ const BrowseStrains = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      <BrowseHeader />
+      <BrowseHeader 
+        selectedCount={selectedStrains.length}
+        totalCount={filteredStrains.length}
+        onSelectAll={selectAll}
+        onClearSelection={clearSelection}
+        onBatchStockUpdate={handleBatchStockUpdate}
+        selectedStrains={selectedStrains}
+        inventoryLoading={inventoryLoading}
+      />
       
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
@@ -70,7 +78,7 @@ const BrowseStrains = () => {
         </div>
         <FilterControls
           filterType={filterType}
-          onFilterTypeChange={setFilterType}
+          onFilterChange={setFilterType}
           sortBy={sortBy}
           onSortChange={setSortBy}
         />

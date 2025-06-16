@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react';
 
-export const useStrainSelection = () => {
+import { useState, useCallback, useMemo } from 'react';
+import { Strain } from '@/types/strain';
+
+export const useStrainSelection = (filteredStrains: Strain[]) => {
   const [selectedStrains, setSelectedStrains] = useState<string[]>([]);
 
   const toggleSelection = useCallback((strainId: string, checked: boolean) => {
@@ -11,19 +13,25 @@ export const useStrainSelection = () => {
     );
   }, []);
 
-  const selectAll = useCallback((strainIds: string[]) => {
-    setSelectedStrains(strainIds);
-  }, []);
+  const selectAll = useCallback(() => {
+    const allStrainIds = filteredStrains.map(strain => strain.id);
+    setSelectedStrains(allStrainIds);
+  }, [filteredStrains]);
 
   const clearSelection = useCallback(() => {
     setSelectedStrains([]);
   }, []);
+
+  const isAllSelected = useMemo(() => {
+    return filteredStrains.length > 0 && selectedStrains.length === filteredStrains.length;
+  }, [selectedStrains.length, filteredStrains.length]);
 
   return {
     selectedStrains,
     toggleSelection,
     selectAll,
     clearSelection,
+    isAllSelected,
     handleStrainSelect: toggleSelection
   };
 };
