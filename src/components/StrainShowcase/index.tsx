@@ -5,6 +5,7 @@ import { useStrainData } from '@/data/hooks/useStrainData';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
+import ToneShowcase from './ToneShowcase';
 import { Strain } from '@/types/strain';
 
 const StrainShowcase = () => {
@@ -241,6 +242,23 @@ const StrainShowcase = () => {
           setMinTHC={setMinTHC}
           strainCount={filteredStrains.length}
         />
+      </div>
+
+      {/* Tone Showcase - Positioned under filters */}
+      <div className={`transition-all duration-500 ${
+        showControls 
+          ? 'opacity-100 transform-none' 
+          : 'opacity-0 translate-y-4 pointer-events-none'
+      }`}>
+        {filteredStrains[current] && (
+          <ToneShowcase 
+            strain={filteredStrains[current]} 
+            onDescriptionChange={(description) => {
+              // Update the current strain's description in the showcase
+              console.log('Description updated for current strain:', description);
+            }}
+          />
+        )}
       </div>
     </div>
   );
