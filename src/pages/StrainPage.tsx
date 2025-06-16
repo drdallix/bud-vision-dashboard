@@ -1,120 +1,161 @@
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { useAuth } from '@/contexts/AuthContext';
-import { Strain } from '@/types/strain';
+import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
+import { useScans } from '@/hooks/useScans';
+import { analyzeStrainWithAI } from '@/components/SmartOmnibar/AIAnalysis';
 import StrainDashboard from '@/components/StrainDashboard';
+import Header from '@/components/Layout/Header';
+import { Strain } from '@/types/strain';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Cannabis, Lock, Database } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const StrainPage = () => {
-  const { strainName } = useParams();
+  const { strainName } = useParams<{ strainName: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { strains, isLoading } = useRealtimeStrainStore();
-  const [strain, setStrain] = useState<Strain | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const { strains, isLoading } = useRealtimeStrainStore(true);
+  const { addScan } = useScans();
+  const { toast } = useToast();
+  
+  const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [searchAttempted, setSearchAttempted] = useState(false);
 
-  useEffect(() => {
-    if (isLoading || !strainName) return;
+  // Convert URL-friendly name back to searchable format
+  const urlToSearchTerm = (urlName: string): string => {
+    return urlName
+      .replace(/_/g, ' ')
+      .replace(/-/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
-    // Find strain by name (case-insensitive, handle URL-friendly names)
-    const decodedName = decodeURIComponent(strainName).replace(/-/g, ' ');
-    const foundStrain = strains.find(s => 
-      s.name.toLowerCase() === decodedName.toLowerCase() ||
-      s.name.toLowerCase().replace(/\s+/g, '-') === strainName.toLowerCase()
+  // Fuzzy search for strain name
+  const findStrainByName = (searchTerm: string): Strain | null => {
+    if (!strains || strains.length === 0) return null;
+    
+    const cleanSearchTerm = searchTerm.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    // Try exact match first
+    let found = strains.find(strain => 
+      strain.name.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanSearchTerm
     );
+    
+    if (found) return found;
+    
+    // Try partial match
+    found = strains.find(strain => 
+      strain.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(cleanSearchTerm) ||
+      cleanSearchTerm.includes(strain.name.toLowerCase().replace(/[^a-z0-9]/g, ''))
+    );
+    
+    if (found) return found;
+    
+    // Try word-by-word match
+    const searchWords = searchTerm.toLowerCase().split(/\s+/);
+    found = strains.find(strain => {
+      const strainWords = strain.name.toLowerCase().split(/\s+/);
+      return searchWords.some(searchWord => 
+        strainWords.some(strainWord => 
+          strainWord.includes(searchWord) || searchWord.includes(strainWord)
+        )
+      );
+    });
+    
+    return found || null;
+  };
 
-    if (foundStrain) {
-      setStrain(foundStrain);
-      setNotFound(false);
-    } else {
-      setStrain(null);
-      setNotFound(true);
+  // Generate strain if not found
+  const generateStrain = async (searchTerm: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to generate new strains.",
+        variant: "destructive",
+      });
+      return;
     }
-  }, [strains, strainName, isLoading]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+    setIsGenerating(true);
+    try {
+      console.log('Generating strain for:', searchTerm);
+      const result = await analyzeStrainWithAI(undefined, searchTerm, user.id);
+      
+      const strain: Strain = {
+        ...result,
+        id: Date.now().toString(),
+        scannedAt: new Date().toISOString(),
+        inStock: true,
+        userId: user.id
+      };
 
-  if (notFound) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-card border-border">
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center mb-4">
-              <Database className="h-8 w-8 text-orange-500 mr-2" />
-              <Cannabis className="h-8 w-8 text-primary" />
-            </div>
-            <CardTitle className="text-2xl text-foreground">
-              Strain Not Found
-            </CardTitle>
-            <CardDescription>
-              "{decodeURIComponent(strainName || '').replace(/-/g, ' ')}" isn't in our database yet.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-center">
-            {user ? (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  As an authenticated user, you can add this strain to our shared database.
-                </p>
-                <Button 
-                  onClick={() => navigate('/')}
-                  className="w-full"
-                >
-                  Add to Database
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-center p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-                  <Lock className="h-5 w-5 text-orange-500 mr-2" />
-                  <p className="text-sm text-orange-400">
-                    Sign in required to add strains to the database
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Button 
-                    onClick={() => navigate('/auth')}
-                    className="w-full"
-                  >
-                    Sign In to Add Strain
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => navigate('/')}
-                    className="w-full"
-                  >
-                    Browse Database
-                  </Button>
-                </div>
-              </div>
-            )}
-            
-            <div className="mt-6 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground text-center">
-                ⚠️ All information generated by AI • For recreation and enjoyment only • Not for medical purposes
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+      await addScan(strain);
+      setCurrentStrain(strain);
+      
+      toast({
+        title: "Strain Generated",
+        description: `${strain.name} has been generated and added to your collection.`,
+      });
+    } catch (error) {
+      console.error('Failed to generate strain:', error);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate strain. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
-  if (!strain) {
+  // Search for strain when component mounts or strains change
+  useEffect(() => {
+    if (!strainName || isLoading || searchAttempted) return;
+    
+    const searchTerm = urlToSearchTerm(strainName);
+    console.log('Searching for strain:', searchTerm, 'from URL:', strainName);
+    
+    const foundStrain = findStrainByName(searchTerm);
+    
+    if (foundStrain) {
+      console.log('Found existing strain:', foundStrain.name);
+      setCurrentStrain(foundStrain);
+    } else {
+      console.log('Strain not found, will generate:', searchTerm);
+      generateStrain(searchTerm);
+    }
+    
+    setSearchAttempted(true);
+  }, [strainName, strains, isLoading, searchAttempted]);
+
+  if (!strainName) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">Loading strain information...</p>
+          <p className="text-muted-foreground">Invalid strain URL</p>
+          <Button onClick={() => navigate('/')} className="mt-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Browse
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || isGenerating) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">
+            {isGenerating ? 'Generating strain profile...' : 'Loading strain data...'}
+          </p>
         </div>
       </div>
     );
@@ -122,23 +163,22 @@ const StrainPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)}
-          className="mb-6"
-        >
-          ← Back
-        </Button>
+      <div className="container mx-auto px-4 py-6">
+        <Header onSettingsClick={() => {}} />
         
-        <StrainDashboard strain={strain} />
-        
-        {/* AI Disclaimer */}
-        <div className="mt-8 p-4 bg-muted/50 rounded-lg border border-border">
-          <p className="text-xs text-muted-foreground text-center">
-            ⚠️ All information generated by AI • For recreation and enjoyment only • Not for medical purposes
-          </p>
+        <div className="mb-6">
+          <Button 
+            onClick={() => navigate('/')} 
+            variant="outline" 
+            size="sm"
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Browse
+          </Button>
         </div>
+
+        <StrainDashboard strain={currentStrain} />
       </div>
     </div>
   );
