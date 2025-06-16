@@ -4,13 +4,12 @@ import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
 import BrowseHeader from './components/BrowseHeader';
 import SafeStrainGrid from './components/SafeStrainGrid';
-import SearchBar from './SearchBar';
-import FilterControls from './FilterControls';
 import BatchActions from './BatchActions';
-import { useBrowseFilters } from './hooks/useBrowseFilters';
 import { useStrainSelection } from './hooks/useStrainSelection';
 import { useInventoryActions } from './hooks/useInventoryActions';
+import { useAdvancedFilters } from './hooks/useAdvancedFilters';
 import SmartOmnibar from '@/components/SmartOmnibar';
+import MobileFilters from './MobileFilters';
 
 interface BrowseStrainsProps {
   onStrainSelect?: (strain: Strain) => void;
@@ -27,10 +26,18 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
     setFilterType,
     sortBy,
     setSortBy,
-    priceFilter,
-    setPriceFilter,
-    filteredStrains
-  } = useBrowseFilters(strains);
+    stockFilter,
+    setStockFilter,
+    selectedEffects,
+    selectedFlavors,
+    thcRange,
+    setThcRange,
+    handleEffectToggle,
+    handleFlavorToggle,
+    filteredStrains,
+    clearAllFilters,
+    hasActiveFilters
+  } = useAdvancedFilters(strains);
   
   const {
     selectedStrains,
@@ -57,7 +64,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <BrowseHeader 
         strainCount={filteredStrains.length}
         editMode={editMode}
@@ -71,46 +78,43 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         hasResults={filteredStrains.length > 0}
       />
       
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1 space-y-4">
-          <SearchBar 
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-          />
-          
-          <FilterControls
-            filterType={filterType}
-            onFilterChange={setFilterType}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            priceFilter={priceFilter}
-            onPriceFilterChange={setPriceFilter}
-          />
-          
-          {editMode && selectedStrains.length > 0 && (
-            <BatchActions
-              selectedCount={selectedStrains.length}
-              onClearSelection={clearSelection}
-              onSelectAll={selectAll}
-              isAllSelected={isAllSelected}
-              onBatchStockUpdate={handleBatchStockUpdate}
-              selectedStrainIds={selectedStrains}
-            />
-          )}
-        </div>
-        
-        <div className="lg:col-span-3">
-          <SafeStrainGrid 
-            strains={filteredStrains}
-            editMode={editMode}
-            selectedStrains={selectedStrains}
-            onStrainSelect={handleStrainSelect}
-            onStockToggle={handleStockToggle}
-            onStrainClick={handleStrainClick}
-            inventoryLoading={inventoryLoading}
-          />
-        </div>
-      </div>
+      <MobileFilters
+        strains={strains}
+        filterType={filterType}
+        sortBy={sortBy}
+        selectedEffects={selectedEffects}
+        selectedFlavors={selectedFlavors}
+        thcRange={thcRange}
+        stockFilter={stockFilter}
+        onFilterChange={setFilterType}
+        onSortChange={setSortBy}
+        onEffectToggle={handleEffectToggle}
+        onFlavorToggle={handleFlavorToggle}
+        onThcRangeChange={setThcRange}
+        onStockFilterChange={setStockFilter}
+        onClearAll={clearAllFilters}
+      />
+      
+      {editMode && selectedStrains.length > 0 && (
+        <BatchActions
+          selectedCount={selectedStrains.length}
+          onClearSelection={clearSelection}
+          onSelectAll={selectAll}
+          isAllSelected={isAllSelected}
+          onBatchStockUpdate={handleBatchStockUpdate}
+          selectedStrainIds={selectedStrains}
+        />
+      )}
+      
+      <SafeStrainGrid 
+        strains={filteredStrains}
+        editMode={editMode}
+        selectedStrains={selectedStrains}
+        onStrainSelect={handleStrainSelect}
+        onStockToggle={handleStockToggle}
+        onStrainClick={handleStrainClick}
+        inventoryLoading={inventoryLoading}
+      />
     </div>
   );
 };
