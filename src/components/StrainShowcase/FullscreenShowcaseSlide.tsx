@@ -53,38 +53,40 @@ const FullscreenShowcaseSlide = ({
 
   return (
     <FullscreenSceneManager strain={strain} mode={currentMode}>
-      <div className={`h-full flex flex-col justify-center transition-all duration-1000 ease-out ${
+      <div className={`h-full flex flex-col transition-all duration-1000 ease-out ${
         isActive ? 'opacity-100 scale-100' : 'opacity-30 scale-95'
       }`}>
         
-        {/* Main content with better flexbox layout */}
-        <div className="flex-1 flex flex-col justify-center items-center px-8 md:px-16 lg:px-24 space-y-8">
+        {/* Main content - proper flexbox layout with safe areas */}
+        <div className="flex-1 flex flex-col justify-center items-center px-8 md:px-16 lg:px-24 py-8 min-h-0 overflow-auto">
           
-          {/* Hero section */}
-          <div className="text-center space-y-6 max-w-6xl">
-            <FullscreenTypography
-              text={strain.name}
-              level="hero"
-              mode={currentMode}
-              isActive={isActive}
-              delay={200}
-            />
-            
-            <div className="flex items-center justify-center gap-6 flex-wrap">
-              <Badge 
-                className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-2xl text-2xl px-8 py-4 animate-pulse`}
-              >
-                {strain.type}
-              </Badge>
-              <Badge className="bg-green-500/90 text-white border-0 shadow-2xl text-2xl px-8 py-4 animate-pulse">
-                <Sparkles className="h-6 w-6 mr-3" />
-                Premium
-              </Badge>
+          {/* Hero section - constrained height */}
+          <div className="flex-shrink-0 text-center space-y-4 max-w-6xl mb-6">
+            <div className="space-y-2">
+              <FullscreenTypography
+                text={strain.name}
+                level="hero"
+                mode={currentMode}
+                isActive={isActive}
+                delay={200}
+              />
+              
+              <div className="flex items-center justify-center gap-4 flex-wrap">
+                <Badge 
+                  className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-2xl text-lg px-6 py-2`}
+                >
+                  {strain.type}
+                </Badge>
+                <Badge className="bg-green-500/90 text-white border-0 shadow-2xl text-lg px-6 py-2">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Premium
+                </Badge>
+              </div>
             </div>
           </div>
 
-          {/* Description with better typography */}
-          <div className="max-w-4xl text-center">
+          {/* Description - constrained height */}
+          <div className="flex-shrink-0 max-w-4xl text-center mb-6">
             <FullscreenTypography
               text={strain.description}
               level="body"
@@ -94,10 +96,10 @@ const FullscreenShowcaseSlide = ({
             />
           </div>
           
-          {/* THC Display - more prominent */}
-          <div className="flex items-center justify-center gap-6 py-8">
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-6 animate-pulse shadow-2xl">
-              <Zap className="h-12 w-12 text-white" />
+          {/* THC Display - compact */}
+          <div className="flex-shrink-0 flex items-center justify-center gap-4 mb-6">
+            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-4 shadow-2xl">
+              <Zap className="h-8 w-8 text-white" />
             </div>
             <div className="text-center">
               <FullscreenTypography
@@ -118,14 +120,14 @@ const FullscreenShowcaseSlide = ({
           </div>
         </div>
 
-        {/* Effects and Flavors - Bottom section with better spacing */}
-        <div className="px-8 md:px-16 lg:px-24 pb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+        {/* Bottom section - effects and flavors with safe bottom margin */}
+        <div className="flex-shrink-0 px-8 md:px-16 lg:px-24 pb-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
             <div className={`transform transition-all duration-1000 delay-800 ${
               isActive ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
             }`}>
               <Card className="border-0 bg-gradient-to-br from-purple-900/40 to-pink-900/40 backdrop-blur-lg shadow-2xl overflow-hidden">
-                <div className="p-8">
+                <div className="p-6">
                   <FullscreenTypography
                     text="Effects"
                     level="subtitle"
@@ -133,7 +135,7 @@ const FullscreenShowcaseSlide = ({
                     isActive={isActive}
                     delay={900}
                   />
-                  <div className="mt-6">
+                  <div className="mt-4">
                     <StrainEffectsVisual effectProfiles={strain.effectProfiles} />
                   </div>
                 </div>
@@ -144,7 +146,7 @@ const FullscreenShowcaseSlide = ({
               isActive ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
             }`}>
               <Card className="border-0 bg-gradient-to-br from-orange-900/40 to-yellow-900/40 backdrop-blur-lg shadow-2xl overflow-hidden">
-                <div className="p-8">
+                <div className="p-6">
                   <FullscreenTypography
                     text="Flavors"
                     level="subtitle"
@@ -152,26 +154,26 @@ const FullscreenShowcaseSlide = ({
                     isActive={isActive}
                     delay={1100}
                   />
-                  <div className="mt-6">
+                  <div className="mt-4">
                     <StrainFlavorsVisual flavorProfiles={strain.flavorProfiles} />
                   </div>
                 </div>
               </Card>
             </div>
           </div>
-        </div>
 
-        {/* Footer info */}
-        <div className={`px-8 md:px-16 lg:px-24 pb-8 transition-all duration-1000 delay-1200 ${
-          isActive ? 'opacity-100' : 'opacity-0'
-        }`}>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 text-white/70 bg-black/20 backdrop-blur-sm rounded-2xl p-6 max-w-6xl mx-auto">
-            <span className="text-lg">
-              Scanned {new Date(strain.scannedAt).toLocaleDateString()}
-            </span>
-            <Badge variant="outline" className="text-green-300 border-green-400 text-lg px-4 py-2">
-              {strain.confidence}% confidence
-            </Badge>
+          {/* Footer info - compact */}
+          <div className={`mt-6 transition-all duration-1000 delay-1200 ${
+            isActive ? 'opacity-100' : 'opacity-0'
+          }`}>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 text-white/70 bg-black/20 backdrop-blur-sm rounded-2xl p-4 max-w-6xl mx-auto">
+              <span className="text-sm">
+                Scanned {new Date(strain.scannedAt).toLocaleDateString()}
+              </span>
+              <Badge variant="outline" className="text-green-300 border-green-400 text-sm px-3 py-1">
+                {strain.confidence}% confidence
+              </Badge>
+            </div>
           </div>
         </div>
       </div>

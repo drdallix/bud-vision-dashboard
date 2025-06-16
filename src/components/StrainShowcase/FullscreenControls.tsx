@@ -19,6 +19,8 @@ export interface FullscreenControlsProps {
   setTransitionMode?: (mode: TransitionMode) => void;
   shuffleTransitions?: boolean;
   setShuffleTransitions?: (shuffle: boolean) => void;
+  shuffleMode?: boolean;
+  setShuffleMode?: (shuffle: boolean) => void;
 }
 
 const FullscreenControls = ({
@@ -33,16 +35,16 @@ const FullscreenControls = ({
   transitionMode = 'elegant',
   setTransitionMode = () => {},
   shuffleTransitions = false,
-  setShuffleTransitions = () => {}
+  setShuffleTransitions = () => {},
+  shuffleMode = false,
+  setShuffleMode = () => {}
 }: FullscreenControlsProps) => {
   const [visible, setVisible] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [mouseY, setMouseY] = useState(0);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setMouseY(e.clientY);
       const shouldShow = e.clientY > window.innerHeight - 200; // Show when near bottom 200px
       
       if (shouldShow !== visible) {
@@ -147,9 +149,9 @@ const FullscreenControls = ({
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => setShuffleTransitions(!shuffleTransitions)}
+              onClick={() => setShuffleMode(!shuffleMode)}
               className={`text-white hover:bg-white/20 transition-all duration-300 ${
-                shuffleTransitions ? 'bg-white/20' : ''
+                shuffleMode ? 'bg-white/20' : ''
               }`}
             >
               <Shuffle className="h-5 w-5" />

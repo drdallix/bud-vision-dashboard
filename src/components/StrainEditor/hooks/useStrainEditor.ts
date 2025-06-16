@@ -1,137 +1,164 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Strain } from '@/types/strain';
-import { useStrainStore } from '@/stores/useStrainStore';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
-export interface StrainEditorErrors {
-  [key: string]: string | undefined;
-  name?: string;
-  type?: string;
-  thc?: string;
-  cbd?: string;
+interface ValidationErrors {
+  [key: string]: string;
 }
 
 export const useStrainEditor = (
-  originalStrain: Strain | null,
+  initialStrain: Strain | null,
   onSave: (updatedStrain: Strain) => void
 ) => {
   const [editedStrain, setEditedStrain] = useState<Strain | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<StrainEditorErrors>({});
-
-  const { updateStock } = useStrainStore();
+  const [errors, setErrors] = useState<ValidationErrors>({});
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Initialize edited strain when original changes
+  // Initialize edited strain when initial strain changes
   useEffect(() => {
-    if (originalStrain) {
-      setEditedStrain({ ...originalStrain });
+    if (initialStrain) {
+      setEditedStrain({ ...initialStrain });
       setIsDirty(false);
       setErrors({});
     }
-  }, [originalStrain]);
+  }, [initialStrain]);
 
-  // Validation function
-  const validateStrain = useCallback((strain: Strain): StrainEditorErrors => {
-    const newErrors: StrainEditorErrors = {};
+  const updateField = useCallback((field: string, value: any) => {
+    if (!editedStrain) return;
 
-    if (!strain.name.trim()) {
+    setEditedStrain(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, [field]: value };
+      return updated;
+    });
+    
+    setIsDirty(true);
+    
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors(prev => {
+        const { [field]: removed, ...rest } = prev;
+        return rest;
+      });
+    }
+  }, [editedStrain, errors]);
+
+  const validateStrain = useCallback((strain: Strain): ValidationErrors => {
+    const newErrors: ValidationErrors = {};
+    
+    if (!strain.name?.trim()) {
       newErrors.name = 'Strain name is required';
     }
-
+    
     if (!strain.type) {
       newErrors.type = 'Strain type is required';
     }
-
-    if (strain.thc !== null && strain.thc !== undefined) {
-      if (strain.thc < 0 || strain.thc > 100) {
-        newErrors.thc = 'THC must be between 0 and 100%';
-      }
+    
+    if (strain.thc !== undefined && (strain.thc < 0 || strain.thc > 100)) {
+      newErrors.thc = 'THC must be between 0 and 100';
     }
-
-    if (strain.cbd !== null && strain.cbd !== undefined) {
-      if (strain.cbd < 0 || strain.cbd > 100) {
-        newErrors.cbd = 'CBD must be between 0 and 100%';
-      }
+    
+    if (strain.cbd !== undefined && (strain.cbd < 0 || strain.cbd > 100)) {
+      newErrors.cbd = 'CBD must be between 0 and 100';
     }
-
+    
     return newErrors;
   }, []);
 
-  // Update field function
-  const updateField = useCallback((field: string, value: any) => {
-    if (!originalStrain || !editedStrain) return;
-
-    const updatedStrain = { ...editedStrain, [field]: value };
-    setEditedStrain(updatedStrain);
-
-    // Check if strain is different from original
-    const hasChanges = JSON.stringify(updatedStrain) !== JSON.stringify(originalStrain);
-    setIsDirty(hasChanges);
-
-    // Clear field-specific error
-    if (errors[field as keyof StrainEditorErrors]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  }, [originalStrain, editedStrain, errors]);
-
-  // Handle save
   const handleSave = useCallback(async () => {
-    if (!editedStrain || !originalStrain) return;
+    if (!editedStrain || !user) {
+      toast({
+        title: "Error",
+        description: "Cannot save: missing strain data or user authentication",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate strain ID
+    if (!editedStrain.id || typeof editedStrain.id !== 'string') {
+      console.error('Invalid strain ID for save operation:', editedStrain.id);
+      toast({
+        title: "Error",
+        description: "Invalid strain ID. Please refresh and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const validationErrors = validateStrain(editedStrain);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       toast({
         title: "Validation Error",
-        description: "Please fix the errors below before saving.",
-        variant: "destructive",
+        description: "Please fix the errors before saving",
+        variant: "destructive"
       });
       return;
     }
 
     setIsLoading(true);
-    setErrors({});
-
     try {
-      // Handle stock status change if it changed
-      if (editedStrain.inStock !== originalStrain.inStock) {
-        const stockUpdateSuccess = await updateStock(editedStrain.id, editedStrain.inStock);
-        if (!stockUpdateSuccess) {
-          throw new Error('Failed to update stock status');
-        }
+      console.log('Saving strain with ID:', editedStrain.id);
+      
+      // Update the strain in the database
+      const { error } = await supabase
+        .from('scans')
+        .update({
+          strain_name: editedStrain.name,
+          strain_type: editedStrain.type,
+          description: editedStrain.description,
+          thc: editedStrain.thc,
+          cbd: editedStrain.cbd,
+          effects: editedStrain.effectProfiles?.map(e => e.name) || [],
+          flavors: editedStrain.flavorProfiles?.map(f => f.name) || [],
+          medical_uses: editedStrain.medicalUses || [],
+          in_stock: editedStrain.inStock,
+          confidence: editedStrain.confidence
+        })
+        .eq('id', editedStrain.id)
+        .eq('user_id', user.id); // Ensure user owns the strain
+
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
       }
 
-      // Call the save callback
+      console.log('Strain saved successfully');
+      
+      // Call the onSave callback with updated strain
       onSave(editedStrain);
       setIsDirty(false);
-
+      
       toast({
-        title: "Strain Updated",
-        description: `Successfully updated ${editedStrain.name}`,
+        title: "Success",
+        description: "Strain updated successfully",
       });
     } catch (error) {
       console.error('Error saving strain:', error);
       toast({
-        title: "Save Error",
-        description: "Failed to save strain changes. Please try again.",
-        variant: "destructive",
+        title: "Save Failed",
+        description: error.message || "Failed to save strain changes",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
-  }, [editedStrain, originalStrain, validateStrain, updateStock, onSave, toast]);
+  }, [editedStrain, user, validateStrain, onSave, toast]);
 
-  // Handle reset
   const handleReset = useCallback(() => {
-    if (originalStrain) {
-      setEditedStrain({ ...originalStrain });
+    if (initialStrain) {
+      setEditedStrain({ ...initialStrain });
       setIsDirty(false);
       setErrors({});
     }
-  }, [originalStrain]);
+  }, [initialStrain]);
 
   return {
     editedStrain,
@@ -140,6 +167,6 @@ export const useStrainEditor = (
     errors,
     updateField,
     handleSave,
-    handleReset,
+    handleReset
   };
 };
