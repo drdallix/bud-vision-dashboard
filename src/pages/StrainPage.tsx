@@ -57,7 +57,7 @@ const StrainPage = () => {
               Strain Not Found
             </CardTitle>
             <CardDescription>
-              "{decodeURIComponent(strainName || '').replace(/-/g,   ')}" isn't in our database yet.
+              "{decodeURIComponent(strainName || '').replace(/-/g, ' ')}" isn't in our database yet.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-center">
