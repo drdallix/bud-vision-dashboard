@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,8 +12,6 @@ import PriceBadges from './components/PriceBadges';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
 import { StrainEditModal } from '@/components/StrainEditor';
 import QuickPriceModal from './components/QuickPriceModal';
-import QuickPrintButton from '@/components/QuickPrintButton';
-import { defaultConfig } from '@/components/PrintSettings';
 
 interface StrainCardProps {
   strain: Strain;
@@ -148,72 +145,30 @@ const StrainCard = ({
             </div>
             
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold truncate text-lg">{strain.name}</h3>
-                <Badge className={`${getTypeColor(strain.type)} text-xs`}>
-                  {strain.type}
-                </Badge>
-                {/* Quick price edit: always show small $ button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 p-0 text-green-600 hover:bg-green-100 inline-flex"
-                  title="Quick Price Edit"
-                  onClick={e => { e.stopPropagation(); setShowQuickPrice(true); }}
-                >
-                  <DollarSign className="h-4 w-4" />
-                </Button>
-                {/* Quick print button */}
-                <div onClick={e => e.stopPropagation()}>
-                  <QuickPrintButton
-                    strain={strain}
-                    config={defaultConfig}
-                    variant="ghost"
-                    size="sm"
-                  />
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <h3 className="font-semibold truncate text-lg">{strain.name}</h3>
+                  <Badge className={`${getTypeColor(strain.type)} text-xs flex-shrink-0`}>
+                    {strain.type}
+                  </Badge>
+                  {!displayInStock && (
+                    <Badge variant="secondary" className="text-xs flex-shrink-0">
+                      Out of Stock
+                    </Badge>
+                  )}
                 </div>
-                {!displayInStock && (
-                  <Badge variant="secondary" className="text-xs">
-                    Out of Stock
-                  </Badge>
-                )}
-              </div>
-
-              {/* Price badges (show only if in stock) */}
-              {displayInStock && !pricesLoading && !!prices.length && (
-                <PriceBadges prices={prices} />
-              )}
-
-              <div className="mb-2">
-                <div className="text-xs text-muted-foreground">
-                  THC: {thcDisplay}
-                </div>
-              </div>
-              
-              <div className="flex gap-1 overflow-x-auto">
-                {strain.effectProfiles.slice(0, 3).map((effect, index) => (
-                  <Badge key={index} variant="outline" className="text-xs flex items-center gap-1 whitespace-nowrap" style={{
-                    backgroundColor: `${effect.color}20`,
-                    color: effect.color,
-                    borderColor: effect.color
-                  }}>
-                    <span>{effect.emoji}</span>
-                    {effect.name}
-                  </Badge>
-                ))}
-                {strain.effectProfiles.length > 3 && (
-                  <Badge variant="outline" className="text-xs whitespace-nowrap">
-                    +{strain.effectProfiles.length - 3}
-                  </Badge>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  {new Date(strain.scannedAt).toLocaleDateString()}
-                </p>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 p-0 text-green-600 hover:bg-green-100"
+                    title="Quick Price Edit"
+                    onClick={e => { e.stopPropagation(); setShowQuickPrice(true); }}
+                  >
+                    <DollarSign className="h-4 w-4" />
+                  </Button>
+                  
                   {editMode && canEdit && (
                     <>
                       <Button
@@ -232,6 +187,42 @@ const StrainCard = ({
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* Price badges (show only if in stock) */}
+              {displayInStock && !pricesLoading && !!prices.length && (
+                <div className="mb-2">
+                  <PriceBadges prices={prices} />
+                </div>
+              )}
+
+              <div className="mb-2">
+                <div className="text-xs text-muted-foreground">
+                  THC: {thcDisplay}
+                </div>
+              </div>
+              
+              {/* Effects - show all effects with better flex layout */}
+              <div className="flex flex-wrap gap-1 mb-2">
+                {strain.effectProfiles.map((effect, index) => (
+                  <Badge 
+                    key={index} 
+                    variant="outline" 
+                    className="text-xs flex items-center gap-1 flex-shrink-0" 
+                    style={{
+                      backgroundColor: `${effect.color}20`,
+                      color: effect.color,
+                      borderColor: effect.color
+                    }}
+                  >
+                    <span>{effect.emoji}</span>
+                    {effect.name}
+                  </Badge>
+                ))}
+              </div>
+              
+              <div className="text-xs text-muted-foreground">
+                {new Date(strain.scannedAt).toLocaleDateString()}
               </div>
             </div>
           </div>

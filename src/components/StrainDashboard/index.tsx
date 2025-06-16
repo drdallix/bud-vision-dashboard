@@ -9,6 +9,8 @@ import StrainCannabinoids from './StrainCannabinoids';
 import StrainTerpenes from './StrainTerpenes';
 import { StrainEditModal } from '@/components/StrainEditor';
 import { Button } from '@/components/ui/button';
+import QuickPrintButton from '@/components/QuickPrintButton';
+import { defaultConfig } from '@/components/PrintSettings';
 
 interface StrainDashboardProps {
   strain: Strain | null;
@@ -29,9 +31,17 @@ const StrainDashboard: React.FC<StrainDashboardProps> = ({ strain }) => {
     <div className="space-y-8">
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-2xl font-bold">Strain Details</h2>
-        <Button onClick={() => setShowEdit(true)} variant="default" size="sm">
-          Edit
-        </Button>
+        <div className="flex items-center gap-2">
+          <QuickPrintButton
+            strain={strain}
+            config={defaultConfig}
+            variant="outline"
+            size="default"
+          />
+          <Button onClick={() => setShowEdit(true)} variant="default" size="sm">
+            Edit
+          </Button>
+        </div>
       </div>
 
       <StrainHeader strain={strain} />
