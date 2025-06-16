@@ -5,7 +5,7 @@ import { useStrainData } from '@/data/hooks/useStrainData';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
-import ToneShowcase from './ToneShowcase';
+import { ToneShowcase } from './ToneShowcase';
 import { Strain } from '@/types/strain';
 
 const StrainShowcase = () => {
