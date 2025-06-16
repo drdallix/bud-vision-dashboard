@@ -47,7 +47,12 @@ export const loadAnimationSettings = async (): Promise<AnimationSettings> => {
       .eq('id', user.id)
       .single();
 
-    if (error || !data?.animation_settings) {
+    if (error) {
+      console.error('Error loading animation settings:', error);
+      return DEFAULT_SETTINGS;
+    }
+
+    if (!data || !data.animation_settings) {
       return DEFAULT_SETTINGS;
     }
 

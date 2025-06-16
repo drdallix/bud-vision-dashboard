@@ -4,7 +4,8 @@ import { Strain } from '@/types/strain';
 import FullscreenShowcaseSlide from '../FullscreenShowcaseSlide';
 import FullscreenControls from '../FullscreenControls';
 import { TransitionMode } from '../FullscreenTransitions';
-import { AnimationSettings, loadAnimationSettings } from '../AnimationSettings';
+import { AnimationSettings } from '../AnimationSettings';
+import { loadAnimationSettings } from '@/services/animationSettingsService';
 
 interface FullscreenViewProps {
   currentStrain: Strain;

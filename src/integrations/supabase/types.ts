@@ -46,6 +46,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          animation_settings: Json | null
           avatar_url: string | null
           created_at: string
           email: string | null
@@ -54,6 +55,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          animation_settings?: Json | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
@@ -62,6 +64,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          animation_settings?: Json | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
