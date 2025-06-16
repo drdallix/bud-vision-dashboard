@@ -1,7 +1,6 @@
 
-import { Search, Filter, Edit, X } from 'lucide-react';
+import { Filter, Edit, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Strain } from '@/types/strain';
 import BulkPrintButton from '@/components/BulkPrintButton';
@@ -31,44 +30,32 @@ const BrowseHeader = ({
 }: BrowseHeaderProps) => {
   return (
     <div className="space-y-4">
-      {/* Search and action buttons */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search strains..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      {/* Action buttons only */}
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onToggleMobileFilters}
+          className="sm:hidden"
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filters
+        </Button>
         
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onToggleMobileFilters}
-            className="sm:hidden"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-          
-          <BulkPrintButton 
-            strains={strains}
-            variant="outline"
-            size="sm"
-          />
-          
-          <Button
-            variant={editMode ? "default" : "outline"}
-            size="sm"
-            onClick={onEditModeToggle}
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            {editMode ? "Done" : "Edit"}
-          </Button>
-        </div>
+        <BulkPrintButton 
+          strains={strains}
+          variant="outline"
+          size="sm"
+        />
+        
+        <Button
+          variant={editMode ? "default" : "outline"}
+          size="sm"
+          onClick={onEditModeToggle}
+        >
+          <Edit className="h-4 w-4 mr-2" />
+          {editMode ? "Done" : "Edit"}
+        </Button>
       </div>
 
       {/* Selection status */}
