@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,8 @@ import PriceBadges from './components/PriceBadges';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
 import { StrainEditModal } from '@/components/StrainEditor';
 import QuickPriceModal from './components/QuickPriceModal';
+import QuickPrintButton from '@/components/QuickPrintButton';
+import { defaultConfig } from '@/components/PrintSettings';
 
 interface StrainCardProps {
   strain: Strain;
@@ -160,6 +163,15 @@ const StrainCard = ({
                 >
                   <DollarSign className="h-4 w-4" />
                 </Button>
+                {/* Quick print button */}
+                <div onClick={e => e.stopPropagation()}>
+                  <QuickPrintButton
+                    strain={strain}
+                    config={defaultConfig}
+                    variant="ghost"
+                    size="sm"
+                  />
+                </div>
                 {!displayInStock && (
                   <Badge variant="secondary" className="text-xs">
                     Out of Stock
