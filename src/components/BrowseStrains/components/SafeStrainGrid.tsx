@@ -32,7 +32,7 @@ const SafeStrainGrid = ({
   onStockToggle,
   onStrainClick,
   inventoryLoading,
-  pricesMap,
+  pricesMap = {}, // Default to empty object to prevent undefined errors
   pricesLoading
 }: SafeStrainGridProps) => {
   console.log('SafeStrainGrid render:', {
@@ -42,6 +42,14 @@ const SafeStrainGrid = ({
     pricesMapKeys: Object.keys(pricesMap).length,
     pricesLoading
   });
+
+  if (!strains || strains.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No strains found</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4">
