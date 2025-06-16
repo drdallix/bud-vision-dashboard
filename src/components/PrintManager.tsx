@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Printer, Copy, Image, Download, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Strain } from '@/types/strain';
-import PrintSettings, { PrintConfig, defaultConfig } from '@/components/PrintSettings';
-import { generateBulkText, generateStrainText, generateStrainImage, downloadImage, copyToClipboard } from '@/utils/printGenerator';
+import { PrintConfig, defaultPrintConfig } from '@/types/printConfig';
+import PrintSettings from '@/components/PrintSettings';
+import { generateOutput, copyToClipboard, downloadText, formatFilename } from '@/utils/outputGenerators';
 
 interface PrintManagerProps {
   open: boolean;
@@ -18,7 +19,7 @@ interface PrintManagerProps {
 }
 
 const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
-  const [config, setConfig] = useState<PrintConfig>(defaultConfig);
+  const [config, setConfig] = useState<PrintConfig>(defaultPrintConfig);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -28,13 +29,14 @@ const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
 
   const handleBulkTextExport = async (strainsToExport: Strain[]) => {
     try {
-      const text = generateBulkText(strainsToExport, config);
+      // Generate full menu for multiple strains
+      const text = generateOutput('full-menu', strainsToExport[0], config, strainsToExport);
       const success = await copyToClipboard(text);
       
       if (success) {
         toast({
           title: "Copied to clipboard",
-          description: `${strainsToExport.length} strains copied as text.`,
+          description: `${strainsToExport.length} strains copied as menu.`,
         });
       } else {
         toast({
@@ -55,11 +57,12 @@ const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
   const handleBulkImageExport = async (strainsToExport: Strain[]) => {
     setIsGenerating(true);
     try {
-      // Generate individual images for each strain
-      const imagePromises = strainsToExport.map(async (strain, index) => {
-        const imageDataUrl = await generateStrainImage(strain, config);
-        const filename = `${strain.name.replace(/[^a-z0-9]/gi, '_')}_strain_info.png`;
-        downloadImage(imageDataUrl, filename);
+      // Generate individual exports for each strain using default export mode
+      const exportPromises = strainsToExport.map(async (strain, index) => {
+        const content = generateOutput(config.defaultExportMode, strain, config);
+        const filename = formatFilename(config.defaultFilename, strain.name);
+        const extension = config.defaultExportMode === 'json' ? '.json' : '.txt';
+        downloadText(content, `${filename}${extension}`);
         
         // Small delay between downloads to avoid overwhelming the browser
         if (index < strainsToExport.length - 1) {
@@ -67,16 +70,16 @@ const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
         }
       });
       
-      await Promise.all(imagePromises);
+      await Promise.all(exportPromises);
       
       toast({
-        title: "Images downloaded",
-        description: `${strainsToExport.length} strain images saved as PNG files.`,
+        title: "Files downloaded",
+        description: `${strainsToExport.length} strain files saved.`,
       });
     } catch (error) {
       toast({
         title: "Export failed",
-        description: "Could not generate image exports.",
+        description: "Could not generate file exports.",
         variant: "destructive",
       });
     } finally {
@@ -122,7 +125,7 @@ const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
                       disabled={allStrains.length === 0}
                     >
                       <Copy className="h-4 w-4 mr-2" />
-                      Copy as Text
+                      Copy as Menu
                     </Button>
                     <Button
                       onClick={() => handleBulkImageExport(allStrains)}
@@ -130,8 +133,8 @@ const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
                       className="flex-1"
                       disabled={allStrains.length === 0 || isGenerating}
                     >
-                      <Image className="h-4 w-4 mr-2" />
-                      {isGenerating ? 'Generating...' : 'Download as Images'}
+                      <Download className="h-4 w-4 mr-2" />
+                      {isGenerating ? 'Generating...' : 'Download Individual Files'}
                     </Button>
                   </div>
                 </CardContent>
@@ -157,7 +160,7 @@ const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
                       disabled={inStockStrains.length === 0}
                     >
                       <Copy className="h-4 w-4 mr-2" />
-                      Copy as Text
+                      Copy as Menu
                     </Button>
                     <Button
                       onClick={() => handleBulkImageExport(inStockStrains)}
@@ -165,8 +168,8 @@ const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
                       className="flex-1"
                       disabled={inStockStrains.length === 0 || isGenerating}
                     >
-                      <Image className="h-4 w-4 mr-2" />
-                      {isGenerating ? 'Generating...' : 'Download as Images'}
+                      <Download className="h-4 w-4 mr-2" />
+                      {isGenerating ? 'Generating...' : 'Download Individual Files'}
                     </Button>
                   </div>
                 </CardContent>
@@ -183,23 +186,21 @@ const PrintManager = ({ open, onOpenChange, strains }: PrintManagerProps) => {
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Format</p>
-                      <Badge variant="outline">{config.format.toUpperCase()}</Badge>
+                      <p className="text-muted-foreground">Copy Mode</p>
+                      <Badge variant="outline">{config.defaultCopyMode.replace('-', ' ').toUpperCase()}</Badge>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Width</p>
-                      <Badge variant="outline">{config.receiptWidth} chars</Badge>
+                      <p className="text-muted-foreground">Export Mode</p>
+                      <Badge variant="outline">{config.defaultExportMode.replace('-', ' ').toUpperCase()}</Badge>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Effects</p>
-                      <Badge variant={config.includeEffects ? "default" : "secondary"}>
-                        {config.includeEffects ? "Yes" : "No"}
-                      </Badge>
+                      <p className="text-muted-foreground">Menu Columns</p>
+                      <Badge variant="outline">{config.menuColumns}</Badge>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Compact</p>
-                      <Badge variant={config.compactMode ? "default" : "secondary"}>
-                        {config.compactMode ? "Yes" : "No"}
+                      <p className="text-muted-foreground">Theme</p>
+                      <Badge variant={config.theme === 'dark' ? "default" : "secondary"}>
+                        {config.theme}
                       </Badge>
                     </div>
                   </div>
