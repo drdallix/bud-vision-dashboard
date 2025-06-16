@@ -201,7 +201,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_strain_description: {
+        Args: { p_strain_id: string; p_description: string; p_user_id?: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

@@ -126,7 +126,7 @@ const StrainDescriptionForm = ({
     }
   };
 
-  const handleApproveDescription = async () => {
+  const handleApproveDescription = async (finalDescription: string) => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -136,25 +136,42 @@ const StrainDescriptionForm = ({
       return;
     }
 
+    // Validate that strain.id is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(strain.id)) {
+      console.error('Invalid strain ID format:', strain.id);
+      toast({
+        title: "Invalid Strain ID",
+        description: "The strain ID format is invalid. Please refresh and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
-      console.log('Attempting to update strain description for strain ID:', strain.id);
+      console.log('Calling update_strain_description function for strain ID:', strain.id);
       
-      const { error } = await supabase
-        .from('scans')
-        .update({ 
-          description: proposedDescription 
-        })
-        .eq('id', strain.id);
+      const { data, error } = await supabase.rpc('update_strain_description', {
+        p_strain_id: strain.id,
+        p_description: finalDescription,
+        p_user_id: user.id
+      });
 
       if (error) {
-        console.error('Database update error:', error);
+        console.error('Supabase RPC error:', error);
         throw error;
       }
 
-      console.log('Description updated successfully in database');
+      if (!data?.success) {
+        console.error('Function returned error:', data?.error);
+        throw new Error(data?.error || 'Failed to update strain description');
+      }
 
-      onUpdate('description', proposedDescription);
+      console.log('Description updated successfully:', data);
+
+      // Update local state
+      onUpdate('description', finalDescription);
       setProposedDescription('');
       setHumanGuidance('');
       
