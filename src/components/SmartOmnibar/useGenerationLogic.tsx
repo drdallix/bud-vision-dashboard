@@ -10,7 +10,7 @@ const generationSteps = [
   "Analyzing input data...",
   "Processing strain characteristics...",
   "Identifying effects and flavors...",
-  "Calculating THC/CBD levels...",
+  "Calculating THC/CBD levels...", // This is step 4 where memory issues occur
   "Generating terpene profile...",
   "Creating strain description...",
   "Setting up tone system...",
@@ -63,37 +63,45 @@ export const useGenerationLogic = ({
       } else {
         clearInterval(typeWriter);
         
-        // Move to next step after a brief pause
+        // Move to next step after a brief pause, with special handling for step 4
         setTimeout(() => {
           if (generationStep < generationSteps.length - 1) {
             setGenerationStep(prev => prev + 1);
             setProgress(prev => Math.min(prev + (100 / generationSteps.length), 95));
           }
-        }, 800);
+        }, generationStep === 3 ? 200 : 800); // Faster transition for step 4 to prevent memory buildup
       }
-    }, 50);
+    }, generationStep === 3 ? 25 : 50); // Faster typing for step 4
 
     return () => clearInterval(typeWriter);
   }, [generationStep, isGenerating]);
 
   const handleGenerate = useCallback(async () => {
-    if (!user) return;
-    if (!searchTerm.trim() && !uploadedImage) return;
+    if (!user) {
+      console.error('No user found for strain generation');
+      return;
+    }
+    if (!searchTerm.trim() && !uploadedImage) {
+      console.error('No search term or image provided');
+      return;
+    }
 
+    console.log('Starting strain generation for:', searchTerm || 'uploaded image');
     setIsGenerating(true);
     setGenerationStep(0);
     setProgress(5);
     setCurrentStepText('');
 
     try {
-      // Simulate more realistic timing
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Brief delay to allow UI to update
+      await new Promise(resolve => setTimeout(resolve, 500));
       
+      console.log('Calling AI analysis...');
       const result = await analyzeStrainWithAI(uploadedImage, searchTerm.trim(), user.id);
       
       const strain: Strain = {
         ...result,
-        id: generateUUID(), // Use proper UUID instead of timestamp
+        id: generateUUID(),
         scannedAt: new Date().toISOString(),
         inStock: true,
         userId: user.id
@@ -101,7 +109,7 @@ export const useGenerationLogic = ({
 
       console.log('Generated strain before tone safety:', strain.name);
 
-      // NEW: Ensure tone safety before cache update
+      // Tone safety with memory optimization
       try {
         const safeTonerData = await ensureStrainHasDefaultTone(strain, user.id);
         console.log('Tone safety ensured for strain:', strain.name, safeTonerData);
@@ -120,12 +128,15 @@ export const useGenerationLogic = ({
       setCurrentStepText('Generation complete!');
       
       // Brief pause before finishing
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
+      console.log('Adding strain to cache:', strain.name);
       addStrainToCache(strain);
       onStrainGenerated(strain);
       onSearchChange('');
       setUploadedImage(null);
+      
+      console.log('Strain generation completed successfully');
     } catch (error) {
       console.error('Generation failed:', error);
       setCurrentStepText('Generation failed. Please try again.');
@@ -135,6 +146,11 @@ export const useGenerationLogic = ({
       setGenerationStep(0);
       setProgress(0);
       setCurrentStepText('');
+      
+      // Force garbage collection hint
+      if (typeof window !== 'undefined' && window.gc) {
+        window.gc();
+      }
     }
   }, [user, searchTerm, uploadedImage, addStrainToCache, onStrainGenerated, onSearchChange, setUploadedImage]);
 
