@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Filter, ChevronDown, Settings } from 'lucide-react';
 import BulkToneManager from './BulkToneManager';
-
 interface ShowcaseFiltersProps {
   selectedTypes: string[];
   setSelectedTypes: (types: string[]) => void;
@@ -18,7 +16,6 @@ interface ShowcaseFiltersProps {
   setMinTHC: (thc: number) => void;
   strainCount: number;
 }
-
 const ShowcaseFilters = ({
   selectedTypes,
   setSelectedTypes,
@@ -29,7 +26,6 @@ const ShowcaseFilters = ({
   strainCount
 }: ShowcaseFiltersProps) => {
   const [showBulkManager, setShowBulkManager] = useState(false);
-
   const toggleType = (type: string) => {
     if (selectedTypes.includes(type)) {
       setSelectedTypes(selectedTypes.filter(t => t !== type));
@@ -37,11 +33,8 @@ const ShowcaseFilters = ({
       setSelectedTypes([...selectedTypes, type]);
     }
   };
-
   const strainTypes = ['Indica', 'Sativa', 'Hybrid'];
-
-  return (
-    <div className="space-y-4">
+  return <div className="space-y-4">
       <Card className="border-green-200/50 bg-white/90 backdrop-blur-sm shadow-xl">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg flex items-center justify-between">
@@ -54,22 +47,14 @@ const ShowcaseFilters = ({
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 text-black ">
           {/* Strain Types */}
           <div className="space-y-3">
             <label className="text-sm font-medium">Strain Types:</label>
             <div className="flex flex-wrap gap-2">
-              {strainTypes.map(type => (
-                <Button
-                  key={type}
-                  variant={selectedTypes.includes(type) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleType(type)}
-                  className="text-sm"
-                >
+              {strainTypes.map(type => <Button key={type} variant={selectedTypes.includes(type) ? "default" : "outline"} size="sm" onClick={() => toggleType(type)} className="text-sm">
                   {type}
-                </Button>
-              ))}
+                </Button>)}
             </div>
           </div>
 
@@ -94,14 +79,7 @@ const ShowcaseFilters = ({
               <label className="text-sm font-medium">Minimum THC:</label>
               <Badge variant="outline">{minTHC}%</Badge>
             </div>
-            <Slider
-              value={[minTHC]}
-              onValueChange={(value) => setMinTHC(value[0])}
-              max={35}
-              min={0}
-              step={1}
-              className="w-full"
-            />
+            <Slider value={[minTHC]} onValueChange={value => setMinTHC(value[0])} max={35} min={0} step={1} className="w-full" />
           </div>
 
           {/* Admin Controls */}
@@ -123,8 +101,6 @@ const ShowcaseFilters = ({
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default ShowcaseFilters;
