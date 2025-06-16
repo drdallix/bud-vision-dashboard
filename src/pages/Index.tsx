@@ -22,6 +22,7 @@ const Index = () => {
   const { strains, isLoading } = useRealtimeStrainStore();
   const [activeTab, setActiveTab] = useState('showcase');
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Set default tab based on authentication
   useEffect(() => {
@@ -44,6 +45,11 @@ const Index = () => {
     setActiveTab('details');
   };
 
+  const handleSettingsClick = () => {
+    // Settings functionality can be implemented later
+    console.log('Settings clicked');
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -54,7 +60,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
-      <Header />
+      <Header onSettingsClick={handleSettingsClick} />
       
       <main className="container mx-auto px-4 py-6">
         {/* Authentication Status & Quick Actions */}
@@ -66,7 +72,7 @@ const Index = () => {
                   <span className="font-semibold">✓ Authenticated</span> - You can add, edit, and manage all strains in the shared database
                 </p>
               </div>
-              <QuickStats />
+              <QuickStats scans={strains} />
             </div>
           ) : (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
@@ -90,7 +96,12 @@ const Index = () => {
         {user && (
           <Card className="mb-6">
             <CardContent className="p-6">
-              <SmartOmnibar onStrainGenerated={handleStrainGenerated} />
+              <SmartOmnibar 
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                onStrainGenerated={handleStrainGenerated}
+                hasResults={strains.length > 0}
+              />
             </CardContent>
           </Card>
         )}
@@ -100,11 +111,7 @@ const Index = () => {
           {/* Navigation */}
           <div className="flex flex-col space-y-4">
             <div className="hidden md:block">
-              <Navigation 
-                activeTab={activeTab} 
-                onTabChange={setActiveTab}
-                showBrowse={!!user} // Only show browse tab for authenticated users
-              />
+              <Navigation />
             </div>
             
             <div className="md:hidden">
@@ -148,7 +155,6 @@ const Index = () => {
       <MobileNavigation 
         activeTab={activeTab} 
         onTabChange={setActiveTab}
-        showBrowse={!!user}
       />
     </div>
   );

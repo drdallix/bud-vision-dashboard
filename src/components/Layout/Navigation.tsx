@@ -3,11 +3,7 @@ import { Menu, Database } from 'lucide-react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface NavigationProps {
-  showSettings?: boolean; // Keep prop for backward compatibility but won't use it
-}
-
-const Navigation = ({ showSettings }: NavigationProps) => {
+const Navigation = () => {
   const { user } = useAuth();
 
   return (
