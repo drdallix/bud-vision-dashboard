@@ -65,13 +65,6 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
     setCurrentIndex(prev => (prev - 1 + filteredStrains.length) % filteredStrains.length);
   };
 
-  const handleStrainClick = (strain: Strain) => {
-    console.log('Strain clicked in showcase:', strain.name);
-    if (onStrainSelect) {
-      onStrainSelect(strain);
-    }
-  };
-
   const handleFullscreen = () => {
     setIsFullscreen(true);
   };
@@ -140,7 +133,6 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
                 <div className="min-h-[600px] bg-gradient-to-br from-background to-muted/20 rounded-2xl p-4 md:p-6 shadow-lg">
                   <ShowcaseSlide
                     strain={strain}
-                    onStrainClick={handleStrainClick}
                     isActive={index === currentIndex}
                     index={index}
                   />
