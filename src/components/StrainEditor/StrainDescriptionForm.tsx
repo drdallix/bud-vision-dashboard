@@ -1,15 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Wand2, RefreshCw, History, Check, X, Mic } from 'lucide-react';
+import { Wand2, History } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ToneService, UserTone } from '@/services/toneService';
+import CurrentToneDisplay from './CurrentToneDisplay';
+import GuidanceInput from './GuidanceInput';
+import DescriptionReviewCard from './DescriptionReviewCard';
 
 interface StrainDescriptionFormProps {
   strain: Strain;
@@ -188,30 +189,7 @@ const StrainDescriptionForm = ({
         <h3 className="text-base sm:text-lg font-semibold">Description Management</h3>
       </div>
 
-      {/* Current Tone Display */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Mic className="h-4 w-4 text-blue-600" />
-            Current Tone
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tonesLoading ? (
-            <div className="animate-pulse text-sm text-muted-foreground">Loading tone...</div>
-          ) : currentTone ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{currentTone.name}</Badge>
-                {!currentTone.user_id && <Badge variant="outline" className="text-xs">System</Badge>}
-              </div>
-              <p className="text-xs text-muted-foreground">{currentTone.description}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No tone selected</p>
-          )}
-        </CardContent>
-      </Card>
+      <CurrentToneDisplay currentTone={currentTone} isLoading={tonesLoading} />
 
       {/* Current Description */}
       <Card>
@@ -235,108 +213,27 @@ const StrainDescriptionForm = ({
         </CardContent>
       </Card>
 
-      {/* Human Guidance Input */}
-      <Card>
-        <CardHeader className="pb-3 sm:pb-6">
-          <CardTitle className="text-sm sm:text-base">Budtender Guidance</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4">
-          <Textarea 
-            value={humanGuidance} 
-            onChange={(e) => setHumanGuidance(e.target.value)} 
-            placeholder="Provide corrections, additional information, or specific changes you want made to the description..." 
-            className="min-h-[80px] sm:min-h-[100px] text-sm" 
-            disabled={isLoading || isRegenerating} 
-          />
-          
-          {/* Tone Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Use Tone (optional):</label>
-            <Select 
-              value={selectedToneId} 
-              onValueChange={setSelectedToneId}
-              disabled={tonesLoading || isRegenerating}
-            >
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Use current default tone" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Use current default tone</SelectItem>
-                {availableTones.map((tone) => (
-                  <SelectItem key={tone.id} value={tone.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{tone.name}</span>
-                      {!tone.user_id && <Badge variant="outline" className="text-xs">System</Badge>}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <Button 
-            onClick={handleRegenerateDescription} 
-            disabled={!humanGuidance.trim() || isLoading || isRegenerating || tonesLoading} 
-            className="w-full text-sm" 
-            size="sm"
-          >
-            {isRegenerating ? (
-              <>
-                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Wand2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                Regenerate Description
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+      <GuidanceInput
+        humanGuidance={humanGuidance}
+        onGuidanceChange={setHumanGuidance}
+        availableTones={availableTones}
+        selectedToneId={selectedToneId}
+        onToneChange={setSelectedToneId}
+        onRegenerate={handleRegenerateDescription}
+        isLoading={isLoading}
+        isRegenerating={isRegenerating}
+        tonesLoading={tonesLoading}
+      />
 
-      {/* Proposed Description Review */}
-      {proposedDescription && (
-        <Card className="border-purple-200">
-          <CardHeader className="pb-3 sm:pb-6">
-            <CardTitle className="text-sm sm:text-base text-purple-900">
-              Proposed New Description
-              {selectedToneId !== 'default' && (
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  {availableTones.find(t => t.id === selectedToneId)?.name || 'Custom Tone'}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4">
-            <div className="p-2 sm:p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs sm:text-sm text-black">
-              {proposedDescription}
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button 
-                onClick={handleApproveDescription} 
-                className="flex-1 bg-green-600 hover:bg-green-700 text-sm" 
-                disabled={isLoading || isSaving} 
-                size="sm"
-              >
-                <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Approve & Apply'}
-              </Button>
-              <Button 
-                onClick={handleRejectDescription} 
-                variant="outline" 
-                className="flex-1 text-red-600 border-red-300 hover:bg-red-50 text-sm" 
-                disabled={isLoading || isSaving} 
-                size="sm"
-              >
-                <X className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                Reject
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <DescriptionReviewCard
+        proposedDescription={proposedDescription}
+        selectedToneId={selectedToneId}
+        availableTones={availableTones}
+        onApprove={handleApproveDescription}
+        onReject={handleRejectDescription}
+        isLoading={isLoading}
+        isSaving={isSaving}
+      />
 
       {/* Guidelines */}
       <Card className="bg-blue-50 border-blue-200">
