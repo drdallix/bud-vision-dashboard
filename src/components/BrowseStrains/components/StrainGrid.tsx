@@ -10,7 +10,7 @@ interface StrainGridProps {
   selectedStrains: string[];
   user: any;
   onSelect: (strainId: string, checked: boolean) => void;
-  onStockToggle: (strainId: string, currentStock: boolean) => void;
+  onStockToggle: (strainId: string, currentStock: boolean) => Promise<boolean>;
   onStrainClick: (strain: Strain) => void;
   inventoryLoading: boolean;
   pricesMap: Record<string, PricePoint[]>;
@@ -24,13 +24,13 @@ interface StrainGridProps {
  * eliminating conditional hook calls that caused render errors.
  */
 const StrainGrid = (props: StrainGridProps) => {
-  // Map the props to match SafeStrainGrid interface
+  // Map the props to match SafeStrainGrid interface with correct types
   const safeGridProps = {
     strains: props.strains,
     editMode: props.editMode,
     selectedStrains: props.selectedStrains,
     onStrainSelect: props.onSelect,
-    onStockToggle: props.onStockToggle,
+    onStockToggle: props.onStockToggle, // This already returns Promise<boolean>
     onStrainClick: props.onStrainClick,
     inventoryLoading: props.inventoryLoading
   };

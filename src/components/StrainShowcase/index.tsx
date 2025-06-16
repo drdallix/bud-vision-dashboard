@@ -7,6 +7,7 @@ import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
 import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
 import { TransitionMode } from './FullscreenTransitions';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
@@ -124,32 +125,65 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
         strainCount={filteredStrains.length}
       />
 
-      {/* Main showcase area with proper card visibility */}
-      <div className="relative min-h-[600px] bg-gradient-to-br from-background to-muted/20 rounded-2xl p-6 shadow-lg">
-        <div className="max-w-4xl mx-auto">
-          <ShowcaseSlide
-            strain={currentStrain}
-            onStrainClick={handleStrainClick}
-            isActive={true}
-            index={currentIndex}
-          />
-        </div>
+      {/* Mobile-First Card Carousel */}
+      <div className="relative">
+        <Carousel 
+          className="w-full"
+          opts={{
+            align: "center",
+            loop: true,
+          }}
+        >
+          <CarouselContent className="-ml-2 md:-ml-4">
+            {filteredStrains.map((strain, index) => (
+              <CarouselItem key={strain.id} className="pl-2 md:pl-4 basis-full">
+                <div className="min-h-[600px] bg-gradient-to-br from-background to-muted/20 rounded-2xl p-4 md:p-6 shadow-lg">
+                  <ShowcaseSlide
+                    strain={strain}
+                    onStrainClick={handleStrainClick}
+                    isActive={index === currentIndex}
+                    index={index}
+                  />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          
+          {/* Desktop Navigation Arrows */}
+          <div className="hidden md:block">
+            <CarouselPrevious className="absolute -left-12 top-1/2" />
+            <CarouselNext className="absolute -right-12 top-1/2" />
+          </div>
 
-        <ShowcaseControls
-          isPlaying={isPlaying}
-          onPlayPause={() => setIsPlaying(!isPlaying)}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
-          onFullscreen={handleFullscreen}
-          transitionMode={transitionMode}
-          onTransitionChange={setTransitionMode}
-          disabled={filteredStrains.length <= 1}
-          total={filteredStrains.length}
-          current={currentIndex}
-          onNav={setCurrentIndex}
-          currentStrain={currentStrain}
-        />
+          {/* Mobile Swipe Indicators */}
+          <div className="flex justify-center mt-4 space-x-2 md:hidden">
+            {filteredStrains.map((_, index) => (
+              <button
+                key={index}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? 'bg-green-600' : 'bg-gray-300'
+                }`}
+                onClick={() => setCurrentIndex(index)}
+              />
+            ))}
+          </div>
+        </Carousel>
       </div>
+
+      <ShowcaseControls
+        isPlaying={isPlaying}
+        onPlayPause={() => setIsPlaying(!isPlaying)}
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+        onFullscreen={handleFullscreen}
+        transitionMode={transitionMode}
+        onTransitionChange={setTransitionMode}
+        disabled={filteredStrains.length <= 1}
+        total={filteredStrains.length}
+        current={currentIndex}
+        onNav={setCurrentIndex}
+        currentStrain={currentStrain}
+      />
     </div>
   );
 };
