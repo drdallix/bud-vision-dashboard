@@ -1,15 +1,15 @@
 
-import { Strain, DatabaseScan, TerpenePeak } from '@/types/strain';
+import { Strain, DatabaseScan, Terpene } from '@/types/strain';
 
 export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
   // Parse terpenes from JSONB
-  let terpenes: TerpenePeak[] = [];
+  let terpenes: Terpene[] = [];
   if (scan.terpenes) {
     try {
       if (typeof scan.terpenes === 'string') {
         terpenes = JSON.parse(scan.terpenes);
       } else {
-        terpenes = scan.terpenes as TerpenePeak[];
+        terpenes = scan.terpenes as Terpene[];
       }
     } catch (error) {
       console.warn('Failed to parse terpenes:', error);
@@ -17,15 +17,30 @@ export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
     }
   }
 
+  // Generate effect profiles with required emoji and color properties
+  const effectProfiles = scan.effects?.map((effect, index) => ({
+    name: effect,
+    intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
+    emoji: ['😌', '😊', '🤩', '💭', '✨', '🚀'][index] || '✨',
+    color: ['#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#6366F1', '#EC4899'][index] || '#6B7280'
+  })) || [];
+
+  // Generate flavor profiles with required emoji and color properties
+  const flavorProfiles = scan.flavors?.map((flavor, index) => ({
+    name: flavor,
+    intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
+    emoji: ['🌍', '🍯', '🌲', '🍋', '🌶️', '🍓'][index] || '🌿',
+    color: ['#78716C', '#F59E0B', '#10B981', '#EAB308', '#F97316', '#EC4899'][index] || '#6B7280'
+  })) || [];
+
   return {
     id: scan.id,
     name: scan.strain_name,
     type: scan.strain_type as 'Indica' | 'Sativa' | 'Hybrid',
     thc: scan.thc || 0,
-    effectProfiles: scan.effects?.map(effect => ({ name: effect, intensity: 5 })) || [],
-    flavorProfiles: scan.flavors?.map(flavor => ({ name: flavor, intensity: 5 })) || [],
+    effectProfiles,
+    flavorProfiles,
     terpenes: terpenes,
-    medicalUses: scan.medical_uses || [],
     description: scan.description || '',
     confidence: scan.confidence || 0,
     scannedAt: scan.scanned_at,
@@ -48,7 +63,7 @@ export const convertStrainToDatabase = (strain: Strain, userId: string): Omit<Da
     effects: strain.effectProfiles?.map(p => p.name) || [],
     flavors: strain.flavorProfiles?.map(p => p.name) || [],
     terpenes: strain.terpenes && strain.terpenes.length > 0 ? strain.terpenes : null,
-    medical_uses: strain.medicalUses || [],
+    medical_uses: [], // Legacy field, kept for compatibility
     description: strain.description,
     confidence: strain.confidence,
     scanned_at: strain.scannedAt,
