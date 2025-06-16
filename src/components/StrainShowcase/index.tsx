@@ -1,396 +1,181 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
-import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
-import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
-import { useAuth } from '@/contexts/AuthContext';
-import ShowcaseSlide from './ShowcaseSlide';
-import ShowcaseControls from './ShowcaseControls';
-import ShowcaseFilters from './ShowcaseFilters';
-import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
-import FullscreenControls from './FullscreenControls';
-import { TransitionMode, TRANSITION_MODES } from './FullscreenTransitions';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Strain } from '@/types/strain';
+import { ShowcaseFilters } from './ShowcaseFilters';
+import { ShowcaseSlide } from './ShowcaseSlide';
+import { ShowcaseControls } from './ShowcaseControls';
+import { ShowcaseProgress } from './ShowcaseProgress';
+import { FullscreenSceneManager } from './FullscreenSceneManager';
+import { FullscreenControls } from './FullscreenControls';
+import { FullscreenButton } from './FullscreenButton';
+import { TransitionMode } from './FullscreenTransitions';
 
 const StrainShowcase = () => {
-  // Use real-time enabled strain store
-  const { strains, isLoading } = useRealtimeStrainStore(true);
-  const { user } = useAuth();
+  const [strains, setStrains] = useState<Strain[]>([]);
   const [filteredStrains, setFilteredStrains] = useState<Strain[]>([]);
-  const [current, setCurrent] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [slideInterval, setSlideInterval] = useState(5000);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
-  // Auto-play by default for signed-out users, paused for signed-in users
-  const [paused, setPaused] = useState(!!user);
-  const [slideInterval, setSlideInterval] = useState(6000);
-  const [showControls, setShowControls] = useState(true);
-  const [api, setApi] = useState<CarouselApi>();
-  
-  // Fullscreen specific states
-  const [showFullscreenControls, setShowFullscreenControls] = useState(false);
+  const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
+  const [shuffleTransitions, setShuffleTransitions] = useState(false);
   const [shuffleMode, setShuffleMode] = useState(false);
-  const fullscreenControlsTimeoutRef = useRef<NodeJS.Timeout>();
-  
-  // Filter and sort states
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(['Indica', 'Sativa', 'Hybrid']);
-  const [sortBy, setSortBy] = useState<'name' | 'thc' | 'recent'>('name');
-  const [minTHC, setMinTHC] = useState(0);
 
-  // Auto-hide controls timer
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
-  
-  // Track fullscreen state
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-  
-  // Set initial auto-play state based on user status
-  useEffect(() => {
-    setPaused(!!user);
-  }, [user]);
-
-  // Filter and sort strains - now reactive to real-time changes
-  useEffect(() => {
-    let filtered = strains.filter(strain => 
-      strain.inStock && // This will automatically filter out newly out-of-stock items
-      selectedTypes.includes(strain.type) &&
-      strain.thc >= minTHC
-    );
-
-    // Sort strains
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'thc':
-          return b.thc - a.thc;
-        case 'recent':
-          return new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime();
-        default:
-          return a.name.localeCompare(b.name);
-      }
-    });
-
-    const previousCount = filteredStrains.length;
-    setFilteredStrains(filtered);
-    
-    // Adjust current index if strains were removed
-    if (filtered.length < previousCount && current >= filtered.length && filtered.length > 0) {
-      const newCurrent = Math.min(current, filtered.length - 1);
-      setCurrent(newCurrent);
-      if (api) {
-        api.scrollTo(newCurrent);
-      }
-    } else if (filtered.length === 0) {
-      setCurrent(0);
-    }
-    
-    console.log(`Filtered strains updated: ${filtered.length} in stock`);
-  }, [strains, selectedTypes, sortBy, minTHC, current, filteredStrains.length, api]);
-
-  // Auto-advance logic with shuffle mode
-  useEffect(() => {
-    if (!filteredStrains.length || paused) return;
-    const timer = setTimeout(() => {
-      if (api) {
-        if (shuffleMode) {
-          // Random slide selection in shuffle mode
-          const randomIndex = Math.floor(Math.random() * filteredStrains.length);
-          api.scrollTo(randomIndex);
-        } else {
-          api.scrollNext();
-        }
-      }
-    }, slideInterval);
-    return () => clearTimeout(timer);
-  }, [current, filteredStrains.length, paused, slideInterval, api, shuffleMode]);
-
-  // Auto-hide controls for signed-out users
-  const resetControlsTimer = useCallback(() => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-    
-    // Only auto-hide for signed-out users
-    if (!user) {
-      controlsTimeoutRef.current = setTimeout(() => {
-        if (!paused) {
-          setShowControls(false);
-        }
-      }, 4000);
-    }
-  }, [paused, user]);
-
-  // Fullscreen controls auto-hide
-  const resetFullscreenControlsTimer = useCallback(() => {
-    setShowFullscreenControls(true);
-    if (fullscreenControlsTimeoutRef.current) {
-      clearTimeout(fullscreenControlsTimeoutRef.current);
-    }
-    
-    fullscreenControlsTimeoutRef.current = setTimeout(() => {
-      setShowFullscreenControls(false);
-    }, 3000);
+    // Mock data for demonstration
+    const mockStrains: Strain[] = [
+      { id: '1', name: 'Northern Lights', type: 'Indica', thc: 20, cbd: 1, scannedAt: new Date(), effectProfiles: [], inStock: true, userId: '' },
+      { id: '2', name: 'Sour Diesel', type: 'Sativa', thc: 22, cbd: 0, scannedAt: new Date(), effectProfiles: [], inStock: true, userId: '' },
+      { id: '3', name: 'Blue Dream', type: 'Hybrid', thc: 19, cbd: 2, scannedAt: new Date(), effectProfiles: [], inStock: true, userId: '' },
+    ];
+    setStrains(mockStrains);
+    setFilteredStrains(mockStrains);
   }, []);
 
-  // Handle user interaction
-  const handleInteraction = useCallback(() => {
-    resetControlsTimer();
-  }, [resetControlsTimer]);
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
 
-  // Handle fullscreen mouse movement
-  const handleFullscreenMouseMove = useCallback((e: React.MouseEvent) => {
-    const { clientY, currentTarget } = e;
-    const windowHeight = (currentTarget as HTMLElement).clientHeight;
-    
-    // Show controls when mouse is in bottom 20% of screen
-    if (clientY > windowHeight * 0.8) {
-      resetFullscreenControlsTimer();
+    if (!paused && !isFullscreen) {
+      intervalId = setInterval(() => {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % filteredStrains.length);
+      }, slideInterval);
     }
-  }, [resetFullscreenControlsTimer]);
 
-  // Setup carousel events
+    return () => clearInterval(intervalId);
+  }, [paused, slideInterval, filteredStrains.length, isFullscreen]);
+
   useEffect(() => {
-    if (!api) return;
+    // Apply filters and sorting
+    let results = [...strains];
 
-    const onSelect = () => {
-      setCurrent(api.selectedScrollSnap());
-    };
+    if (searchTerm) {
+      results = results.filter(strain =>
+        strain.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
-    api.on('select', onSelect);
-    onSelect();
+    if (typeFilter !== 'all') {
+      results = results.filter(strain => strain.type === typeFilter);
+    }
 
-    return () => {
-      api.off('select', onSelect);
-    };
-  }, [api]);
+    if (sortBy === 'name') {
+      results.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === 'thc') {
+      results.sort((a, b) => b.thc - a.thc);
+    }
 
-  // Pause on tab blur
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.hidden) {
-        setPaused(true);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+    setFilteredStrains(results);
+    setCurrentIndex(0); // Reset index when filters change
+  }, [strains, searchTerm, typeFilter, sortBy]);
+
+  const handleNavigation = (index: number) => {
+    setCurrentIndex(index);
+  };
+
+  const handleStrainClick = useCallback((strain: Strain) => {
+    console.log('Strain clicked in showcase:', strain);
+    // Navigate to strain details - this will be handled by the parent Index component
+    // We can trigger a custom event or use a callback passed from parent
+    const event = new CustomEvent('strainSelected', { detail: strain });
+    window.dispatchEvent(event);
   }, []);
 
-  // Reset controls timer when paused state changes
-  useEffect(() => {
-    resetControlsTimer();
-  }, [paused, resetControlsTimer]);
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+      {!isFullscreen && (
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Strain Showcase
+              <span className="ml-2">🌿</span>
+            </h1>
+            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Discover premium cannabis strains from our curated collection. Each strain is carefully selected for quality and unique characteristics.
+            </p>
+          </div>
 
-  // Auto-start showcase for signed-out users after a brief delay
-  useEffect(() => {
-    if (!user && filteredStrains.length > 0) {
-      const startTimer = setTimeout(() => {
-        setPaused(false);
-      }, 2000); // Start auto-play after 2 seconds
-      
-      return () => clearTimeout(startTimer);
-    }
-  }, [user, filteredStrains.length]);
+          <ShowcaseFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+          />
 
-  if (isLoading) {
-    return (
-      <div className="h-96 flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl animate-pulse">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-green-600 mx-auto"></div>
-          <p className="text-muted-foreground">Loading strains...</p>
-        </div>
-      </div>
-    );
-  }
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <div className="flex-1">
+              {filteredStrains.length > 0 ? (
+                <ShowcaseSlide 
+                  strain={filteredStrains[currentIndex]} 
+                  onStrainClick={handleStrainClick}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 dark:text-gray-400">No strains match your current filters</p>
+                </div>
+              )}
+            </div>
 
-  if (!filteredStrains.length) {
-    return (
-      <div className="w-full max-w-7xl mx-auto space-y-4 md:space-y-6 px-2 md:px-4">
-        {/* Main Showcase - Empty State */}
-        <div className="relative">
-          <div className="shadow-2xl rounded-2xl md:rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
-            <div className="h-64 md:h-96 flex flex-col items-center justify-center text-muted-foreground">
-              <span className="text-4xl md:text-6xl mb-4 animate-bounce">🪴</span>
-              <div className="text-lg md:text-xl font-medium">No strains match your filters</div>
-              <div className="text-sm mt-2">Try adjusting your search criteria below</div>
+            <div className="lg:w-80">
+              {filteredStrains.length > 0 && (
+                <ShowcaseControls
+                  total={filteredStrains.length}
+                  current={currentIndex}
+                  paused={paused}
+                  slideInterval={slideInterval}
+                  setPaused={setPaused}
+                  setSlideInterval={setSlideInterval}
+                  onNav={handleNavigation}
+                  currentStrain={filteredStrains[currentIndex]}
+                />
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Always show filters when there are no results */}
-        <div className="transition-all duration-500 opacity-100 transform-none">
-          <ShowcaseFilters
-            selectedTypes={selectedTypes}
-            setSelectedTypes={setSelectedTypes}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            minTHC={minTHC}
-            setMinTHC={setMinTHC}
-            strainCount={filteredStrains.length}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Fullscreen mode - immersive experience
-  if (isFullscreen) {
-    return (
-      <div 
-        className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 overflow-hidden"
-        onMouseMove={handleFullscreenMouseMove}
-      >
-        {/* Animated background elements */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
-        </div>
-
-        <Carousel
-          setApi={setApi}
-          opts={{
-            loop: true,
-            skipSnaps: false,
-            align: 'center',
-            dragFree: false,
-            containScroll: 'trimSnaps',
-            slidesToScroll: 1,
-            duration: shuffleMode ? Math.random() * 20 + 10 : 25,
-          }}
-          className="w-full h-full"
-        >
-          <CarouselContent className="-ml-1 md:-ml-2 h-full">
-            {filteredStrains.map((strain, index) => (
-              <CarouselItem key={strain.id} className="pl-1 md:pl-2 h-full">
-                <div className="h-full flex items-center justify-center p-4">
-                  <FullscreenShowcaseSlide 
-                    strain={strain} 
-                    isActive={index === current}
-                    index={index}
-                    shuffleMode={shuffleMode}
-                  />
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-
-        {/* Fullscreen Controls */}
-        <div className={`absolute bottom-0 left-0 right-0 p-6 transition-all duration-500 ${
-          showFullscreenControls 
-            ? 'opacity-100 translate-y-0' 
-            : 'opacity-0 translate-y-full pointer-events-none'
-        }`}>
-          <FullscreenControls
+          <ShowcaseProgress 
             total={filteredStrains.length}
-            current={current}
-            paused={paused}
-            shuffleMode={shuffleMode}
-            slideInterval={slideInterval}
-            setPaused={setPaused}
-            setShuffleMode={setShuffleMode}
-            setSlideInterval={setSlideInterval}
-            onNav={(index) => api?.scrollTo(index)}
-            currentStrain={filteredStrains[current]}
+            current={currentIndex}
+            onNav={handleNavigation}
           />
         </div>
-      </div>
-    );
-  }
+      )}
 
-  // Normal mode - show everything
-  return (
-    <div 
-      className="w-full max-w-7xl mx-auto space-y-4 md:space-y-6 px-2 md:px-4"
-      onClick={handleInteraction}
-      onTouchStart={handleInteraction}
-      onMouseMove={handleInteraction}
-    >
-      {/* Main Showcase - Full Width */}
-      <div className="relative">
-        <div className="shadow-2xl rounded-2xl md:rounded-3xl bg-gradient-to-br from-white via-green-50/20 to-blue-50/20 border border-green-200/50 backdrop-blur-sm overflow-hidden">
-          <Carousel
-            setApi={setApi}
-            opts={{
-              loop: true,
-              skipSnaps: false,
-              align: 'center',
-              dragFree: false,
-              containScroll: 'trimSnaps',
-              slidesToScroll: 1,
-              duration: 25,
-            }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-1 md:-ml-2">
-              {filteredStrains.map((strain, index) => (
-                <CarouselItem key={strain.id} className="pl-1 md:pl-2">
-                  <div className="p-2 md:p-4 lg:p-8">
-                    <ShowcaseSlide 
-                      strain={strain} 
-                      isActive={index === current}
-                      index={index}
-                    />
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-        </div>
+      {isFullscreen && filteredStrains.length > 0 && (
+        <FullscreenSceneManager
+          strains={filteredStrains}
+          currentIndex={currentIndex}
+          transitionMode={transitionMode}
+          onStrainClick={handleStrainClick}
+        />
+      )}
 
-        {/* Progress dots */}
-        <div className="absolute -bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1 md:gap-2">
-          {filteredStrains.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => api?.scrollTo(index)}
-              className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all duration-300 ${
-                index === current 
-                  ? 'bg-green-600 scale-150 shadow-lg' 
-                  : 'bg-gray-300 hover:bg-gray-400'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Enhanced Controls - Always visible for signed-in users, auto-hide for signed-out */}
-      <div className={`transition-all duration-500 ${
-        user || showControls
-          ? 'opacity-100 transform-none' 
-          : 'opacity-0 translate-y-4 pointer-events-none'
-      }`}>
-        <ShowcaseControls
+      {isFullscreen && filteredStrains.length > 0 && (
+        <FullscreenControls
           total={filteredStrains.length}
-          current={current}
+          current={currentIndex}
           paused={paused}
           slideInterval={slideInterval}
           setPaused={setPaused}
           setSlideInterval={setSlideInterval}
-          onNav={(index) => api?.scrollTo(index)}
-          currentStrain={filteredStrains[current]}
+          onNav={handleNavigation}
+          currentStrain={filteredStrains[currentIndex]}
+          transitionMode={transitionMode}
+          setTransitionMode={setTransitionMode}
+          shuffleTransitions={shuffleTransitions}
+          setShuffleTransitions={setShuffleTransitions}
+          shuffleMode={shuffleMode}
+          setShuffleMode={setShuffleMode}
+          onStrainClick={handleStrainClick}
         />
-      </div>
+      )}
 
-      {/* Filters - Always visible for signed-in users, auto-hide for signed-out */}
-      <div className={`transition-all duration-500 ${
-        user || showControls
-          ? 'opacity-100 transform-none' 
-          : 'opacity-0 translate-y-4 pointer-events-none'
-      }`}>
-        <ShowcaseFilters
-          selectedTypes={selectedTypes}
-          setSelectedTypes={setSelectedTypes}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          minTHC={minTHC}
-          setMinTHC={setMinTHC}
-          strainCount={filteredStrains.length}
-        />
-      </div>
+      <FullscreenButton 
+        isFullscreen={isFullscreen} 
+        onToggle={() => setIsFullscreen(!isFullscreen)} 
+      />
     </div>
   );
 };

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Pause, SkipBack, SkipForward, Settings, Shuffle } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Settings, Shuffle, Info } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import { TransitionMode, TRANSITION_MODES } from './FullscreenTransitions';
 
@@ -21,6 +21,7 @@ export interface FullscreenControlsProps {
   setShuffleTransitions?: (shuffle: boolean) => void;
   shuffleMode?: boolean;
   setShuffleMode?: (shuffle: boolean) => void;
+  onStrainClick?: (strain: Strain) => void;
 }
 
 const FullscreenControls = ({
@@ -37,7 +38,8 @@ const FullscreenControls = ({
   shuffleTransitions = false,
   setShuffleTransitions = () => {},
   shuffleMode = false,
-  setShuffleMode = () => {}
+  setShuffleMode = () => {},
+  onStrainClick
 }: FullscreenControlsProps) => {
   const [visible, setVisible] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -55,19 +57,44 @@ const FullscreenControls = ({
           clearTimeout(hideTimeout);
         }
         
-        // Set new timeout to hide after 3 seconds of inactivity
+        // Set new timeout to hide after 4 seconds of inactivity (increased from 3)
         if (shouldShow) {
           const timeout = setTimeout(() => {
             setVisible(false);
-          }, 3000);
+          }, 4000);
           setHideTimeout(timeout);
         }
       }
     };
 
+    // Also show controls when mouse enters the bottom area and add extra delay
+    const handleMouseEnter = () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+      // Add 1 second delay before starting the hide timer
+      const timeout = setTimeout(() => {
+        const hideTimer = setTimeout(() => {
+          setVisible(false);
+        }, 4000);
+        setHideTimeout(hideTimer);
+      }, 1000);
+      setHideTimeout(timeout);
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
+    
+    // Add event listener for the controls area to prevent immediate hiding
+    const controlsArea = document.querySelector('[data-fullscreen-controls]');
+    if (controlsArea) {
+      controlsArea.addEventListener('mouseenter', handleMouseEnter);
+    }
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      if (controlsArea) {
+        controlsArea.removeEventListener('mouseenter', handleMouseEnter);
+      }
       if (hideTimeout) {
         clearTimeout(hideTimeout);
       }
@@ -82,8 +109,16 @@ const FullscreenControls = ({
     onNav(current < total - 1 ? current + 1 : 0);
   };
 
+  const handleStrainInfo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onStrainClick) {
+      onStrainClick(currentStrain);
+    }
+  };
+
   return (
     <div 
+      data-fullscreen-controls
       className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
         visible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
       }`}
@@ -127,9 +162,22 @@ const FullscreenControls = ({
           {/* Center: Progress and Info */}
           <div className="flex-1 mx-8">
             <div className="text-center mb-2">
-              <h3 className="text-white text-lg font-semibold truncate">
-                {currentStrain.name}
-              </h3>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <h3 className="text-white text-lg font-semibold truncate">
+                  {currentStrain.name}
+                </h3>
+                {onStrainClick && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleStrainInfo}
+                    className="text-white hover:bg-white/20 transition-all duration-300 h-8 w-8 p-0"
+                    title="View strain details"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <p className="text-white/70 text-sm">
                 {current + 1} of {total} • {currentStrain.type}
               </p>
