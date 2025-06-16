@@ -78,7 +78,6 @@ export type Database = {
           created_at: string
           description: string | null
           effects: string[] | null
-          emoji: string | null
           flavors: string[] | null
           id: string
           in_stock: boolean
@@ -96,7 +95,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           effects?: string[] | null
-          emoji?: string | null
           flavors?: string[] | null
           id?: string
           in_stock?: boolean
@@ -114,7 +112,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           effects?: string[] | null
-          emoji?: string | null
           flavors?: string[] | null
           id?: string
           in_stock?: boolean
@@ -133,7 +130,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_strain_description: {
+        Args: { p_strain_id: string; p_description: string; p_user_id?: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

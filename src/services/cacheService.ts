@@ -86,7 +86,7 @@ export class CacheService {
   static async saveToDatabase(strain: Strain, userId: string): Promise<void> {
     // Convert terpenes to JSON-compatible format
     const terpenes = strain.terpenes && strain.terpenes.length > 0 
-      ? JSON.stringify(strain.terpenes) 
+      ? strain.terpenes 
       : null;
 
     const { error } = await supabase.from('scans').insert({
@@ -97,12 +97,12 @@ export class CacheService {
       cbd: 0, // Default CBD value since new Strain type doesn't have it
       effects: strain.effectProfiles?.map(p => p.name) || [],
       flavors: strain.flavorProfiles?.map(p => p.name) || [],
-      terpenes: terpenes, // Now properly converted to JSON string
-      medical_uses: [], // Default empty array since new Strain type doesn't have medicalUses
+      terpenes: terpenes, // Store as JSONB
+      medical_uses: strain.medicalUses || [],
       description: strain.description,
       confidence: strain.confidence,
       scanned_at: strain.scannedAt,
-      in_stock: true
+      in_stock: strain.inStock ?? true
     });
 
     if (error) {
