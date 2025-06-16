@@ -13,7 +13,8 @@ const Auth = lazy(() => import('./pages/Auth'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const StrainPage = lazy(() => import('./pages/StrainPage'));
 const ShopMenu = lazy(() => import('./components/ShopMenu'));
-const { StrainApiEndpoint, QRApiEndpoint } = lazy(() => import('./pages/api/StrainApi'));
+const StrainApiEndpoint = lazy(() => import('./pages/api/StrainApi').then(module => ({ default: module.StrainApiEndpoint })));
+const QRApiEndpoint = lazy(() => import('./pages/api/StrainApi').then(module => ({ default: module.QRApiEndpoint })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
