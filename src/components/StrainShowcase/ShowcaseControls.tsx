@@ -1,9 +1,10 @@
 
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Play, Pause, SkipBack, SkipForward, Maximize, Settings } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import CurrentStrainInfo from './CurrentStrainInfo';
-import PlaybackControls from './PlaybackControls';
 import SlideNavigation from './SlideNavigation';
 import SettingsPanel from './SettingsPanel';
 import { TransitionMode } from './FullscreenTransitions';
@@ -56,17 +57,70 @@ const ShowcaseControls = ({
           />
         )}
 
-        {/* Main Controls */}
-        <PlaybackControls
-          current={current}
-          total={total}
-          paused={!isPlaying}
-          showSettings={showSettings}
-          setPaused={(paused) => onPlayPause()}
-          onNav={onNav}
-          onReset={resetToStart}
-          onToggleSettings={() => setShowSettings(!showSettings)}
-        />
+        {/* Main Playback Controls */}
+        <div className="flex items-center justify-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onPrevious}
+            disabled={disabled}
+            className="h-10 w-10"
+          >
+            <SkipBack className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant={isPlaying ? "secondary" : "default"}
+            size="icon"
+            onClick={onPlayPause}
+            disabled={disabled}
+            className="h-12 w-12"
+          >
+            {isPlaying ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5" />
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onNext}
+            disabled={disabled}
+            className="h-10 w-10"
+          >
+            <SkipForward className="h-4 w-4" />
+          </Button>
+
+          <div className="h-8 w-px bg-border mx-2" />
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onFullscreen}
+            disabled={disabled}
+            className="h-10 w-10"
+            title="Enter fullscreen mode"
+          >
+            <Maximize className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowSettings(!showSettings)}
+            className="h-10 w-10"
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Progress indicator */}
+        <div className="text-center text-sm text-muted-foreground">
+          {current + 1} of {total} strains
+        </div>
 
         {/* Slide Navigation Dots */}
         <SlideNavigation
