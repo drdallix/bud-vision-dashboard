@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Settings as SettingsIcon, Download, Upload, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Settings as SettingsIcon, Download, Upload, Trash2, RefreshCw, AlertTriangle, Printer } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -9,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Strain } from '@/types/strain';
+import PrintManager from '@/components/PrintManager';
 
 interface SettingsProps {
   scanHistory: Strain[];
@@ -19,6 +19,7 @@ const Settings = ({ scanHistory, onDataRestore }: SettingsProps) => {
   const [loading, setLoading] = useState(false);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const [isPrintManagerOpen, setIsPrintManagerOpen] = useState(false);
 
   const exportData = () => {
     try {
@@ -195,6 +196,30 @@ const Settings = ({ scanHistory, onDataRestore }: SettingsProps) => {
         </CardContent>
       </Card>
 
+      {/* Print & Export Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Printer className="h-5 w-5" />
+            Print & Export
+          </CardTitle>
+          <CardDescription>
+            Configure print settings and export strain data
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            onClick={() => setIsPrintManagerOpen(true)}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={scanHistory.length === 0}
+          >
+            <Printer className="h-4 w-4" />
+            Manage Printing & Export
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Account Information */}
       <Card>
         <CardHeader>
@@ -233,6 +258,12 @@ const Settings = ({ scanHistory, onDataRestore }: SettingsProps) => {
           </Alert>
         </CardContent>
       </Card>
+
+      <PrintManager
+        open={isPrintManagerOpen}
+        onOpenChange={setIsPrintManagerOpen}
+        strains={scanHistory}
+      />
     </div>
   );
 };
