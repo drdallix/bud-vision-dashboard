@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
@@ -19,8 +20,8 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('recent');
-  const [transitionMode, setTransitionMode] = useState<'fade' | 'slide' | 'scale'>('fade');
+  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'thc'>('recent');
+  const [transitionMode, setTransitionMode] = useState<'fade' | 'slide'>('fade');
 
   // Filter strains based on type
   const filteredStrains = strains.filter(strain => {
@@ -34,7 +35,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
         return (b.thc || 0) - (a.thc || 0);
       case 'recent':
       default:
-        return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+        return new Date(b.scannedAt || '').getTime() - new Date(a.scannedAt || '').getTime();
     }
   });
 
@@ -65,6 +66,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   };
 
   const handleStrainClick = (strain: Strain) => {
+    console.log('Strain clicked in showcase:', strain.name);
     if (onStrainSelect) {
       onStrainSelect(strain);
     }

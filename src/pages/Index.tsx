@@ -42,6 +42,7 @@ const Index = () => {
   }, []);
 
   const handleStrainGenerated = async (strain: Strain) => {
+    console.log('Strain generated in Index:', strain.name);
     const completeStrain: Strain = {
       ...strain,
       inStock: true,
@@ -64,6 +65,7 @@ const Index = () => {
   };
 
   const handleStrainSelect = (strain: Strain) => {
+    console.log('Strain selected in Index:', strain.name);
     setCurrentStrain(strain);
     setActiveTab('details');
   };

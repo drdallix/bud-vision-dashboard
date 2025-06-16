@@ -69,13 +69,16 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainosProps) => {
   };
 
   const handleStrainGenerated = (strain: Strain) => {
-    // Auto-select the generated strain
+    console.log('Strain generated in BrowseStrains:', strain.name);
+    // Auto-select the generated strain for details view
     if (onStrainSelect) {
       onStrainSelect(strain);
     }
   };
 
+  // This handles clicking on a strain card to view details
   const handleStrainClick = (strain: Strain) => {
+    console.log('Strain clicked for details view:', strain.name);
     if (onStrainSelect) {
       onStrainSelect(strain);
     }
