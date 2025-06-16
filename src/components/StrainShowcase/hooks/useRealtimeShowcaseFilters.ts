@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Hook to manage real-time showcase filter synchronization
@@ -8,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const useRealtimeShowcaseFilters = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState(Date.now());
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     console.log('Setting up real-time showcase filter subscription');
@@ -23,8 +25,15 @@ export const useRealtimeShowcaseFilters = () => {
         },
         (payload) => {
           console.log('Real-time showcase filter change detected:', payload.eventType);
+          
+          // Force invalidate all strain queries to trigger immediate refresh
+          queryClient.invalidateQueries({ queryKey: ['strains-all'] });
+          queryClient.invalidateQueries({ queryKey: ['strains-user'] });
+          
           // Update timestamp to trigger filter refresh
-          setLastUpdateTime(Date.now());
+          const newTime = Date.now();
+          console.log('Refreshing showcase filters due to real-time update:', newTime);
+          setLastUpdateTime(newTime);
         }
       )
       .subscribe((status) => {
@@ -35,9 +44,18 @@ export const useRealtimeShowcaseFilters = () => {
       console.log('Cleaning up showcase filter subscription');
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
+
+  const forceRefresh = useCallback(() => {
+    const newTime = Date.now();
+    console.log('Manual showcase filter refresh triggered:', newTime);
+    setLastUpdateTime(newTime);
+    queryClient.invalidateQueries({ queryKey: ['strains-all'] });
+    queryClient.invalidateQueries({ queryKey: ['strains-user'] });
+  }, [queryClient]);
 
   return {
-    lastUpdateTime
+    lastUpdateTime,
+    forceRefresh
   };
 };

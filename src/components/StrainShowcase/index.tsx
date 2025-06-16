@@ -29,8 +29,8 @@ const StrainShowcase = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
 
-  // Real-time filter synchronization
-  const { lastUpdateTime } = useRealtimeShowcaseFilters();
+  // Real-time filter synchronization with forced refresh capability
+  const { lastUpdateTime, forceRefresh } = useRealtimeShowcaseFilters();
 
   // Favorites management
   const {
@@ -61,11 +61,19 @@ const StrainShowcase = ({
     hasActiveFilters
   } = useAdvancedFilters(strains);
 
-  // Enhanced filtered strains with real-time update trigger
+  // Enhanced filtered strains with real-time update trigger and forced refresh on changes
   const filteredStrains = React.useMemo(() => {
     console.log('Refreshing showcase filters due to real-time update:', lastUpdateTime);
+    console.log('Current strains count:', strains.length, 'Filtered count:', baseFilteredStrains.length);
+    
+    // Force a refresh if we detect inconsistencies
+    if (strains.length > 0 && baseFilteredStrains.length === 0 && !hasActiveFilters) {
+      console.log('Detected potential filter sync issue, forcing refresh');
+      setTimeout(() => forceRefresh(), 100);
+    }
+    
     return baseFilteredStrains;
-  }, [baseFilteredStrains, lastUpdateTime]);
+  }, [baseFilteredStrains, lastUpdateTime, strains.length, hasActiveFilters, forceRefresh]);
 
   // Use the carousel hook with real-time synchronized strains
   const {
