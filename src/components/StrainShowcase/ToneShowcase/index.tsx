@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Palette, Wand2, Globe, Loader2, Check } from 'lucide-react';
@@ -12,14 +11,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useStrainData } from '@/data/hooks/useStrainData';
 import type { Tables } from '@/integrations/supabase/types';
 import { ToneSelector } from './ToneSelector';
-
 type Tone = Tables<'user_tones'>;
-
 interface ToneShowcaseProps {
   strain: Strain;
   onDescriptionChange: (description: string) => void;
 }
-
 export const ToneShowcase = ({
   strain,
   onDescriptionChange
@@ -31,36 +27,39 @@ export const ToneShowcase = ({
   const [isApplyingGlobally, setIsApplyingGlobally] = useState(false);
   const [globalProgress, setGlobalProgress] = useState(0);
   const [currentDescription, setCurrentDescription] = useState(strain.description || '');
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const { strains, updateStrainInCache } = useStrainData(true);
-
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
+  const {
+    strains,
+    updateStrainInCache
+  } = useStrainData(true);
   useEffect(() => {
     if (user) {
       fetchTonesAndDescriptions();
     }
   }, [user, strain.id]);
-
   const fetchTonesAndDescriptions = async () => {
     try {
       // Fetch all available tones (system + user)
-      const { data: tones, error: tonesError } = await supabase
-        .from('user_tones')
-        .select('*')
-        .or(`user_id.is.null,user_id.eq.${user?.id}`)
-        .order('created_at', { ascending: true });
-
+      const {
+        data: tones,
+        error: tonesError
+      } = await supabase.from('user_tones').select('*').or(`user_id.is.null,user_id.eq.${user?.id}`).order('created_at', {
+        ascending: true
+      });
       if (tonesError) throw tonesError;
       setAvailableTones(tones || []);
 
       // Fetch stored descriptions for this strain
-      const { data: descriptions, error: descriptionsError } = await supabase
-        .from('strain_tone_descriptions')
-        .select('*')
-        .eq('strain_id', strain.id);
-
+      const {
+        data: descriptions,
+        error: descriptionsError
+      } = await supabase.from('strain_tone_descriptions').select('*').eq('strain_id', strain.id);
       if (descriptionsError) throw descriptionsError;
-
       const descriptionsMap: Record<string, string> = {};
       descriptions?.forEach(desc => {
         descriptionsMap[desc.tone_id] = desc.generated_description;
@@ -71,13 +70,14 @@ export const ToneShowcase = ({
       if (tones && tones.length > 0 && !selectedToneId) {
         const firstToneId = tones[0].id;
         setSelectedToneId(firstToneId);
-        
         const initialDescription = descriptionsMap[firstToneId] || strain.description || '';
         setCurrentDescription(initialDescription);
         onDescriptionChange(initialDescription);
-        
+
         // Update showcase immediately
-        updateStrainInCache(strain.id, { description: initialDescription });
+        updateStrainInCache(strain.id, {
+          description: initialDescription
+        });
       }
 
       // Auto-generate missing descriptions in background
@@ -86,7 +86,6 @@ export const ToneShowcase = ({
       console.error('Error fetching tones and descriptions:', error);
     }
   };
-
   const generateMissingDescriptions = async (tones: Tone[], existingDescriptions: Record<string, string>) => {
     for (const tone of tones) {
       if (!existingDescriptions[tone.id]) {
@@ -98,13 +97,14 @@ export const ToneShowcase = ({
       }
     }
   };
-
   const generateDescriptionForTone = async (toneId: string, silent = false) => {
     if (!user) return;
     if (!silent) setIsGenerating(true);
-    
     try {
-      const { data, error } = await supabase.functions.invoke('regenerate-description', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('regenerate-description', {
         body: {
           strainName: strain.name,
           strainType: strain.type,
@@ -115,22 +115,19 @@ export const ToneShowcase = ({
           toneId: toneId
         }
       });
-
       if (error || data?.error) {
         throw new Error(error?.message || data?.error || 'Generation failed');
       }
-
       const newDescription = data.description;
 
       // Store the generated description
-      const { error: storeError } = await supabase
-        .from('strain_tone_descriptions')
-        .upsert({
-          strain_id: strain.id,
-          tone_id: toneId,
-          generated_description: newDescription
-        });
-
+      const {
+        error: storeError
+      } = await supabase.from('strain_tone_descriptions').upsert({
+        strain_id: strain.id,
+        tone_id: toneId,
+        generated_description: newDescription
+      });
       if (storeError) throw storeError;
 
       // Update local state
@@ -143,9 +140,10 @@ export const ToneShowcase = ({
       if (toneId === selectedToneId) {
         setCurrentDescription(newDescription);
         onDescriptionChange(newDescription);
-        updateStrainInCache(strain.id, { description: newDescription });
+        updateStrainInCache(strain.id, {
+          description: newDescription
+        });
       }
-
       if (!silent) {
         toast({
           title: "Description Generated",
@@ -165,37 +163,33 @@ export const ToneShowcase = ({
       if (!silent) setIsGenerating(false);
     }
   };
-
   const switchToTone = (toneId: string) => {
     setSelectedToneId(toneId);
     const description = storedDescriptions[toneId] || strain.description || '';
     setCurrentDescription(description);
     onDescriptionChange(description);
-    
+
     // Update showcase immediately so when user scrolls up, it's already changed
-    updateStrainInCache(strain.id, { description });
-    
+    updateStrainInCache(strain.id, {
+      description
+    });
+
     // If no description exists for this tone, generate it
     if (!storedDescriptions[toneId]) {
       generateDescriptionForTone(toneId, true);
     }
   };
-
   const applyToneToAllStrains = async () => {
     if (!selectedToneId || !user) return;
-    
     setIsApplyingGlobally(true);
     setGlobalProgress(0);
-
     try {
       // Get all strain-tone descriptions for the selected tone
-      const { data: toneDescriptions, error: fetchError } = await supabase
-        .from('strain_tone_descriptions')
-        .select('strain_id, generated_description')
-        .eq('tone_id', selectedToneId);
-
+      const {
+        data: toneDescriptions,
+        error: fetchError
+      } = await supabase.from('strain_tone_descriptions').select('strain_id, generated_description').eq('tone_id', selectedToneId);
       if (fetchError) throw fetchError;
-
       if (!toneDescriptions || toneDescriptions.length === 0) {
         toast({
           title: "No Descriptions Available",
@@ -204,46 +198,38 @@ export const ToneShowcase = ({
         });
         return;
       }
-
       const totalDescriptions = toneDescriptions.length;
       let processedCount = 0;
-
       for (const toneDesc of toneDescriptions) {
         try {
           // Apply the tone description to each strain
           const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(toneDesc.strain_id);
-          
           let updateQuery;
           if (isValidUUID) {
-            updateQuery = supabase
-              .from('scans')
-              .update({ description: toneDesc.generated_description })
-              .eq('id', toneDesc.strain_id);
+            updateQuery = supabase.from('scans').update({
+              description: toneDesc.generated_description
+            }).eq('id', toneDesc.strain_id);
           } else {
             const strain = strains.find(s => s.id === toneDesc.strain_id);
             if (strain) {
-              updateQuery = supabase
-                .from('scans')
-                .update({ description: toneDesc.generated_description })
-                .eq('strain_name', strain.name)
-                .eq('user_id', user.id);
+              updateQuery = supabase.from('scans').update({
+                description: toneDesc.generated_description
+              }).eq('strain_name', strain.name).eq('user_id', user.id);
             }
           }
-
           if (updateQuery) {
             await updateQuery;
-            updateStrainInCache(toneDesc.strain_id, { description: toneDesc.generated_description });
+            updateStrainInCache(toneDesc.strain_id, {
+              description: toneDesc.generated_description
+            });
           }
         } catch (error) {
           console.error(`Error updating strain ${toneDesc.strain_id}:`, error);
         }
-
         processedCount++;
-        setGlobalProgress((processedCount / totalDescriptions) * 100);
-        
+        setGlobalProgress(processedCount / totalDescriptions * 100);
         await new Promise(resolve => setTimeout(resolve, 50));
       }
-
       toast({
         title: "✨ Tone Applied Successfully!",
         description: `Applied "${getCurrentToneName()}" tone to ${processedCount} strains across your entire database.`
@@ -260,18 +246,14 @@ export const ToneShowcase = ({
       setGlobalProgress(0);
     }
   };
-
   const getCurrentToneName = () => {
     const tone = availableTones.find(t => t.id === selectedToneId);
     return tone?.name || 'Professional';
   };
-
   const hasStoredDescription = (toneId: string) => {
     return !!storedDescriptions[toneId];
   };
-
-  return (
-    <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
+  return <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-pink-50/50">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg flex items-center gap-2">
           <Palette className="h-5 w-5 text-purple-600" />
@@ -283,12 +265,7 @@ export const ToneShowcase = ({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Tone Selection */}
-        <ToneSelector
-          availableTones={availableTones}
-          selectedToneId={selectedToneId}
-          storedDescriptions={storedDescriptions}
-          onToneChange={switchToTone}
-        />
+        <ToneSelector availableTones={availableTones} selectedToneId={selectedToneId} storedDescriptions={storedDescriptions} onToneChange={switchToTone} />
 
         {/* Live Preview */}
         <div className="space-y-2">
@@ -297,17 +274,13 @@ export const ToneShowcase = ({
               Live Preview ({getCurrentToneName()}):
             </label>
             <div className="flex items-center gap-2">
-              {hasStoredDescription(selectedToneId) ? (
-                <div className="flex items-center gap-1 text-green-600 text-xs">
+              {hasStoredDescription(selectedToneId) ? <div className="flex items-center gap-1 text-green-600 text-xs">
                   <Check className="h-3 w-3" />
                   Generated
-                </div>
-              ) : (
-                <div className="text-orange-600 text-xs">Generating...</div>
-              )}
+                </div> : <div className="text-orange-600 text-xs">Generating...</div>}
             </div>
           </div>
-          <div className="p-4 bg-white border rounded-lg text-sm min-h-[120px] max-h-[200px] overflow-y-auto">
+          <div className="p-4 bg-white border rounded-lg text-sm min-h-[120px] max-h-[200px] overflow-y-auto text-black ">
             {currentDescription || 'No description available'}
           </div>
         </div>
@@ -315,44 +288,27 @@ export const ToneShowcase = ({
         {/* Action Buttons */}
         <div className="space-y-3">
           {/* Generate/Regenerate Button */}
-          <Button
-            onClick={() => generateDescriptionForTone(selectedToneId)}
-            disabled={isGenerating}
-            className="w-full"
-            variant={hasStoredDescription(selectedToneId) ? "outline" : "default"}
-          >
-            {isGenerating ? (
-              <>
+          <Button onClick={() => generateDescriptionForTone(selectedToneId)} disabled={isGenerating} className="w-full" variant={hasStoredDescription(selectedToneId) ? "outline" : "default"}>
+            {isGenerating ? <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Generating...
-              </>
-            ) : (
-              <>
+              </> : <>
                 <Wand2 className="h-4 w-4 mr-2" />
                 {hasStoredDescription(selectedToneId) ? 'Regenerate' : 'Generate'} {getCurrentToneName()} Description
-              </>
-            )}
+              </>}
           </Button>
 
           {/* Apply Globally Button */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button
-                variant="secondary"
-                disabled={!selectedToneId || isApplyingGlobally}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
-              >
-                {isApplyingGlobally ? (
-                  <>
+              <Button variant="secondary" disabled={!selectedToneId || isApplyingGlobally} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700">
+                {isApplyingGlobally ? <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Applying {getCurrentToneName()} Globally...
-                  </>
-                ) : (
-                  <>
+                  </> : <>
                     <Globe className="h-4 w-4 mr-2" />
                     Apply "{getCurrentToneName()}" to All My Strains
-                  </>
-                )}
+                  </>}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -375,38 +331,25 @@ export const ToneShowcase = ({
           </AlertDialog>
 
           {/* Progress Bar */}
-          {isApplyingGlobally && (
-            <div className="space-y-2">
+          {isApplyingGlobally && <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span>Applying "{getCurrentToneName()}" tone globally...</span>
                 <span>{Math.round(globalProgress)}%</span>
               </div>
               <Progress value={globalProgress} className="w-full" />
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* Quick Tone Preview Grid */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Quick Switch:</label>
           <div className="grid grid-cols-2 gap-2">
-            {availableTones.slice(0, 4).map(tone => (
-              <Button
-                key={tone.id}
-                variant={tone.id === selectedToneId ? "default" : "outline"}
-                size="sm"
-                onClick={() => switchToTone(tone.id)}
-                className="justify-start text-xs relative"
-              >
+            {availableTones.slice(0, 4).map(tone => <Button key={tone.id} variant={tone.id === selectedToneId ? "default" : "outline"} size="sm" onClick={() => switchToTone(tone.id)} className="justify-start text-xs relative">
                 {tone.name}
-                {hasStoredDescription(tone.id) && (
-                  <Check className="h-3 w-3 ml-1 text-green-500" />
-                )}
-              </Button>
-            ))}
+                {hasStoredDescription(tone.id) && <Check className="h-3 w-3 ml-1 text-green-500" />}
+              </Button>)}
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
