@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Strain } from '@/types/strain';
 import StrainEffectsVisual from '@/components/StrainDashboard/StrainEffectsVisual';
 import StrainFlavorsVisual from '@/components/StrainDashboard/StrainFlavorsVisual';
+import ToneShowcase from './ToneShowcase';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,8 +19,14 @@ interface ShowcaseSlideProps {
 
 const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProps) => {
   const [isLiked, setIsLiked] = useState(false);
+  const [currentDescription, setCurrentDescription] = useState(strain.description || '');
   const { toast } = useToast();
   const { thcDisplay } = useStrainTHC(strain.name);
+
+  // Update description when strain changes
+  useEffect(() => {
+    setCurrentDescription(strain.description || '');
+  }, [strain.description]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -46,6 +53,10 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
       description: `${strain.name} ${isLiked ? 'removed from' : 'added to'} your favorites`,
       duration: 2000,
     });
+  };
+
+  const handleDescriptionChange = (newDescription: string) => {
+    setCurrentDescription(newDescription);
   };
 
   return (
@@ -91,7 +102,7 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
                   </div>
                   
                   <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-                    {strain.description}
+                    {currentDescription}
                   </p>
                   
                   {/* THC percentage at bottom of description */}
@@ -127,6 +138,12 @@ const ShowcaseSlide = ({ strain, isActive = true, index = 0 }: ShowcaseSlideProp
             </div>
           </Card>
         </div>
+
+        {/* Tone Showcase - New Section */}
+        <ToneShowcase 
+          strain={strain} 
+          onDescriptionChange={handleDescriptionChange}
+        />
 
         {/* Effects and Flavors Grid - Mobile Optimized */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">

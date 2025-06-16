@@ -139,6 +139,33 @@ export type Database = {
         }
         Relationships: []
       }
+      strain_tone_descriptions: {
+        Row: {
+          created_at: string
+          generated_description: string
+          id: string
+          strain_id: string
+          tone_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_description: string
+          id?: string
+          strain_id: string
+          tone_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_description?: string
+          id?: string
+          strain_id?: string
+          tone_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_tones: {
         Row: {
           created_at: string | null
