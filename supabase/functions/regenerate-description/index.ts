@@ -118,7 +118,7 @@ Based on the human guidance provided and following the tone guidelines above, pl
 6. Provides rich detail about the strain's characteristics, background, and appeal
 7. Uses engaging, descriptive language appropriate to the tone
 
-Important: Write a complete, comprehensive description of 3-5 full sentences. Do not write short, abbreviated descriptions. Each sentence should be substantial and informative.
+Important: Write a complete, comprehensive description of 3-5 full sentences. Do not write short, abbreviated descriptions. Each sentence should be substantial and informative, providing detailed information about the strain's effects, flavors, background, and appeal to create a compelling product description.
 
 Write only the new description, nothing else.`
 
