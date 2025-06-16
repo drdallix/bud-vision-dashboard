@@ -24,7 +24,7 @@ export const saveAnimationSettings = async (settings: AnimationSettings): Promis
       .from('profiles')
       .upsert({
         id: user.id,
-        animation_settings: settings,
+        animation_settings: settings as any, // Cast to Json type
         updated_at: new Date().toISOString()
       });
 
@@ -56,7 +56,7 @@ export const loadAnimationSettings = async (): Promise<AnimationSettings> => {
       return DEFAULT_SETTINGS;
     }
 
-    return { ...DEFAULT_SETTINGS, ...data.animation_settings };
+    return { ...DEFAULT_SETTINGS, ...(data.animation_settings as AnimationSettings) };
   } catch (error) {
     console.error('Error loading animation settings:', error);
     return DEFAULT_SETTINGS;

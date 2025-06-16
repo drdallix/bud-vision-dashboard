@@ -31,6 +31,7 @@ const FullscreenShowcaseSlide = ({
 }: FullscreenShowcaseSlideProps) => {
   const { thcDisplay } = useStrainTHC(strain.name);
   const [currentMode, setCurrentMode] = useState<TransitionMode>('elegant');
+  const [animationStage, setAnimationStage] = useState(0);
 
   // Determine transition mode
   useEffect(() => {
@@ -44,6 +45,19 @@ const FullscreenShowcaseSlide = ({
       setCurrentMode(getStrainTransitionMode(strain.type));
     }
   }, [isActive, transitionMode, shuffleMode, strain.type, strain.id]);
+
+  // Staggered animation entrance
+  useEffect(() => {
+    if (isActive) {
+      setAnimationStage(0);
+      const stages = [1, 2, 3, 4, 5];
+      stages.forEach((stage, i) => {
+        setTimeout(() => setAnimationStage(stage), i * 200);
+      });
+    } else {
+      setAnimationStage(0);
+    }
+  }, [isActive, strain.id]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -69,7 +83,9 @@ const FullscreenShowcaseSlide = ({
 
   return (
     <FullscreenSceneManager strain={strain} mode={currentMode}>
-      <div className="h-screen w-screen flex items-center p-8 lg:p-16 overflow-hidden">
+      <div className={`h-screen w-screen flex items-center p-8 lg:p-16 overflow-hidden transition-all duration-1000 ${
+        isActive ? 'opacity-100 scale-100' : 'opacity-50 scale-95'
+      }`}>
         
         {/* Main Content - Side by Side Layout */}
         <div className="w-full h-full flex gap-12 items-center max-w-7xl mx-auto">
@@ -80,26 +96,33 @@ const FullscreenShowcaseSlide = ({
             {/* Hero Section */}
             <div className="space-y-6">
               {/* Strain emoji with enhanced animation */}
-              <div className={`text-8xl lg:text-9xl xl:text-[10rem] ${
-                animationSettings?.emojiAnimations ? 'animate-bounce' : ''
-              }`} style={{ 
+              <div className={`text-8xl lg:text-9xl xl:text-[10rem] transition-all duration-1000 ${
+                animationStage >= 1 ? 'translate-x-0 opacity-100 scale-100' : '-translate-x-20 opacity-0 scale-75'
+              } ${animationSettings?.emojiAnimations ? 'animate-bounce' : ''}`} 
+              style={{ 
                 animationDuration: animationSettings?.emojiAnimations ? '3s' : undefined,
                 filter: `drop-shadow(0 0 ${(animationSettings?.glowIntensity || 50) / 2}px rgba(255,255,255,0.5))`
               }}>
                 {getStrainEmoji(strain.type)}
               </div>
               
-              <FullscreenTypography
-                text={strain.name}
-                level="hero"
-                mode={currentMode}
-                isActive={isActive}
-                delay={200}
-              />
+              <div className={`transition-all duration-1000 delay-200 ${
+                animationStage >= 2 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+              }`}>
+                <FullscreenTypography
+                  text={strain.name}
+                  level="hero"
+                  mode={currentMode}
+                  isActive={isActive}
+                  delay={200}
+                />
+              </div>
               
-              <div className="flex items-center gap-6 flex-wrap">
+              <div className={`flex items-center gap-6 flex-wrap transition-all duration-1000 delay-400 ${
+                animationStage >= 3 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+              }`}>
                 <Badge 
-                  className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-2xl text-xl px-6 py-3 rounded-full`}
+                  className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-2xl text-xl px-6 py-3 rounded-full transform hover:scale-105 transition-all duration-300`}
                   style={{
                     boxShadow: animationSettings?.glowIntensity ? 
                       `0 0 ${animationSettings.glowIntensity}px rgba(255,255,255,0.3)` : 
@@ -108,7 +131,7 @@ const FullscreenShowcaseSlide = ({
                 >
                   {strain.type}
                 </Badge>
-                <Badge className="bg-green-500/90 text-white border-0 shadow-2xl text-xl px-6 py-3 rounded-full animate-pulse">
+                <Badge className="bg-green-500/90 text-white border-0 shadow-2xl text-xl px-6 py-3 rounded-full animate-pulse hover:scale-105 transition-all duration-300">
                   <Sparkles className="h-5 w-5 mr-2" />
                   Premium
                 </Badge>
@@ -116,10 +139,10 @@ const FullscreenShowcaseSlide = ({
             </div>
 
             {/* THC Display */}
-            <div className={`flex items-center gap-8 transform transition-all duration-1000 ${
-              isActive ? 'scale-100 opacity-100' : 'scale-90 opacity-70'
+            <div className={`flex items-center gap-8 transition-all duration-1000 delay-600 ${
+              animationStage >= 4 ? 'translate-x-0 opacity-100 scale-100' : '-translate-x-10 opacity-0 scale-90'
             }`}>
-              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-6 shadow-2xl animate-pulse">
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-6 shadow-2xl animate-pulse hover:scale-110 transition-all duration-300">
                 <Zap className="h-10 w-10 text-white" />
               </div>
               <div>
@@ -141,7 +164,9 @@ const FullscreenShowcaseSlide = ({
             </div>
 
             {/* Description */}
-            <div className="max-w-3xl">
+            <div className={`max-w-3xl transition-all duration-1000 delay-800 ${
+              animationStage >= 5 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+            }`}>
               <FullscreenTypography
                 text={strain.description}
                 level="body"
@@ -156,10 +181,10 @@ const FullscreenShowcaseSlide = ({
           <div className="flex-[2] h-full flex flex-col justify-center gap-8 min-w-0">
             
             {/* Effects Card */}
-            <div className={`transform transition-all duration-1000 delay-800 ${
-              isActive ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-8 opacity-0 scale-95'
+            <div className={`transform transition-all duration-1000 delay-1000 ${
+              animationStage >= 4 ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-20 opacity-0 scale-95'
             }`}>
-              <Card className="border-0 bg-gradient-to-br from-purple-900/60 to-pink-900/60 backdrop-blur-lg shadow-2xl h-full">
+              <Card className="border-0 bg-gradient-to-br from-purple-900/60 to-pink-900/60 backdrop-blur-lg shadow-2xl h-full hover:scale-105 transition-all duration-300">
                 <div className="p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <span className="text-3xl animate-bounce" style={{ animationDelay: '0.5s' }}>⚡</span>
@@ -177,10 +202,10 @@ const FullscreenShowcaseSlide = ({
             </div>
             
             {/* Flavors Card */}
-            <div className={`transform transition-all duration-1000 delay-1000 ${
-              isActive ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-8 opacity-0 scale-95'
+            <div className={`transform transition-all duration-1000 delay-1200 ${
+              animationStage >= 5 ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-20 opacity-0 scale-95'
             }`}>
-              <Card className="border-0 bg-gradient-to-br from-orange-900/60 to-yellow-900/60 backdrop-blur-lg shadow-2xl h-full">
+              <Card className="border-0 bg-gradient-to-br from-orange-900/60 to-yellow-900/60 backdrop-blur-lg shadow-2xl h-full hover:scale-105 transition-all duration-300">
                 <div className="p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <span className="text-3xl animate-bounce" style={{ animationDelay: '1s' }}>🍃</span>
