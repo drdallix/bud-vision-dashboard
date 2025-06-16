@@ -18,6 +18,7 @@ interface BrowseStrainsProps {
 const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   const { strains, isLoading } = useRealtimeStrainStore(false);
   const [editMode, setEditMode] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   const {
     searchTerm,
@@ -66,9 +67,15 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
   return (
     <div className="space-y-4">
       <BrowseHeader 
-        strainCount={filteredStrains.length}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
         editMode={editMode}
         onEditModeToggle={() => setEditMode(!editMode)}
+        selectedCount={selectedStrains.length}
+        onClearSelection={clearSelection}
+        showMobileFilters={showMobileFilters}
+        onToggleMobileFilters={() => setShowMobileFilters(!showMobileFilters)}
+        strains={strains}
       />
       
       <SmartOmnibar 
