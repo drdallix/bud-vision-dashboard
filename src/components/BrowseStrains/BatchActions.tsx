@@ -7,17 +7,42 @@ import { BadgeDollarSign } from 'lucide-react';
 
 interface BatchActionsProps {
   selectedCount: number;
-  onInStock: () => void;
-  onOutOfStock: () => void;
-  onClear: () => void;
-  loading: boolean;
-  onBatchPrice: (nowPrice: number, wasPrice?: number | null) => Promise<void>;
+  onClearSelection: () => void;
+  onSelectAll: () => void;
+  isAllSelected: boolean;
+  onBatchStockUpdate: (strainIds: string[], inStock: boolean) => Promise<boolean>;
+  selectedStrainIds: string[];
 }
 
-const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading, onBatchPrice }: BatchActionsProps) => {
+const BatchActions = ({ 
+  selectedCount, 
+  onClearSelection, 
+  onSelectAll, 
+  isAllSelected, 
+  onBatchStockUpdate, 
+  selectedStrainIds 
+}: BatchActionsProps) => {
   const [showBatchPrice, setShowBatchPrice] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   if (selectedCount === 0) return null;
+
+  const handleInStock = async () => {
+    setLoading(true);
+    await onBatchStockUpdate(selectedStrainIds, true);
+    setLoading(false);
+  };
+
+  const handleOutOfStock = async () => {
+    setLoading(true);
+    await onBatchStockUpdate(selectedStrainIds, false);
+    setLoading(false);
+  };
+
+  const handleBatchPrice = async (nowPrice: number, wasPrice?: number | null) => {
+    console.log('Batch price update:', { nowPrice, wasPrice, selectedStrainIds });
+    // This would need integration with price service
+  };
 
   return (
     <div className="flex items-center gap-2 px-1 py-2 bg-muted/50 rounded-md">
@@ -27,7 +52,7 @@ const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading
       <Button
         size="sm"
         variant="outline"
-        onClick={onInStock}
+        onClick={handleInStock}
         disabled={loading}
         className="h-7 px-2 text-xs"
       >
@@ -37,7 +62,7 @@ const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading
       <Button
         size="sm"
         variant="outline"
-        onClick={onOutOfStock}
+        onClick={handleOutOfStock}
         disabled={loading}
         className="h-7 px-2 text-xs"
       >
@@ -56,8 +81,16 @@ const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading
       </Button>
       <Button
         size="sm"
+        variant="outline"
+        onClick={onSelectAll}
+        className="h-7 px-2 text-xs"
+      >
+        {isAllSelected ? 'Deselect All' : 'Select All'}
+      </Button>
+      <Button
+        size="sm"
         variant="ghost"
-        onClick={onClear}
+        onClick={onClearSelection}
         className="h-7 w-7 p-0"
       >
         <X className="h-3 w-3" />
@@ -65,7 +98,7 @@ const BatchActions = ({ selectedCount, onInStock, onOutOfStock, onClear, loading
       <BatchPriceModal
         open={showBatchPrice}
         setOpen={setShowBatchPrice}
-        onApply={onBatchPrice}
+        onApply={handleBatchPrice}
       />
     </div>
   );

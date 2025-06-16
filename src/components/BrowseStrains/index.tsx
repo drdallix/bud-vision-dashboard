@@ -27,6 +27,8 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
     setFilterType,
     sortBy,
     setSortBy,
+    priceFilter,
+    setPriceFilter,
     filteredStrains
   } = useBrowseFilters(strains);
   
@@ -62,7 +64,12 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         onEditModeToggle={() => setEditMode(!editMode)}
       />
       
-      <SmartOmnibar onStrainGenerated={handleStrainGenerated} />
+      <SmartOmnibar 
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onStrainGenerated={handleStrainGenerated}
+        hasResults={filteredStrains.length > 0}
+      />
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1 space-y-4">
@@ -76,6 +83,8 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
             onFilterChange={setFilterType}
             sortBy={sortBy}
             onSortChange={setSortBy}
+            priceFilter={priceFilter}
+            onPriceFilterChange={setPriceFilter}
           />
           
           {editMode && selectedStrains.length > 0 && (
@@ -93,7 +102,6 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         <div className="lg:col-span-3">
           <SafeStrainGrid 
             strains={filteredStrains}
-            isLoading={isLoading}
             editMode={editMode}
             selectedStrains={selectedStrains}
             onStrainSelect={handleStrainSelect}
