@@ -21,8 +21,14 @@ export const useInventoryManagement = () => {
 
     setLoading(true);
     try {
+      console.log(`Updating stock status: ${strainId} -> ${inStock ? 'in stock' : 'out of stock'}`);
+      
+      // Perform the database update - real-time will handle UI updates
       await StrainService.updateStockStatus(strainId, user.id, inStock);
 
+      console.log('Stock status updated successfully, real-time will sync UI');
+      
+      // Show immediate feedback toast
       toast({
         title: "Stock status updated",
         description: `Strain marked as ${inStock ? 'in stock' : 'out of stock'}.`,
@@ -56,7 +62,12 @@ export const useInventoryManagement = () => {
 
     setLoading(true);
     try {
+      console.log(`Batch updating ${strainIds.length} strains to ${inStock ? 'in stock' : 'out of stock'}`);
+      
+      // Perform the database update - real-time will handle UI updates
       await StrainService.batchUpdateStock(strainIds, user.id, inStock);
+
+      console.log('Batch stock update successful, real-time will sync UI');
 
       toast({
         title: "Bulk update completed",

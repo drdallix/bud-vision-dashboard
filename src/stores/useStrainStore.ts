@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Strain } from '@/types/strain';
 import { PricePoint } from '@/types/price';
 import { useStrainData } from '@/data/hooks/useStrainData';
@@ -8,16 +8,10 @@ import { useInventoryManagement } from '@/hooks/useInventoryManagement';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * Centralized Strain Store
+ * Centralized Strain Store with Real-time Support
  * 
  * This store provides a unified interface for all strain-related state and operations.
- * It consolidates data fetching, price management, and inventory operations.
- * 
- * Benefits:
- * - Single source of truth for strain data
- * - Consistent state updates across components
- * - Optimistic updates with rollback capability
- * - Batch operations for better performance
+ * Real-time updates are handled by the useRealtimeStrains hook, so no optimistic updates needed.
  */
 export const useStrainStore = (includeAllStrains = false) => {
   const { toast } = useToast();
@@ -46,93 +40,47 @@ export const useStrainStore = (includeAllStrains = false) => {
     loading: inventoryLoading 
   } = useInventoryManagement();
 
-  // Local optimistic state for immediate UI feedback
-  const [optimisticUpdates, setOptimisticUpdates] = useState<Record<string, Partial<Strain>>>({});
-
   /**
-   * Get strain with optimistic updates applied
+   * Get strain by ID
    */
   const getStrain = useCallback((strainId: string): Strain | undefined => {
-    const baseStrain = strains.find(s => s.id === strainId);
-    if (!baseStrain) return undefined;
-    
-    const optimisticUpdate = optimisticUpdates[strainId];
-    return optimisticUpdate ? { ...baseStrain, ...optimisticUpdate } : baseStrain;
-  }, [strains, optimisticUpdates]);
+    return strains.find(s => s.id === strainId);
+  }, [strains]);
 
   /**
-   * Get all strains with optimistic updates applied
-   */
-  const getStrainsWithUpdates = useCallback(() => {
-    return strains.map(strain => {
-      const optimisticUpdate = optimisticUpdates[strain.id];
-      return optimisticUpdate ? { ...strain, ...optimisticUpdate } : strain;
-    });
-  }, [strains, optimisticUpdates]);
-
-  /**
-   * Apply optimistic update for immediate UI feedback
-   */
-  const applyOptimisticUpdate = useCallback((strainId: string, updates: Partial<Strain>) => {
-    setOptimisticUpdates(prev => ({
-      ...prev,
-      [strainId]: { ...prev[strainId], ...updates }
-    }));
-  }, []);
-
-  /**
-   * Clear optimistic update (on success or failure)
-   */
-  const clearOptimisticUpdate = useCallback((strainId: string) => {
-    setOptimisticUpdates(prev => {
-      const { [strainId]: removed, ...rest } = prev;
-      return rest;
-    });
-  }, []);
-
-  /**
-   * Update stock status with optimistic updates and rollback capability
+   * Update stock status - real-time will handle UI updates
    */
   const updateStock = useCallback(async (strainId: string, inStock: boolean) => {
-    const originalStrain = strains.find(s => s.id === strainId);
-    if (!originalStrain) return false;
+    const strain = strains.find(s => s.id === strainId);
+    if (!strain) return false;
 
-    // Apply optimistic update immediately
-    applyOptimisticUpdate(strainId, { inStock });
+    console.log(`Updating stock for ${strain.name}: ${strain.inStock} -> ${inStock}`);
     
     try {
-      // Attempt the actual update
       const success = await updateStockStatus(strainId, inStock);
       
       if (success) {
-        // Update cache and clear optimistic update on success
-        updateStrainInCache(strainId, { inStock });
-        clearOptimisticUpdate(strainId);
-        
-        console.log(`Stock updated successfully: ${originalStrain.name} -> ${inStock ? 'in stock' : 'out of stock'}`);
+        console.log(`Stock updated successfully: ${strain.name} -> ${inStock ? 'in stock' : 'out of stock'}`);
+        // Real-time subscription will update UI automatically
         return true;
       } else {
-        // Revert optimistic update on failure
-        clearOptimisticUpdate(strainId);
         toast({
           title: "Stock update failed",
-          description: `Failed to update stock for ${originalStrain.name}`,
+          description: `Failed to update stock for ${strain.name}`,
           variant: "destructive",
         });
         return false;
       }
     } catch (error) {
-      // Revert optimistic update on error
-      clearOptimisticUpdate(strainId);
       console.error('Stock update error:', error);
       toast({
         title: "Stock update error",
-        description: `Error updating stock for ${originalStrain.name}`,
+        description: `Error updating stock for ${strain.name}`,
         variant: "destructive",
       });
       return false;
     }
-  }, [strains, applyOptimisticUpdate, clearOptimisticUpdate, updateStockStatus, updateStrainInCache, toast]);
+  }, [strains, updateStockStatus, toast]);
 
   /**
    * Batch update stock status for multiple strains
@@ -140,35 +88,21 @@ export const useStrainStore = (includeAllStrains = false) => {
   const updateStockBatch = useCallback(async (strainIds: string[], inStock: boolean) => {
     if (strainIds.length === 0) return false;
 
-    // Apply optimistic updates immediately
-    strainIds.forEach(strainId => {
-      applyOptimisticUpdate(strainId, { inStock });
-    });
-
     try {
       const success = await batchUpdateStock(strainIds, inStock);
       
       if (success) {
-        // Update cache and clear optimistic updates on success
-        strainIds.forEach(strainId => {
-          updateStrainInCache(strainId, { inStock });
-          clearOptimisticUpdate(strainId);
-        });
-        
         console.log(`Batch stock update successful: ${strainIds.length} strains -> ${inStock ? 'in stock' : 'out of stock'}`);
+        // Real-time subscription will update UI automatically
         return true;
       } else {
-        // Revert all optimistic updates on failure
-        strainIds.forEach(clearOptimisticUpdate);
         return false;
       }
     } catch (error) {
-      // Revert all optimistic updates on error
-      strainIds.forEach(clearOptimisticUpdate);
       console.error('Batch stock update error:', error);
       return false;
     }
-  }, [applyOptimisticUpdate, clearOptimisticUpdate, batchUpdateStock, updateStrainInCache]);
+  }, [batchUpdateStock]);
 
   /**
    * Get prices for a specific strain
@@ -190,17 +124,15 @@ export const useStrainStore = (includeAllStrains = false) => {
    */
   const removeStrain = useCallback((strainId: string) => {
     removeStrainFromCache(strainId);
-    clearOptimisticUpdate(strainId);
     console.log('Removed strain from store:', strainId);
-  }, [removeStrainFromCache, clearOptimisticUpdate]);
+  }, [removeStrainFromCache]);
 
   // Loading states
   const isLoading = strainsLoading || pricesLoading || inventoryLoading;
 
   return {
     // Data
-    strains: getStrainsWithUpdates(),
-    rawStrains: strains, // Original strains without optimistic updates
+    strains,
     pricesMap,
     
     // Individual strain operations
@@ -221,8 +153,6 @@ export const useStrainStore = (includeAllStrains = false) => {
     
     // Cache management
     refetchStrains,
-    
-    // Debug helpers
-    optimisticUpdates, // For debugging optimistic state
+    updateStrainInCache,
   };
 };

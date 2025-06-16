@@ -21,13 +21,16 @@ export const useStrainData = (includeAllStrains = false) => {
   const { data: strains = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
+      console.log(`Fetching strains: ${includeAllStrains ? 'all' : 'user-specific'}`);
       const rawScans = includeAllStrains 
         ? await StrainService.getAllStrains()
         : user 
           ? await StrainService.getUserStrains(user.id)
           : [];
       
-      return convertDatabaseScansToStrains(rawScans);
+      const converted = convertDatabaseScansToStrains(rawScans);
+      console.log(`Converted ${rawScans.length} scans to ${converted.length} strains`);
+      return converted;
     },
     enabled: includeAllStrains || !!user,
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
@@ -46,6 +49,7 @@ export const useStrainData = (includeAllStrains = false) => {
   }, [error, toast]);
 
   const updateStrainInCache = useCallback((strainId: string, updates: Partial<Strain>) => {
+    console.log('Updating strain in cache:', strainId, updates);
     queryClient.setQueryData(queryKey, (oldData: Strain[] = []) => {
       const updated = oldData.map(strain => 
         strain.id === strainId ? { ...strain, ...updates } : strain
@@ -54,7 +58,7 @@ export const useStrainData = (includeAllStrains = false) => {
       return updated;
     });
     
-    // Also invalidate to trigger a fresh fetch
+    // Also invalidate to trigger a fresh fetch for consistency
     queryClient.invalidateQueries({ queryKey });
   }, [queryClient, queryKey]);
 
@@ -77,6 +81,7 @@ export const useStrainData = (includeAllStrains = false) => {
   }, [queryClient, queryKey]);
 
   const removeStrainFromCache = useCallback((strainId: string) => {
+    console.log('Removing strain from cache:', strainId);
     queryClient.setQueryData(queryKey, (oldData: Strain[] = []) => {
       return oldData.filter(strain => strain.id !== strainId);
     });

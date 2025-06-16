@@ -1,121 +1,99 @@
 
+import { useState } from 'react';
+import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { useBrowseFilters } from './hooks/useBrowseFilters';
 import { useStrainSelection } from './hooks/useStrainSelection';
 import { useInventoryActions } from './hooks/useInventoryActions';
-import { useStrainStore } from '@/stores/useStrainStore';
-import { useStrainFiltering } from '@/data/hooks/useStrainFiltering';
 import BrowseHeader from './components/BrowseHeader';
-import StrainGrid from './components/StrainGrid';
+import SearchBar from './SearchBar';
 import FilterControls from './FilterControls';
-import SmartOmnibar from '@/components/SmartOmnibar';
-import { Strain } from '@/types/strain';
+import BatchActions from './BatchActions';
+import SafeStrainGrid from './components/SafeStrainGrid';
 
-interface BrowseStrainsProps {
-  onStrainSelect: (strain: Strain) => void;
-}
-
-/**
- * Enhanced BrowseStrains Component
- * 
- * Now uses centralized state management with the new strain store.
- * All state operations are handled through the store with optimistic updates.
- * Includes comprehensive search, filtering, and AI-powered strain generation.
- * 
- * Architecture improvements:
- * - Centralized state through useStrainStore
- * - Optimistic updates with rollback
- * - Better error handling and loading states
- * - Consistent data flow patterns
- * - Integrated search and filtering UI
- */
-const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
-  // Centralized strain state management
-  const {
-    strains: allStrains = [], // Provide default empty array
-    pricesMap,
-    isLoading,
-    pricesLoading,
-    addStrain
-  } = useStrainStore(true); // Get all strains for browsing
-
-  // Filter and UI state management
+const BrowseStrains = () => {
+  // Use real-time enabled strain store
   const { 
-    searchTerm, 
-    filterType, 
-    sortBy, 
-    priceFilter,
-    updateFilters 
-  } = useBrowseFilters(allStrains);
-  
-  const { selectedStrains, toggleSelection, clearSelection, selectAll } = useStrainSelection();
-  const { handleStockToggle, handleBatchStockUpdate, inventoryLoading } = useInventoryActions(true);
+    strains, 
+    isLoading,
+    updateStock
+  } = useRealtimeStrainStore(false); // User's strains only
 
-  // Apply filtering to the centralized strain data
-  const filteredStrains = useStrainFiltering(allStrains, searchTerm, filterType, sortBy);
+  const {
+    searchTerm,
+    setSearchTerm,
+    filterType,
+    setFilterType,
+    sortBy,
+    setSortBy,
+    filteredStrains
+  } = useBrowseFilters(strains);
 
-  // Handle AI strain generation
-  const handleStrainGenerated = (strain: Strain) => {
-    addStrain(strain);
-    onStrainSelect(strain);
+  const {
+    selectedStrains,
+    toggleStrainSelection,
+    clearSelection,
+    selectAll,
+    isAllSelected
+  } = useStrainSelection(filteredStrains);
+
+  const { handleBatchStockUpdate, inventoryLoading } = useInventoryActions(false);
+
+  const [showBatchActions, setShowBatchActions] = useState(false);
+
+  const handleStockToggle = async (strainId: string, currentStock: boolean) => {
+    console.log(`Toggling stock for strain ${strainId}: ${currentStock} -> ${!currentStock}`);
+    await updateStock(strainId, !currentStock);
   };
 
-  const hasResults = filteredStrains && filteredStrains.length > 0;
-
-  console.log('BrowseStrains render:', {
-    totalStrains: allStrains?.length || 0,
-    filteredStrains: filteredStrains?.length || 0,
-    selectedCount: selectedStrains.length,
-    isLoading,
-    pricesLoading,
-    inventoryLoading,
-    searchTerm,
-    filterType,
-    sortBy
-  });
+  const handleBatchStockChange = async (inStock: boolean) => {
+    if (selectedStrains.length === 0) return;
+    
+    const success = await handleBatchStockUpdate(selectedStrains, inStock);
+    if (success) {
+      clearSelection();
+      setShowBatchActions(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Smart Omnibar for AI-powered search and generation */}
-      <SmartOmnibar
-        searchTerm={searchTerm}
-        onSearchChange={(term) => updateFilters({ searchTerm: term })}
-        onStrainGenerated={handleStrainGenerated}
-        hasResults={hasResults}
-      />
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      <BrowseHeader strainCount={filteredStrains.length} />
+      
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex-1">
+          <SearchBar 
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+          />
+        </div>
+        <FilterControls
+          filterType={filterType}
+          setFilterType={setFilterType}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+        />
+      </div>
 
-      {/* Filter controls */}
-      <FilterControls
-        filterType={filterType}
-        sortBy={sortBy}
-        priceFilter={priceFilter}
-        onFilterChange={(type) => updateFilters({ filterType: type })}
-        onSortChange={(sort) => updateFilters({ sortBy: sort })}
-        onPriceFilterChange={(price) => updateFilters({ priceFilter: price })}
-      />
+      {selectedStrains.length > 0 && (
+        <BatchActions
+          selectedCount={selectedStrains.length}
+          totalCount={filteredStrains.length}
+          onClearSelection={clearSelection}
+          onSelectAll={selectAll}
+          isAllSelected={isAllSelected}
+          onBatchStockUpdate={handleBatchStockChange}
+          isLoading={inventoryLoading}
+          showBatchActions={showBatchActions}
+          setShowBatchActions={setShowBatchActions}
+        />
+      )}
 
-      {/* Browse header with selection and batch actions */}
-      <BrowseHeader
-        selectedCount={selectedStrains.length}
-        totalCount={filteredStrains?.length || 0}
-        onSelectAll={() => selectAll(filteredStrains.map(s => s.id))}
-        onClearSelection={clearSelection}
-        onBatchStockUpdate={handleBatchStockUpdate}
+      <SafeStrainGrid
+        strains={filteredStrains}
+        isLoading={isLoading}
         selectedStrains={selectedStrains}
-        inventoryLoading={inventoryLoading}
-      />
-
-      {/* Strain grid */}
-      <StrainGrid
-        strains={filteredStrains || []}
-        editMode={selectedStrains.length > 0}
-        selectedStrains={selectedStrains}
-        user={null} // Will be populated by auth context
-        onSelect={toggleSelection}
+        onToggleSelection={toggleStrainSelection}
         onStockToggle={handleStockToggle}
-        onStrainClick={onStrainSelect}
-        inventoryLoading={inventoryLoading}
-        pricesMap={pricesMap || {}}
-        pricesLoading={pricesLoading}
       />
     </div>
   );

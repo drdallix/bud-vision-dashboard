@@ -1,7 +1,6 @@
-
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
-import { useStrainData } from '@/data/hooks/useStrainData';
+import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { useAuth } from '@/contexts/AuthContext';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
@@ -12,7 +11,8 @@ import { TransitionMode, TRANSITION_MODES } from './FullscreenTransitions';
 import { Strain } from '@/types/strain';
 
 const StrainShowcase = () => {
-  const { strains, isLoading } = useStrainData(true);
+  // Use real-time enabled strain store
+  const { strains, isLoading } = useRealtimeStrainStore(true);
   const { user } = useAuth();
   const [filteredStrains, setFilteredStrains] = useState<Strain[]>([]);
   const [current, setCurrent] = useState(0);
@@ -52,10 +52,10 @@ const StrainShowcase = () => {
     setPaused(!!user);
   }, [user]);
 
-  // Filter and sort strains
+  // Filter and sort strains - now reactive to real-time changes
   useEffect(() => {
     let filtered = strains.filter(strain => 
-      strain.inStock && 
+      strain.inStock && // This will automatically filter out newly out-of-stock items
       selectedTypes.includes(strain.type) &&
       strain.thc >= minTHC
     );
@@ -72,12 +72,22 @@ const StrainShowcase = () => {
       }
     });
 
+    const previousCount = filteredStrains.length;
     setFilteredStrains(filtered);
-    setCurrent(0);
-    if (api) {
-      api.scrollTo(0);
+    
+    // Adjust current index if strains were removed
+    if (filtered.length < previousCount && current >= filtered.length && filtered.length > 0) {
+      const newCurrent = Math.min(current, filtered.length - 1);
+      setCurrent(newCurrent);
+      if (api) {
+        api.scrollTo(newCurrent);
+      }
+    } else if (filtered.length === 0) {
+      setCurrent(0);
     }
-  }, [strains, selectedTypes, sortBy, minTHC, api]);
+    
+    console.log(`Filtered strains updated: ${filtered.length} in stock`);
+  }, [strains, selectedTypes, sortBy, minTHC, current, filteredStrains.length, api]);
 
   // Auto-advance logic with shuffle mode
   useEffect(() => {
