@@ -8,11 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Printer, Settings, Image, Copy } from 'lucide-react';
+import { Printer, Settings, Image, Copy, Layout } from 'lucide-react';
 
 export interface PrintConfig {
   // Output format
   format: 'text' | 'image';
+  
+  // Print style
+  printStyle: 'receipt' | 'showcase'; // New: receipt printer style vs showcase card style
   
   // Receipt printer settings
   receiptWidth: number; // characters per line
@@ -26,6 +29,11 @@ export interface PrintConfig {
   includePricing: boolean;
   includeQRCode: boolean;
   
+  // Visual chart options (for showcase style)
+  includeEffectChart: boolean;
+  includeTerpeneChart: boolean;
+  includeFlavorChart: boolean;
+  
   // Layout options
   compactMode: boolean;
   showEmojis: boolean;
@@ -38,6 +46,7 @@ export interface PrintConfig {
 
 const defaultConfig: PrintConfig = {
   format: 'text',
+  printStyle: 'receipt',
   receiptWidth: 48,
   fontSize: 12,
   includeEffects: true,
@@ -46,6 +55,9 @@ const defaultConfig: PrintConfig = {
   includeDescription: true,
   includePricing: true,
   includeQRCode: false,
+  includeEffectChart: false,
+  includeTerpeneChart: false,
+  includeFlavorChart: false,
   compactMode: false,
   showEmojis: true,
   imageWidth: 800,
@@ -106,38 +118,77 @@ const PrintSettings = ({ config, onConfigChange }: PrintSettingsProps) => {
         </CardContent>
       </Card>
 
-      {/* Receipt Printer Settings */}
+      {/* Print Style */}
       <Card>
         <CardHeader>
-          <CardTitle>Receipt Printer Settings</CardTitle>
-          <CardDescription>Configure for thermal receipt printers</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Layout className="h-5 w-5" />
+            Print Style
+          </CardTitle>
+          <CardDescription>Choose the layout style for your prints</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label>Characters per line: {config.receiptWidth}</Label>
-            <Slider
-              value={[config.receiptWidth]}
-              onValueChange={(value) => updateConfig({ receiptWidth: value[0] })}
-              min={24}
-              max={80}
-              step={4}
-              className="mt-2"
-            />
-          </div>
-          
-          <div>
-            <Label>Font size: {config.fontSize}px</Label>
-            <Slider
-              value={[config.fontSize]}
-              onValueChange={(value) => updateConfig({ fontSize: value[0] })}
-              min={8}
-              max={20}
-              step={1}
-              className="mt-2"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              variant={config.printStyle === 'receipt' ? 'default' : 'outline'}
+              onClick={() => updateConfig({ printStyle: 'receipt' })}
+              className="flex flex-col items-center gap-2 h-auto py-4"
+            >
+              <Printer className="h-6 w-6" />
+              <div className="text-center">
+                <div className="font-semibold">Receipt Style</div>
+                <div className="text-xs text-muted-foreground">Simple text layout</div>
+              </div>
+            </Button>
+            <Button
+              variant={config.printStyle === 'showcase' ? 'default' : 'outline'}
+              onClick={() => updateConfig({ printStyle: 'showcase' })}
+              className="flex flex-col items-center gap-2 h-auto py-4"
+            >
+              <Layout className="h-6 w-6" />
+              <div className="text-center">
+                <div className="font-semibold">Showcase Card</div>
+                <div className="text-xs text-muted-foreground">Visual charts & styling</div>
+              </div>
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Receipt Printer Settings (only show if receipt style) */}
+      {config.printStyle === 'receipt' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Receipt Printer Settings</CardTitle>
+            <CardDescription>Configure for thermal receipt printers</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Characters per line: {config.receiptWidth}</Label>
+              <Slider
+                value={[config.receiptWidth]}
+                onValueChange={(value) => updateConfig({ receiptWidth: value[0] })}
+                min={24}
+                max={80}
+                step={4}
+                className="mt-2"
+              />
+            </div>
+            
+            <div>
+              <Label>Font size: {config.fontSize}px</Label>
+              <Slider
+                value={[config.fontSize]}
+                onValueChange={(value) => updateConfig({ fontSize: value[0] })}
+                min={8}
+                max={20}
+                step={1}
+                className="mt-2"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Content Options */}
       <Card>
@@ -197,6 +248,41 @@ const PrintSettings = ({ config, onConfigChange }: PrintSettingsProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Visual Chart Options (only show if showcase style) */}
+      {config.printStyle === 'showcase' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Visual Chart Options</CardTitle>
+            <CardDescription>Include interactive visual elements</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Effect Intensity Chart</Label>
+              <Switch
+                checked={config.includeEffectChart}
+                onCheckedChange={(checked) => updateConfig({ includeEffectChart: checked })}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Label>Terpene Intensity Chart</Label>
+              <Switch
+                checked={config.includeTerpeneChart}
+                onCheckedChange={(checked) => updateConfig({ includeTerpeneChart: checked })}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Label>Flavor Profile Chart</Label>
+              <Switch
+                checked={config.includeFlavorChart}
+                onCheckedChange={(checked) => updateConfig({ includeFlavorChart: checked })}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Layout Options */}
       <Card>

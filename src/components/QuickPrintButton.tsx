@@ -5,17 +5,17 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Printer, Copy, Image, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Strain } from '@/types/strain';
-import { PrintConfig } from '@/components/PrintSettings';
+import { PrintConfig, defaultConfig } from '@/components/PrintSettings';
 import { generateStrainText, generateStrainImage, downloadImage, copyToClipboard } from '@/utils/printGenerator';
 
 interface QuickPrintButtonProps {
   strain: Strain;
-  config: PrintConfig;
+  config?: PrintConfig;
   variant?: 'default' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg';
 }
 
-const QuickPrintButton = ({ strain, config, variant = 'outline', size = 'sm' }: QuickPrintButtonProps) => {
+const QuickPrintButton = ({ strain, config = defaultConfig, variant = 'outline', size = 'sm' }: QuickPrintButtonProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -49,12 +49,12 @@ const QuickPrintButton = ({ strain, config, variant = 'outline', size = 'sm' }: 
     setIsGenerating(true);
     try {
       const imageDataUrl = await generateStrainImage(strain, config);
-      const filename = `${strain.name.replace(/[^a-z0-9]/gi, '_')}_strain_info.png`;
+      const filename = `${strain.name.replace(/[^a-z0-9]/gi, '_')}_strain_${config.printStyle}.png`;
       downloadImage(imageDataUrl, filename);
       
       toast({
         title: "Image downloaded",
-        description: `${strain.name} strain info saved as PNG.`,
+        description: `${strain.name} strain info saved as ${config.printStyle} PNG.`,
       });
     } catch (error) {
       toast({
@@ -82,7 +82,7 @@ const QuickPrintButton = ({ strain, config, variant = 'outline', size = 'sm' }: 
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleImageExport} disabled={isGenerating}>
           <Image className="h-4 w-4 mr-2" />
-          {isGenerating ? 'Generating...' : 'Download as PNG'}
+          {isGenerating ? 'Generating...' : `Download as ${config.printStyle === 'showcase' ? 'Showcase' : 'Receipt'} PNG`}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
