@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CarouselApi } from '@/components/ui/carousel';
 import { Strain } from '@/types/strain';
+import { useRealtimeShowcaseFilters } from './useRealtimeShowcaseFilters';
 
 interface UseShowcaseCarouselProps {
   filteredStrains: Strain[];
@@ -11,6 +12,7 @@ interface UseShowcaseCarouselProps {
 export const useShowcaseCarousel = ({ filteredStrains, isPlaying }: UseShowcaseCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const { lastUpdateTime } = useRealtimeShowcaseFilters();
 
   // Sync carousel with current index
   useEffect(() => {
@@ -35,7 +37,7 @@ export const useShowcaseCarousel = ({ filteredStrains, isPlaying }: UseShowcaseC
     };
   }, [carouselApi]);
 
-  // Auto-advance logic
+  // Auto-advance logic with real-time filter sync
   useEffect(() => {
     if (!isPlaying || filteredStrains.length <= 1) return;
 
@@ -50,15 +52,15 @@ export const useShowcaseCarousel = ({ filteredStrains, isPlaying }: UseShowcaseC
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, filteredStrains.length, carouselApi]);
+  }, [isPlaying, filteredStrains.length, carouselApi, lastUpdateTime]);
 
-  // Reset index when filters change
+  // Reset index when filters change or real-time updates occur
   useEffect(() => {
     setCurrentIndex(0);
     if (carouselApi) {
       carouselApi.scrollTo(0);
     }
-  }, [filteredStrains.length, carouselApi]);
+  }, [filteredStrains.length, carouselApi, lastUpdateTime]);
 
   const handleNext = useCallback(() => {
     const nextIndex = (currentIndex + 1) % filteredStrains.length;
