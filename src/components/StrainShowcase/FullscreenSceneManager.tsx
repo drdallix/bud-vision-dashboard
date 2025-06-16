@@ -1,7 +1,8 @@
 
 import { ReactNode } from 'react';
 import { Strain } from '@/types/strain';
-import { TransitionMode, getStrainTransitionMode } from './FullscreenTransitions';
+import { TransitionMode } from './FullscreenTransitions';
+import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
 
 interface SceneConfig {
   backgroundGradient: string;
@@ -36,13 +37,20 @@ const STRAIN_SCENES: Record<string, SceneConfig> = {
 };
 
 interface FullscreenSceneManagerProps {
-  strain: Strain;
-  mode: TransitionMode;
-  children: ReactNode;
+  strains: Strain[];
+  currentIndex: number;
+  transitionMode: TransitionMode;
+  onStrainClick?: (strain: Strain) => void;
 }
 
-const FullscreenSceneManager = ({ strain, mode, children }: FullscreenSceneManagerProps) => {
-  const scene = STRAIN_SCENES[strain.type] || STRAIN_SCENES.Hybrid;
+const FullscreenSceneManager = ({ 
+  strains, 
+  currentIndex, 
+  transitionMode, 
+  onStrainClick 
+}: FullscreenSceneManagerProps) => {
+  const currentStrain = strains[currentIndex];
+  const scene = STRAIN_SCENES[currentStrain.type] || STRAIN_SCENES.Hybrid;
   
   return (
     <div className={`relative w-full h-full bg-gradient-to-br ${scene.backgroundGradient} overflow-hidden`}>
@@ -93,7 +101,13 @@ const FullscreenSceneManager = ({ strain, mode, children }: FullscreenSceneManag
         }}
       />
 
-      {children}
+      {/* Render the current strain slide */}
+      <FullscreenShowcaseSlide
+        strain={currentStrain}
+        isActive={true}
+        index={currentIndex}
+        transitionMode={transitionMode}
+      />
     </div>
   );
 };

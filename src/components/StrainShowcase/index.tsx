@@ -1,20 +1,21 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Strain } from '@/types/strain';
-import { ShowcaseFilters } from './ShowcaseFilters';
-import { ShowcaseSlide } from './ShowcaseSlide';
-import { ShowcaseControls } from './ShowcaseControls';
-import { ShowcaseProgress } from './ShowcaseProgress';
-import { FullscreenSceneManager } from './FullscreenSceneManager';
-import { FullscreenControls } from './FullscreenControls';
-import { FullscreenButton } from './FullscreenButton';
+import ShowcaseFilters from './ShowcaseFilters';
+import ShowcaseSlide from './ShowcaseSlide';
+import ShowcaseControls from './ShowcaseControls';
+import ShowcaseProgress from './ShowcaseProgress';
+import FullscreenSceneManager from './FullscreenSceneManager';
+import FullscreenControls from './FullscreenControls';
+import FullscreenButton from './FullscreenButton';
 import { TransitionMode } from './FullscreenTransitions';
 
 const StrainShowcase = () => {
   const [strains, setStrains] = useState<Strain[]>([]);
   const [filteredStrains, setFilteredStrains] = useState<Strain[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('recent');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['Indica', 'Sativa', 'Hybrid']);
+  const [sortBy, setSortBy] = useState<'name' | 'thc' | 'recent'>('recent');
+  const [minTHC, setMinTHC] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [slideInterval, setSlideInterval] = useState(5000);
@@ -26,9 +27,48 @@ const StrainShowcase = () => {
   useEffect(() => {
     // Mock data for demonstration
     const mockStrains: Strain[] = [
-      { id: '1', name: 'Northern Lights', type: 'Indica', thc: 20, cbd: 1, scannedAt: new Date(), effectProfiles: [], inStock: true, userId: '' },
-      { id: '2', name: 'Sour Diesel', type: 'Sativa', thc: 22, cbd: 0, scannedAt: new Date(), effectProfiles: [], inStock: true, userId: '' },
-      { id: '3', name: 'Blue Dream', type: 'Hybrid', thc: 19, cbd: 2, scannedAt: new Date(), effectProfiles: [], inStock: true, userId: '' },
+      { 
+        id: '1', 
+        name: 'Northern Lights', 
+        type: 'Indica', 
+        thc: 20, 
+        cbd: 1, 
+        scannedAt: new Date().toISOString(), 
+        effectProfiles: [], 
+        flavorProfiles: [],
+        description: 'A classic indica strain known for its relaxing effects and sweet, earthy aroma.',
+        confidence: 95,
+        inStock: true, 
+        userId: '' 
+      },
+      { 
+        id: '2', 
+        name: 'Sour Diesel', 
+        type: 'Sativa', 
+        thc: 22, 
+        cbd: 0, 
+        scannedAt: new Date().toISOString(), 
+        effectProfiles: [], 
+        flavorProfiles: [],
+        description: 'An energizing sativa with a distinctive diesel-like aroma and uplifting effects.',
+        confidence: 92,
+        inStock: true, 
+        userId: '' 
+      },
+      { 
+        id: '3', 
+        name: 'Blue Dream', 
+        type: 'Hybrid', 
+        thc: 19, 
+        cbd: 2, 
+        scannedAt: new Date().toISOString(), 
+        effectProfiles: [], 
+        flavorProfiles: [],
+        description: 'A balanced hybrid offering the best of both worlds with sweet berry flavors.',
+        confidence: 88,
+        inStock: true, 
+        userId: '' 
+      },
     ];
     setStrains(mockStrains);
     setFilteredStrains(mockStrains);
@@ -50,16 +90,17 @@ const StrainShowcase = () => {
     // Apply filters and sorting
     let results = [...strains];
 
-    if (searchTerm) {
-      results = results.filter(strain =>
-        strain.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    // Filter by types
+    if (selectedTypes.length > 0) {
+      results = results.filter(strain => selectedTypes.includes(strain.type));
     }
 
-    if (typeFilter !== 'all') {
-      results = results.filter(strain => strain.type === typeFilter);
+    // Filter by minimum THC
+    if (minTHC > 0) {
+      results = results.filter(strain => strain.thc >= minTHC);
     }
 
+    // Sort results
     if (sortBy === 'name') {
       results.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === 'thc') {
@@ -68,7 +109,7 @@ const StrainShowcase = () => {
 
     setFilteredStrains(results);
     setCurrentIndex(0); // Reset index when filters change
-  }, [strains, searchTerm, typeFilter, sortBy]);
+  }, [strains, selectedTypes, sortBy, minTHC]);
 
   const handleNavigation = (index: number) => {
     setCurrentIndex(index);
@@ -97,12 +138,13 @@ const StrainShowcase = () => {
           </div>
 
           <ShowcaseFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            typeFilter={typeFilter}
-            onTypeFilterChange={setTypeFilter}
+            selectedTypes={selectedTypes}
+            setSelectedTypes={setSelectedTypes}
             sortBy={sortBy}
-            onSortChange={setSortBy}
+            setSortBy={setSortBy}
+            minTHC={minTHC}
+            setMinTHC={setMinTHC}
+            strainCount={filteredStrains.length}
           />
 
           <div className="flex flex-col lg:flex-row gap-8 items-start">
