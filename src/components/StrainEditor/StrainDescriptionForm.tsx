@@ -1,14 +1,17 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Wand2, RefreshCw, History, Check, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Wand2, RefreshCw, History, Check, X, Mic } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import type { Tables } from '@/integrations/supabase/types';
+
+type Tone = Tables<'user_tones'>;
 
 interface StrainDescriptionFormProps {
   strain: Strain;
@@ -26,8 +29,50 @@ const StrainDescriptionForm = ({
   const [proposedDescription, setProposedDescription] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [availableTones, setAvailableTones] = useState<Tone[]>([]);
+  const [selectedToneId, setSelectedToneId] = useState<string>('');
+  const [defaultToneId, setDefaultToneId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetchTonesAndDefaults();
+    }
+  }, [user]);
+
+  const fetchTonesAndDefaults = async () => {
+    try {
+      // Fetch available tones
+      const { data: tones, error: tonesError } = await supabase
+        .from('user_tones')
+        .select('*')
+        .or(`user_id.is.null,user_id.eq.${user?.id}`)
+        .order('created_at', { ascending: true });
+
+      if (tonesError) throw tonesError;
+      setAvailableTones(tones || []);
+
+      // Fetch user's default tone
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('default_tone_id')
+        .eq('id', user?.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+      
+      const defaultId = profile?.default_tone_id || null;
+      setDefaultToneId(defaultId);
+      
+      // Set selected tone to default if none selected
+      if (!selectedToneId && defaultId) {
+        setSelectedToneId(defaultId);
+      }
+    } catch (error) {
+      console.error('Error fetching tones:', error);
+    }
+  };
 
   const handleRegenerateDescription = async () => {
     if (!humanGuidance.trim()) {
@@ -49,7 +94,8 @@ const StrainDescriptionForm = ({
           currentDescription: strain.description,
           humanGuidance: humanGuidance,
           effects: strain.effectProfiles?.map(e => e.name) || [],
-          flavors: strain.flavorProfiles?.map(f => f.name) || []
+          flavors: strain.flavorProfiles?.map(f => f.name) || [],
+          toneId: selectedToneId || null
         }
       });
 
@@ -149,6 +195,11 @@ const StrainDescriptionForm = ({
     });
   };
 
+  const getCurrentToneName = () => {
+    const currentTone = availableTones.find(t => t.id === (selectedToneId || defaultToneId));
+    return currentTone?.name || 'Professional';
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center gap-2 mb-2 sm:mb-4">
@@ -175,6 +226,46 @@ const StrainDescriptionForm = ({
           <div className="p-2 sm:p-3 bg-gray-50 border rounded-lg text-xs sm:text-sm text-black">
             {strain.description || 'No description available'}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Tone Selection */}
+      <Card>
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <Mic className="h-4 w-4" />
+            Description Tone
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Current:</span>
+            <Badge variant="secondary" className="text-xs">
+              {getCurrentToneName()}
+              {selectedToneId === defaultToneId && ' (Default)'}
+            </Badge>
+          </div>
+          
+          <Select value={selectedToneId || defaultToneId || ''} onValueChange={setSelectedToneId}>
+            <SelectTrigger className="text-sm">
+              <SelectValue placeholder="Select a tone for generation" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableTones.map((tone) => (
+                <SelectItem key={tone.id} value={tone.id}>
+                  <div className="flex items-center gap-2">
+                    <span>{tone.name}</span>
+                    {!tone.user_id && (
+                      <Badge variant="outline" className="text-xs">System</Badge>
+                    )}
+                    {tone.id === defaultToneId && (
+                      <Badge variant="secondary" className="text-xs">Default</Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
@@ -260,6 +351,7 @@ const StrainDescriptionForm = ({
             <li>• Mention unique characteristics or effects</li>
             <li>• Include customer feedback or observations</li>
             <li>• Note any medical uses or warnings</li>
+            <li>• Selected tone will influence the writing style</li>
           </ul>
         </CardContent>
       </Card>

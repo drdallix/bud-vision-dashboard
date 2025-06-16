@@ -14,9 +14,9 @@ serve(async (req) => {
   }
 
   try {
-    const { strainName, strainType, currentDescription, humanGuidance, effects, flavors } = await req.json()
+    const { strainName, strainType, currentDescription, humanGuidance, effects, flavors, toneId } = await req.json()
 
-    console.log('Regenerate description request:', { strainName, strainType, currentDescription, humanGuidance, effects, flavors })
+    console.log('Regenerate description request:', { strainName, strainType, currentDescription, humanGuidance, effects, flavors, toneId })
 
     // Validate required inputs
     if (!strainName || !humanGuidance) {
@@ -35,7 +35,71 @@ serve(async (req) => {
       )
     }
 
+    // Get authorization header to identify the user
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    })
+
+    // Get user's tone (either specified toneId or their default tone)
+    let tonePersonaPrompt = 'Write in a professional, informative tone suitable for a medical dispensary. Be factual and helpful without being overly technical. Focus on benefits and effects in a clear, trustworthy manner.'
+    
+    try {
+      let toneQuery
+      
+      if (toneId) {
+        // Use specific tone if provided
+        toneQuery = await supabase
+          .from('user_tones')
+          .select('persona_prompt')
+          .eq('id', toneId)
+          .single()
+      } else {
+        // Get user's default tone
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('default_tone_id')
+            .eq('id', userData.user.id)
+            .single()
+
+          if (profile?.default_tone_id) {
+            toneQuery = await supabase
+              .from('user_tones')
+              .select('persona_prompt')
+              .eq('id', profile.default_tone_id)
+              .single()
+          }
+        }
+      }
+
+      if (toneQuery?.data?.persona_prompt) {
+        tonePersonaPrompt = toneQuery.data.persona_prompt
+        console.log('Using tone persona prompt:', tonePersonaPrompt)
+      } else {
+        console.log('Using default tone persona prompt')
+      }
+    } catch (error) {
+      console.error('Error fetching tone, using default:', error)
+    }
+
     const prompt = `You are a cannabis expert writing product descriptions for a dispensary. 
+
+${tonePersonaPrompt}
 
 Strain: ${strainName}
 Type: ${strainType}
@@ -45,9 +109,9 @@ Flavors: ${flavors?.join(', ') || 'None specified'}
 
 Human Guidance/Corrections: ${humanGuidance}
 
-Based on the human guidance provided, please regenerate an improved product description that:
+Based on the human guidance provided and following the tone guidelines above, please regenerate an improved product description that:
 1. Incorporates the specific feedback and corrections mentioned
-2. Is professional and appealing to customers
+2. Follows the specified tone and writing style
 3. Is 2-3 sentences long
 4. Mentions key effects and flavors when relevant
 5. Addresses any specific concerns or additions mentioned in the guidance
@@ -67,7 +131,7 @@ Write only the new description, nothing else.`
         messages: [
           {
             role: 'system',
-            content: 'You are a professional cannabis copywriter. Write concise, accurate product descriptions.'
+            content: 'You are a professional cannabis copywriter. Write concise, accurate product descriptions following the specified tone and style guidelines.'
           },
           {
             role: 'user',
