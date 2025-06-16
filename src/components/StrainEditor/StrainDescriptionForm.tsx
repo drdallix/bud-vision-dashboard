@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -354,62 +353,6 @@ const StrainDescriptionForm = ({
       </Card>
     </div>
   );
-};
-
-const handleApproveDescription = async () => {
-  if (!user) {
-    toast({
-      title: "Authentication Required",
-      description: "You must be logged in to save changes.",
-      variant: "destructive"
-    });
-    return;
-  }
-
-  setIsSaving(true);
-  try {
-    console.log('Attempting to update strain description for strain ID:', strain.id);
-    
-    const { error } = await supabase
-      .from('scans')
-      .update({ 
-        description: proposedDescription 
-      })
-      .eq('id', strain.id);
-
-    if (error) {
-      console.error('Database update error:', error);
-      throw error;
-    }
-
-    console.log('Description updated successfully in database');
-
-    onUpdate('description', proposedDescription);
-    setProposedDescription('');
-    setHumanGuidance('');
-    
-    toast({
-      title: "Description Updated",
-      description: "The new description has been applied and saved to the strain."
-    });
-  } catch (error) {
-    console.error('Error saving description:', error);
-    toast({
-      title: "Save Failed",
-      description: error.message || "Failed to save description. Please try again.",
-      variant: "destructive"
-    });
-  } finally {
-    setIsSaving(false);
-  }
-};
-
-const handleRejectDescription = () => {
-  setProposedDescription('');
-  toast({
-    title: "Description Rejected",
-    description: "The proposed description has been discarded."
-  });
 };
 
 export default StrainDescriptionForm;
