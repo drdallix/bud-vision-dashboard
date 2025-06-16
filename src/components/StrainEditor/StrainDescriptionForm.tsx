@@ -71,11 +71,21 @@ const StrainDescriptionForm = ({
       });
     } catch (error) {
       console.error('Error regenerating description:', error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate new description. Please try again.",
-        variant: "destructive"
-      });
+      
+      // Handle specific error types
+      if (error.message?.includes('rate limit')) {
+        toast({
+          title: "Rate Limit Exceeded",
+          description: "OpenAI API rate limit reached. Please try again in a few minutes.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: error.message || "Failed to generate new description. Please try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsRegenerating(false);
     }
@@ -93,16 +103,15 @@ const StrainDescriptionForm = ({
 
     setIsSaving(true);
     try {
-      console.log('Attempting to update strain description for strain ID:', strain.id, 'User ID:', user.id);
+      console.log('Attempting to update strain description for strain ID:', strain.id);
       
-      // Update in database using the scans table
+      // Update in database using the scans table - now all authenticated users can edit any strain
       const { error } = await supabase
         .from('scans')
         .update({ 
           description: proposedDescription 
         })
-        .eq('id', strain.id)
-        .eq('user_id', user.id); // Ensure user can only update their own strains
+        .eq('id', strain.id);
 
       if (error) {
         console.error('Database update error:', error);
