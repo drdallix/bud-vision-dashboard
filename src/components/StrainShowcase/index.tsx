@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
 import { useStrainData } from '@/data/hooks/useStrainData';
@@ -13,6 +12,7 @@ const StrainShowcase = () => {
   const { user } = useAuth();
   const [filteredStrains, setFilteredStrains] = useState<Strain[]>([]);
   const [current, setCurrent] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Auto-play by default for signed-out users, paused for signed-in users
   const [paused, setPaused] = useState(!!user);
@@ -27,6 +27,16 @@ const StrainShowcase = () => {
 
   // Auto-hide controls timer
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  // Track fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
   
   // Set initial auto-play state based on user status
   useEffect(() => {
@@ -177,6 +187,42 @@ const StrainShowcase = () => {
     );
   }
 
+  // Fullscreen mode - only show the carousel
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <Carousel
+          setApi={setApi}
+          opts={{
+            loop: true,
+            skipSnaps: false,
+            align: 'center',
+            dragFree: false,
+            containScroll: 'trimSnaps',
+            slidesToScroll: 1,
+            duration: 25,
+          }}
+          className="w-full h-full"
+        >
+          <CarouselContent className="-ml-1 md:-ml-2 h-full">
+            {filteredStrains.map((strain, index) => (
+              <CarouselItem key={strain.id} className="pl-1 md:pl-2 h-full">
+                <div className="h-full flex items-center justify-center">
+                  <ShowcaseSlide 
+                    strain={strain} 
+                    isActive={index === current}
+                    index={index}
+                  />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
+    );
+  }
+
+  // Normal mode - show everything
   return (
     <div 
       className="w-full max-w-7xl mx-auto space-y-4 md:space-y-6 px-2 md:px-4"
