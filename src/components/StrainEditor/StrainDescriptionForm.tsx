@@ -166,7 +166,7 @@ const StrainDescriptionForm = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4">
-            <div className="p-2 sm:p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs sm:text-sm">
+            <div className="p-2 sm:p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs sm:text-sm text-black ">
               {proposedDescription}
             </div>
             
