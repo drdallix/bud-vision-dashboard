@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
@@ -15,11 +14,16 @@ import Navigation from '@/components/Layout/Navigation';
 import QuickStats from '@/components/Layout/QuickStats';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-
 const Index = () => {
-  const { user, loading: authLoading } = useAuth();
+  const {
+    user,
+    loading: authLoading
+  } = useAuth();
   const navigate = useNavigate();
-  const { strains, isLoading } = useRealtimeStrainStore();
+  const {
+    strains,
+    isLoading
+  } = useRealtimeStrainStore();
   const [activeTab, setActiveTab] = useState('showcase');
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,77 +38,54 @@ const Index = () => {
       }
     }
   }, [user, authLoading]);
-
   const handleStrainSelect = (strain: Strain) => {
     setCurrentStrain(strain);
     setActiveTab('details');
   };
-
   const handleStrainGenerated = (strain: Strain) => {
     setCurrentStrain(strain);
     setActiveTab('details');
   };
-
   const handleSettingsClick = () => {
     // Settings functionality can be implemented later
     console.log('Settings clicked');
   };
-
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+  return <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 ">
       <Header onSettingsClick={handleSettingsClick} />
       
       <main className="container mx-auto px-4 py-6">
         {/* Authentication Status & Quick Actions */}
         <div className="mb-6">
-          {user ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+          {user ? <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-green-800">
                   <span className="font-semibold">✓ Authenticated</span> - You can add, edit, and manage all strains in the shared database
                 </p>
               </div>
               <QuickStats scans={strains} />
-            </div>
-          ) : (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+            </div> : <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-blue-800">
                   <span className="font-semibold">👁️ Viewing Mode</span> - Browse and search all strains, but sign in to add new ones
                 </p>
               </div>
-              <Button 
-                onClick={() => navigate('/auth')}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button onClick={() => navigate('/auth')} size="sm" className="bg-blue-600 hover:bg-blue-700">
                 Sign In
               </Button>
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* Smart Omnibar - Only show for authenticated users */}
-        {user && (
-          <Card className="mb-6">
+        {user && <Card className="mb-6">
             <CardContent className="p-6">
-              <SmartOmnibar 
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                onStrainGenerated={handleStrainGenerated}
-                hasResults={strains.length > 0}
-              />
+              <SmartOmnibar searchTerm={searchTerm} onSearchChange={setSearchTerm} onStrainGenerated={handleStrainGenerated} hasResults={strains.length > 0} />
             </CardContent>
-          </Card>
-        )}
+          </Card>}
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -127,20 +108,14 @@ const Index = () => {
             <StrainShowcase onStrainSelect={handleStrainSelect} />
           </TabsContent>
 
-          {user && (
-            <TabsContent value="browse" className="space-y-6">
+          {user && <TabsContent value="browse" className="space-y-6">
               <BrowseStrains onStrainSelect={handleStrainSelect} />
-            </TabsContent>
-          )}
+            </TabsContent>}
 
           <TabsContent value="details" className="space-y-6">
-            {currentStrain ? (
-              <StrainDashboard strain={currentStrain} />
-            ) : (
-              <div className="text-center py-12">
+            {currentStrain ? <StrainDashboard strain={currentStrain} /> : <div className="text-center py-12">
                 <p className="text-muted-foreground">Select a strain to view details</p>
-              </div>
-            )}
+              </div>}
           </TabsContent>
         </Tabs>
 
@@ -152,12 +127,7 @@ const Index = () => {
         </div>
       </main>
 
-      <MobileNavigation 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab}
-      />
-    </div>
-  );
+      <MobileNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+    </div>;
 };
-
 export default Index;
