@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Strain } from '@/types/strain';
 import type { Tables } from '@/integrations/supabase/types';
@@ -143,6 +142,7 @@ export const ensureStrainHasDefaultTone = async (
  * Get default system tones as fallback
  */
 const getDefaultTones = (): Tone[] => {
+  const now = new Date().toISOString();
   return [
     {
       id: '00000000-0000-0000-0000-000000000001',
@@ -151,8 +151,8 @@ const getDefaultTones = (): Tone[] => {
       persona_prompt: 'Write in a professional, clear, and informative manner suitable for business communications.',
       user_id: null,
       is_default: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: now,
+      updated_at: now
     }
   ];
 };
