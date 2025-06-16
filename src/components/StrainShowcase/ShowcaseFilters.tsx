@@ -59,8 +59,8 @@ const ShowcaseFilters = ({
           </div>
 
           {/* Sort Options */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Sort By:</label>
+          <div className="space-y-3 text-white ">
+            <label className="text-sm font-medium text-black ">Sort By:</label>
             <Select value={sortBy} onValueChange={(value: 'name' | 'thc' | 'recent') => setSortBy(value)}>
               <SelectTrigger>
                 <SelectValue />
