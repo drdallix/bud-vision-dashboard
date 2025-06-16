@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,7 @@ const StrainDescriptionForm = ({
   const [showHistory, setShowHistory] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [availableTones, setAvailableTones] = useState<UserTone[]>([]);
-  const [selectedToneId, setSelectedToneId] = useState<string>('');
+  const [selectedToneId, setSelectedToneId] = useState<string>('default');
   const [currentTone, setCurrentTone] = useState<UserTone | null>(null);
   const [tonesLoading, setTonesLoading] = useState(true);
   const { toast } = useToast();
@@ -50,7 +51,7 @@ const StrainDescriptionForm = ({
       
       setAvailableTones(tones);
       setCurrentTone(defaultTone);
-      setSelectedToneId(defaultTone?.id || '');
+      setSelectedToneId('default');
     } catch (error) {
       console.error('Error loading tones:', error);
       toast({
@@ -84,7 +85,7 @@ const StrainDescriptionForm = ({
           humanGuidance: humanGuidance,
           effects: strain.effectProfiles?.map(e => e.name) || [],
           flavors: strain.flavorProfiles?.map(f => f.name) || [],
-          toneId: selectedToneId || currentTone?.id
+          toneId: selectedToneId === 'default' ? currentTone?.id : selectedToneId
         }
       });
 
@@ -261,7 +262,7 @@ const StrainDescriptionForm = ({
                 <SelectValue placeholder="Use current default tone" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Use current default tone</SelectItem>
+                <SelectItem value="default">Use current default tone</SelectItem>
                 {availableTones.map((tone) => (
                   <SelectItem key={tone.id} value={tone.id}>
                     <div className="flex items-center gap-2">
@@ -301,7 +302,7 @@ const StrainDescriptionForm = ({
           <CardHeader className="pb-3 sm:pb-6">
             <CardTitle className="text-sm sm:text-base text-purple-900">
               Proposed New Description
-              {selectedToneId && (
+              {selectedToneId !== 'default' && (
                 <Badge variant="secondary" className="ml-2 text-xs">
                   {availableTones.find(t => t.id === selectedToneId)?.name || 'Custom Tone'}
                 </Badge>
@@ -353,6 +354,62 @@ const StrainDescriptionForm = ({
       </Card>
     </div>
   );
+};
+
+const handleApproveDescription = async () => {
+  if (!user) {
+    toast({
+      title: "Authentication Required",
+      description: "You must be logged in to save changes.",
+      variant: "destructive"
+    });
+    return;
+  }
+
+  setIsSaving(true);
+  try {
+    console.log('Attempting to update strain description for strain ID:', strain.id);
+    
+    const { error } = await supabase
+      .from('scans')
+      .update({ 
+        description: proposedDescription 
+      })
+      .eq('id', strain.id);
+
+    if (error) {
+      console.error('Database update error:', error);
+      throw error;
+    }
+
+    console.log('Description updated successfully in database');
+
+    onUpdate('description', proposedDescription);
+    setProposedDescription('');
+    setHumanGuidance('');
+    
+    toast({
+      title: "Description Updated",
+      description: "The new description has been applied and saved to the strain."
+    });
+  } catch (error) {
+    console.error('Error saving description:', error);
+    toast({
+      title: "Save Failed",
+      description: error.message || "Failed to save description. Please try again.",
+      variant: "destructive"
+    });
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+const handleRejectDescription = () => {
+  setProposedDescription('');
+  toast({
+    title: "Description Rejected",
+    description: "The proposed description has been discarded."
+  });
 };
 
 export default StrainDescriptionForm;
