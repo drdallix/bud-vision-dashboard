@@ -29,7 +29,10 @@ export const useShowcaseCarousel = ({ filteredStrains, isPlaying }: UseShowcaseC
     };
 
     carouselApi.on('select', onSelect);
-    return () => carouselApi.off('select', onSelect);
+    
+    return () => {
+      carouselApi.off('select', onSelect);
+    };
   }, [carouselApi]);
 
   // Auto-advance logic
