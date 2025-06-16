@@ -30,6 +30,7 @@ export const ToneShowcase = ({
   const [storedDescriptions, setStoredDescriptions] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApplyingToAll, setIsApplyingToAll] = useState(false);
+  const [isApplyingToneToAll, setIsApplyingToneToAll] = useState(false);
   const [applyProgress, setApplyProgress] = useState(0);
   const [currentDescription, setCurrentDescription] = useState(strain.description || '');
   const { toast } = useToast();
@@ -299,6 +300,91 @@ export const ToneShowcase = ({
     }
   };
 
+  // New function to apply the selected tone to all strains that have tone descriptions
+  const applySelectedToneToAllValidStrains = async () => {
+    if (!selectedToneId || !user) return;
+    
+    setIsApplyingToneToAll(true);
+    setApplyProgress(0);
+
+    try {
+      // Get all strain-tone descriptions for the selected tone
+      const { data: toneDescriptions, error: fetchError } = await supabase
+        .from('strain_tone_descriptions')
+        .select('strain_id, generated_description')
+        .eq('tone_id', selectedToneId);
+
+      if (fetchError) throw fetchError;
+
+      if (!toneDescriptions || toneDescriptions.length === 0) {
+        toast({
+          title: "No Descriptions Found",
+          description: "No tone descriptions found for the selected tone.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const totalDescriptions = toneDescriptions.length;
+      let processedCount = 0;
+
+      for (const toneDesc of toneDescriptions) {
+        try {
+          // Apply the tone description to each strain
+          const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(toneDesc.strain_id);
+          
+          let updateQuery;
+          if (isValidUUID) {
+            updateQuery = supabase
+              .from('scans')
+              .update({ description: toneDesc.generated_description })
+              .eq('id', toneDesc.strain_id);
+          } else {
+            // For non-UUID strain IDs, we need to find by strain name and user
+            const strain = strains.find(s => s.id === toneDesc.strain_id);
+            if (strain) {
+              updateQuery = supabase
+                .from('scans')
+                .update({ description: toneDesc.generated_description })
+                .eq('strain_name', strain.name)
+                .eq('user_id', user.id);
+            }
+          }
+
+          if (updateQuery) {
+            await updateQuery;
+            
+            // Update strain cache
+            updateStrainInCache(toneDesc.strain_id, { description: toneDesc.generated_description });
+          }
+        } catch (error) {
+          console.error(`Error updating strain ${toneDesc.strain_id}:`, error);
+        }
+
+        processedCount++;
+        setApplyProgress((processedCount / totalDescriptions) * 100);
+        
+        // Small delay for visual feedback
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      toast({
+        title: "Tone Applied Successfully",
+        description: `Applied "${getCurrentToneName()}" tone to ${processedCount} strains in the database.`
+      });
+    } catch (error) {
+      console.error('Error applying tone to all valid strains:', error);
+      toast({
+        title: "Application Failed",
+        description: "Failed to apply tone to all valid strains.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsApplyingToneToAll(false);
+      setApplyProgress(0);
+    }
+  };
+
   const getCurrentToneName = () => {
     const tone = availableTones.find(t => t.id === selectedToneId);
     return tone?.name || 'Professional';
@@ -355,6 +441,34 @@ export const ToneShowcase = ({
           storedDescriptions={storedDescriptions}
           onToneSwitch={switchToTone}
         />
+
+        {/* New Apply Tone to All Valid Strains Button */}
+        <div className="border-t pt-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Database Actions:
+            </label>
+            <button
+              onClick={applySelectedToneToAllValidStrains}
+              disabled={isApplyingToneToAll || !selectedToneId}
+              className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              {isApplyingToneToAll ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Applying {getCurrentToneName()} to All Valid Strains... ({Math.round(applyProgress)}%)
+                </>
+              ) : (
+                <>
+                  🎨 Apply "{getCurrentToneName()}" Tone to All Valid Strains
+                </>
+              )}
+            </button>
+            <p className="text-xs text-gray-500">
+              This will apply the "{getCurrentToneName()}" tone descriptions to all strains that have generated descriptions for this tone.
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
