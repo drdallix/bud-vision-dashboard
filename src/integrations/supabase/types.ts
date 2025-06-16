@@ -48,6 +48,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          default_tone_id: string | null
           email: string | null
           full_name: string | null
           id: string
@@ -56,6 +57,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          default_tone_id?: string | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -64,12 +66,21 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          default_tone_id?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_default_tone_id_fkey"
+            columns: ["default_tone_id"]
+            isOneToOne: false
+            referencedRelation: "user_tones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scans: {
         Row: {
@@ -125,6 +136,39 @@ export type Database = {
           terpenes?: Json | null
           thc?: number | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_tones: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          persona_prompt: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          persona_prompt: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          persona_prompt?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

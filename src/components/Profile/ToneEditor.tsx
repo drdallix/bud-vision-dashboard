@@ -70,7 +70,7 @@ const ToneEditor = ({ open, onOpenChange, tone, onSave }: ToneEditorProps) => {
       if (tone) {
         // Update existing tone
         result = await supabase
-          .from('user_tones')
+          .from('user_tones' as any)
           .update(toneData)
           .eq('id', tone.id)
           .select()
@@ -78,7 +78,7 @@ const ToneEditor = ({ open, onOpenChange, tone, onSave }: ToneEditorProps) => {
       } else {
         // Create new tone
         result = await supabase
-          .from('user_tones')
+          .from('user_tones' as any)
           .insert(toneData)
           .select()
           .single();
