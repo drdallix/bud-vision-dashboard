@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import StrainPage from "./pages/StrainPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/strains/:strainName" element={<StrainPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
