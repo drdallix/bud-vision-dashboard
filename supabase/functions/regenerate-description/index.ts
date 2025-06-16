@@ -111,10 +111,14 @@ Human Guidance/Corrections: ${humanGuidance}
 
 Based on the human guidance provided and following the tone guidelines above, please regenerate an improved product description that:
 1. Incorporates the specific feedback and corrections mentioned
-2. Follows the specified tone and writing style
-3. Is 2-3 sentences long
+2. Follows the specified tone and writing style exactly
+3. Is EXACTLY 3-5 sentences long (comprehensive and detailed)
 4. Mentions key effects and flavors when relevant
 5. Addresses any specific concerns or additions mentioned in the guidance
+6. Provides rich detail about the strain's characteristics, background, and appeal
+7. Uses engaging, descriptive language appropriate to the tone
+
+Important: Write a complete, comprehensive description of 3-5 full sentences. Do not write short, abbreviated descriptions. Each sentence should be substantial and informative.
 
 Write only the new description, nothing else.`
 
@@ -131,14 +135,14 @@ Write only the new description, nothing else.`
         messages: [
           {
             role: 'system',
-            content: 'You are a professional cannabis copywriter. Write concise, accurate product descriptions following the specified tone and style guidelines.'
+            content: 'You are a professional cannabis copywriter. Write comprehensive, detailed product descriptions of exactly 3-5 sentences following the specified tone and style guidelines. Each sentence should be substantial and informative, providing rich detail about the strain.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 200,
+        max_tokens: 400,
         temperature: 0.7,
       }),
     })
