@@ -8,20 +8,29 @@ import { useBulkStrainPrices } from './useBulkStrainPrices';
 
 export const useBrowseStrains = () => {
   const { strains, isLoading, refetch } = useStrainData(false);
-  const { pricesMap = {}, isLoading: pricesLoading } = useBulkStrainPrices(strains);
+  
+  // Extract strain IDs for price fetching
+  const strainIds = useMemo(() => strains.map(strain => strain.id), [strains]);
+  const { pricesMap = {}, isLoading: pricesLoading } = useBulkStrainPrices(strainIds);
 
   const {
     searchTerm,
-    filterType: typeFilter,
+    filterType,
     sortBy,
-    priceFilter: stockFilter,
+    priceFilter,
     setSearchTerm,
-    setFilterType: setTypeFilter,
+    setFilterType,
     setSortBy,
-    setPriceFilter: setStockFilter,
+    setPriceFilter,
     updateFilters,
     filteredStrains: filteredAndSortedStrains
   } = useBrowseFilters(strains);
+
+  // Create aliases for backward compatibility
+  const typeFilter = filterType;
+  const stockFilter = priceFilter;
+  const setTypeFilter = setFilterType;
+  const setStockFilter = setPriceFilter;
 
   // Create sortOrder from sortBy for backward compatibility
   const sortOrder = sortBy === 'recent' ? 'desc' : 'asc';

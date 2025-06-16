@@ -43,33 +43,33 @@ const BrowseStrains = memo(() => {
 
   return (
     <div className="space-y-6">
-      <BrowseHeader stats={stats} />
-      
-      <FilterControls
-        searchTerm={searchTerm}
-        typeFilter={typeFilter}
-        stockFilter={stockFilter}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onSearchChange={setSearchTerm}
-        onTypeChange={setTypeFilter}
-        onStockChange={setStockFilter}
-        onSortByChange={setSortBy}
-        onSortOrderChange={setSortOrder}
-        onClearFilters={clearFilters}
-        editMode={editMode}
-        onToggleEditMode={setEditMode}
+      <BrowseHeader 
         selectedCount={selectedStrains.length}
         totalCount={stats.filteredStrains}
         onSelectAll={selectAll}
         onClearSelection={clearSelection}
+        onBatchStockUpdate={bulkUpdateStock}
+        selectedStrains={selectedStrains}
+        inventoryLoading={isUpdating}
+      />
+      
+      <FilterControls
+        filterType={typeFilter}
+        sortBy={sortBy}
+        priceFilter={stockFilter}
+        onFilterChange={setTypeFilter}
+        onSortChange={setSortBy}
+        onPriceFilterChange={setStockFilter}
       />
 
       {editMode && selectedStrains.length > 0 && (
         <BatchActions
-          selectedStrains={selectedStrains}
-          onBulkUpdateStock={bulkUpdateStock}
-          isLoading={isUpdating}
+          selectedCount={selectedStrains.length}
+          onInStock={() => bulkUpdateStock(true)}
+          onOutOfStock={() => bulkUpdateStock(false)}
+          onClear={clearSelection}
+          loading={isUpdating}
+          onBatchPrice={async () => {}} // Placeholder for batch price functionality
         />
       )}
 
