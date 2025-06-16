@@ -6,13 +6,11 @@ import { useStrainData } from '@/data/hooks/useStrainData';
 import { Strain } from '@/types/strain';
 
 const generationSteps = [
-  "Analyzing input data...",
-  "Processing strain characteristics...",
-  "Identifying effects and flavors...",
-  "Calculating THC/CBD levels...",
-  "Generating terpene profile...",
-  "Creating strain description...",
-  "Finalizing results..."
+  "Scanning cannabis databases...",
+  "Cross-referencing strain genetics...",
+  "Analyzing terpene profiles...",
+  "Compiling lab results...",
+  "Finalizing strain profile..."
 ];
 
 interface UseGenerationLogicProps {
@@ -37,7 +35,7 @@ export const useGenerationLogic = ({
   const { user } = useAuth();
   const { addStrainToCache } = useStrainData(false);
 
-  // Animation for step text
+  // Fast typing animation
   useEffect(() => {
     if (!isGenerating) return;
 
@@ -52,15 +50,15 @@ export const useGenerationLogic = ({
       } else {
         clearInterval(typeWriter);
         
-        // Move to next step after a brief pause
+        // Quick step advancement (200ms instead of 800ms)
         setTimeout(() => {
           if (generationStep < generationSteps.length - 1) {
             setGenerationStep(prev => prev + 1);
             setProgress(prev => Math.min(prev + (100 / generationSteps.length), 95));
           }
-        }, 800);
+        }, 200);
       }
-    }, 50);
+    }, 25); // Faster typing (25ms instead of 50ms)
 
     return () => clearInterval(typeWriter);
   }, [generationStep, isGenerating]);
@@ -71,14 +69,17 @@ export const useGenerationLogic = ({
 
     setIsGenerating(true);
     setGenerationStep(0);
-    setProgress(5);
+    setProgress(10);
     setCurrentStepText('');
 
     try {
-      // Simulate more realistic timing
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Start AI request immediately, don't wait for animations
+      const aiPromise = analyzeStrainWithAI(uploadedImage, searchTerm.trim(), user.id);
       
-      const result = await analyzeStrainWithAI(uploadedImage, searchTerm.trim(), user.id);
+      // Let animations play while AI processes
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const result = await aiPromise;
       
       const strain: Strain = {
         ...result,
@@ -88,12 +89,12 @@ export const useGenerationLogic = ({
         userId: user.id
       };
 
-      // Complete the progress
+      // Complete progress quickly
       setProgress(100);
-      setCurrentStepText('Generation complete!');
+      setCurrentStepText('Database search complete!');
       
       // Brief pause before finishing
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       addStrainToCache(strain);
       onStrainGenerated(strain);
@@ -101,8 +102,8 @@ export const useGenerationLogic = ({
       setUploadedImage(null);
     } catch (error) {
       console.error('Generation failed:', error);
-      setCurrentStepText('Generation failed. Please try again.');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      setCurrentStepText('Database search failed. Please try again.');
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } finally {
       setIsGenerating(false);
       setGenerationStep(0);

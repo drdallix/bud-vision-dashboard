@@ -1,37 +1,63 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ThemeProvider } from "@/components/ui/theme-provider";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import StrainPage from "./pages/StrainPage";
-import NotFound from "./pages/NotFound";
+import { Suspense, lazy } from 'react';
+import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from 'next-themes';
+import { AuthProvider } from '@/contexts/AuthContext';
 
-const queryClient = new QueryClient();
+// Lazy load components
+const Index = lazy(() => import('./pages/Index'));
+const Auth = lazy(() => import('./pages/Auth'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const StrainPage = lazy(() => import('./pages/StrainPage'));
+const ShopMenu = lazy(() => import('./components/ShopMenu'));
+const { StrainApiEndpoint, QRApiEndpoint } = lazy(() => import('./pages/api/StrainApi'));
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="dark" storageKey="cannabis-app-theme">
-      <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/strains/:strainName" element={<StrainPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    },
+  },
+});
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <TooltipProvider>
+          <AuthProvider>
+            <Router>
+              <div className="min-h-screen bg-background font-sans antialiased">
+                <Suspense fallback={
+                  <div className="flex items-center justify-center min-h-screen">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                  </div>
+                }>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/menu" element={<ShopMenu />} />
+                    <Route path="/strain/:strainName" element={<StrainPage />} />
+                    
+                    {/* API Endpoints */}
+                    <Route path="/api/strains/:id" element={<StrainApiEndpoint />} />
+                    <Route path="/api/qr/:action" element={<QRApiEndpoint />} />
+                    
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </div>
+            </Router>
+            <Toaster />
+          </AuthProvider>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
