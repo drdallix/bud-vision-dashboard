@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
@@ -6,9 +5,11 @@ import { TransitionMode } from './FullscreenTransitions';
 import { useAdvancedFilters } from '@/components/BrowseStrains/hooks/useAdvancedFilters';
 import MobileFilters from '@/components/BrowseStrains/MobileFilters';
 import { useShowcaseCarousel } from './hooks/useShowcaseCarousel';
+import { useFavoriteStrains } from '@/hooks/useFavoriteStrains';
 import ShowcaseCarousel from './components/ShowcaseCarousel';
 import FullscreenView from './components/FullscreenView';
 import EmptyState from './components/EmptyState';
+import FavoritesComparison from './components/FavoritesComparison';
 
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
@@ -20,6 +21,9 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
+
+  // Favorites management
+  const { favoriteStrains, toggleFavorite, isFavorite, clearFavorites } = useFavoriteStrains();
 
   // Use the same advanced filters as BrowseStrains
   const {
@@ -111,7 +115,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <MobileFilters
         strains={strains}
         filterType={filterType}
@@ -129,51 +133,63 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
         onClearAll={clearAllFilters}
       />
 
-      <ShowcaseCarousel
-        filteredStrains={filteredStrains}
-        currentIndex={currentIndex}
-        setCarouselApi={setCarouselApi}
-        onNavigateToIndex={handleNavigateToIndex}
-      />
+      {/* Modified ShowcaseCarousel with favorites integration */}
+      <div className="space-y-4">
+        <ShowcaseCarousel
+          filteredStrains={filteredStrains}
+          currentIndex={currentIndex}
+          setCarouselApi={setCarouselApi}
+          onNavigateToIndex={handleNavigateToIndex}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+        />
 
-      {/* Compact showcase controls */}
-      <div className="flex items-center justify-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg">
-        <button
-          onClick={handlePrevious}
-          className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-          disabled={filteredStrains.length <= 1}
-        >
-          ←
-        </button>
-        
-        <button
-          onClick={() => setIsPlaying(!isPlaying)}
-          className="p-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors"
-          disabled={filteredStrains.length <= 1}
-        >
-          {isPlaying ? '⏸️' : '▶️'}
-        </button>
-        
-        <button
-          onClick={handleNext}
-          className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-          disabled={filteredStrains.length <= 1}
-        >
-          →
-        </button>
-        
-        <button
-          onClick={handleFullscreen}
-          className="p-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors"
-          disabled={filteredStrains.length <= 1}
-        >
-          ⛶
-        </button>
-        
-        <span className="text-sm text-gray-600">
-          {currentIndex + 1} / {filteredStrains.length}
-        </span>
+        {/* Compact mobile-first controls */}
+        <div className="flex items-center justify-center gap-3 p-3 bg-white/90 backdrop-blur-sm rounded-lg">
+          <button
+            onClick={handlePrevious}
+            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
+            disabled={filteredStrains.length <= 1}
+          >
+            ←
+          </button>
+          
+          <button
+            onClick={() => setIsPlaying(!isPlaying)}
+            className="p-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
+            disabled={filteredStrains.length <= 1}
+          >
+            {isPlaying ? '⏸️' : '▶️'}
+          </button>
+          
+          <button
+            onClick={handleNext}
+            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
+            disabled={filteredStrains.length <= 1}
+          >
+            →
+          </button>
+          
+          <button
+            onClick={handleFullscreen}
+            className="p-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
+            disabled={filteredStrains.length <= 1}
+          >
+            ⛶
+          </button>
+          
+          <span className="text-sm text-gray-600 ml-2">
+            {currentIndex + 1} / {filteredStrains.length}
+          </span>
+        </div>
       </div>
+
+      {/* Favorites Comparison Table */}
+      <FavoritesComparison 
+        favoriteStrains={favoriteStrains}
+        onRemoveFavorite={toggleFavorite}
+        onClearAll={clearFavorites}
+      />
     </div>
   );
 };

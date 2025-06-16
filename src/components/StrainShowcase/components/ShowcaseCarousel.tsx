@@ -8,13 +8,17 @@ interface ShowcaseCarouselProps {
   currentIndex: number;
   setCarouselApi: (api: CarouselApi) => void;
   onNavigateToIndex: (index: number) => void;
+  isFavorite: (strainId: string) => boolean;
+  onToggleFavorite: (strain: Strain) => void;
 }
 
 const ShowcaseCarousel = ({ 
   filteredStrains, 
   currentIndex, 
   setCarouselApi, 
-  onNavigateToIndex 
+  onNavigateToIndex,
+  isFavorite,
+  onToggleFavorite
 }: ShowcaseCarouselProps) => {
   return (
     <div className="relative">
@@ -24,58 +28,54 @@ const ShowcaseCarousel = ({
         opts={{
           align: "center",
           loop: true,
-          duration: 20, // Smooth transition duration
+          duration: 15, // Snappy transition
+          skipSnaps: false,
+          dragFree: false,
         }}
       >
-        <CarouselContent className="-ml-2 md:-ml-4 transition-transform duration-500 ease-in-out">
+        <CarouselContent className="-ml-1 md:-ml-4">
           {filteredStrains.map((strain, index) => (
             <CarouselItem 
               key={strain.id} 
-              className="pl-2 md:pl-4 basis-full transform transition-all duration-500 ease-in-out"
-              style={{
-                transform: index === currentIndex ? 'scale(1)' : 'scale(0.95)',
-                opacity: index === currentIndex ? 1 : 0.7
-              }}
+              className="pl-1 md:pl-4 basis-full"
             >
-              <div 
-                className={`min-h-[600px] bg-gradient-to-br from-background to-muted/20 rounded-2xl p-4 md:p-6 shadow-lg transition-all duration-500 ease-in-out ${
-                  index === currentIndex ? 'shadow-2xl scale-100' : 'shadow-md scale-95'
-                }`}
-              >
+              <div className="min-h-[500px] md:min-h-[600px] bg-gradient-to-br from-background to-muted/20 rounded-xl md:rounded-2xl p-3 md:p-6 shadow-md">
                 <ShowcaseSlide
                   strain={strain}
                   isActive={index === currentIndex}
                   index={index}
+                  isFavorite={isFavorite(strain.id)}
+                  onToggleFavorite={onToggleFavorite}
                 />
               </div>
             </CarouselItem>
           ))}
         </CarouselContent>
         
-        {/* Desktop Navigation Arrows with smooth transitions */}
+        {/* Desktop Navigation Arrows */}
         <div className="hidden md:block">
-          <CarouselPrevious className="absolute -left-12 top-1/2 transition-all duration-300 hover:scale-110 hover:shadow-lg" />
-          <CarouselNext className="absolute -right-12 top-1/2 transition-all duration-300 hover:scale-110 hover:shadow-lg" />
+          <CarouselPrevious className="absolute -left-12 top-1/2" />
+          <CarouselNext className="absolute -right-12 top-1/2" />
         </div>
       </Carousel>
 
-      {/* Mobile Swipe Indicators/Dots with animations */}
-      <div className="flex justify-center mt-4 space-x-2 md:hidden">
-        {filteredStrains.slice(0, Math.min(10, filteredStrains.length)).map((_, index) => (
+      {/* Mobile swipe indicators - simplified and larger for one-handed use */}
+      <div className="flex justify-center mt-3 space-x-1 md:hidden">
+        {filteredStrains.slice(0, Math.min(8, filteredStrains.length)).map((_, index) => (
           <button
             key={index}
-            className={`w-2 h-2 rounded-full transition-all duration-500 ease-in-out transform ${
+            className={`w-3 h-3 rounded-full transition-all duration-200 ${
               index === currentIndex 
-                ? 'bg-green-600 scale-150 shadow-lg' 
-                : 'bg-gray-300 hover:bg-gray-400 hover:scale-125'
+                ? 'bg-green-600 scale-110' 
+                : 'bg-gray-300 active:bg-gray-400'
             }`}
             onClick={() => onNavigateToIndex(index)}
             aria-label={`Go to slide ${index + 1}`}
           />
         ))}
-        {filteredStrains.length > 10 && (
-          <span className="text-xs text-muted-foreground ml-2 animate-fade-in">
-            +{filteredStrains.length - 10}
+        {filteredStrains.length > 8 && (
+          <span className="text-xs text-muted-foreground ml-2">
+            +{filteredStrains.length - 8}
           </span>
         )}
       </div>
