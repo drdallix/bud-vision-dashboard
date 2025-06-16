@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -151,13 +152,25 @@ const StrainDescriptionForm = ({
     try {
       console.log('Attempting to update strain description for strain ID:', strain.id);
       
-      // Update in database using the scans table - now all authenticated users can edit any strain
-      const { error } = await supabase
-        .from('scans')
-        .update({ 
-          description: proposedDescription 
-        })
-        .eq('id', strain.id);
+      // Check if strain.id is a valid UUID, if not, find the strain by name
+      let updateQuery;
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(strain.id);
+      
+      if (isValidUUID) {
+        updateQuery = supabase
+          .from('scans')
+          .update({ description: proposedDescription })
+          .eq('id', strain.id);
+      } else {
+        // If ID is not a UUID, try to find by strain name and user
+        updateQuery = supabase
+          .from('scans')
+          .update({ description: proposedDescription })
+          .eq('strain_name', strain.name)
+          .eq('user_id', user.id);
+      }
+
+      const { error } = await updateQuery;
 
       if (error) {
         console.error('Database update error:', error);
