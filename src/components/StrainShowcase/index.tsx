@@ -5,7 +5,7 @@ import { Strain } from '@/types/strain';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
-import FullscreenSceneManager from './FullscreenSceneManager';
+import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
 import { TransitionMode } from './FullscreenTransitions';
 
 interface StrainShowcaseProps {
@@ -98,15 +98,12 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   if (isFullscreen) {
     return (
       <div className="fixed inset-0 bg-black z-50">
-        <FullscreenSceneManager
+        <FullscreenShowcaseSlide
           strain={currentStrain}
-          mode={transitionMode}
-        >
-          <ShowcaseSlide
-            strain={currentStrain}
-            onStrainClick={handleStrainClick}
-          />
-        </FullscreenSceneManager>
+          isActive={true}
+          index={currentIndex}
+          transitionMode={transitionMode}
+        />
         <button
           onClick={handleExitFullscreen}
           className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 z-10"
@@ -127,11 +124,16 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
         strainCount={filteredStrains.length}
       />
 
-      <div className="relative">
-        <ShowcaseSlide
-          strain={currentStrain}
-          onStrainClick={handleStrainClick}
-        />
+      {/* Main showcase area with proper card visibility */}
+      <div className="relative min-h-[600px] bg-gradient-to-br from-background to-muted/20 rounded-2xl p-6 shadow-lg">
+        <div className="max-w-4xl mx-auto">
+          <ShowcaseSlide
+            strain={currentStrain}
+            onStrainClick={handleStrainClick}
+            isActive={true}
+            index={currentIndex}
+          />
+        </div>
 
         <ShowcaseControls
           isPlaying={isPlaying}

@@ -24,9 +24,20 @@ interface StrainGridProps {
  * eliminating conditional hook calls that caused render errors.
  */
 const StrainGrid = (props: StrainGridProps) => {
+  // Map the props to match SafeStrainGrid interface
+  const safeGridProps = {
+    strains: props.strains,
+    editMode: props.editMode,
+    selectedStrains: props.selectedStrains,
+    onStrainSelect: props.onSelect,
+    onStockToggle: props.onStockToggle,
+    onStrainClick: props.onStrainClick,
+    inventoryLoading: props.inventoryLoading
+  };
+
   return (
     <StrainErrorBoundary>
-      <SafeStrainGrid {...props} />
+      <SafeStrainGrid {...safeGridProps} />
     </StrainErrorBoundary>
   );
 };
