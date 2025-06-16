@@ -109,11 +109,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         strains={filteredStrains || []}
         editMode={selectedStrains.length > 0}
         selectedStrains={selectedStrains}
-        user={null} // Will be populated by auth context
-        onSelect={toggleSelection}
-        onStockToggle={handleStockToggle}
-        onStrainClick={onStrainSelect}
-        inventoryLoading={inventoryLoading}
+        onToggleStrain={toggleSelection}
         pricesMap={pricesMap || {}}
         pricesLoading={pricesLoading}
       />

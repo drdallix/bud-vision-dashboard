@@ -41,6 +41,11 @@ const BrowseStrains = memo(() => {
     }
   }
 
+  // Wrapper function to match expected signature
+  const handleBatchStockUpdate = async (strainIds: string[], inStock: boolean) => {
+    return await bulkUpdateStock(inStock);
+  };
+
   return (
     <div className="space-y-6">
       <BrowseHeader 
@@ -48,7 +53,7 @@ const BrowseStrains = memo(() => {
         totalCount={stats.filteredStrains}
         onSelectAll={selectAll}
         onClearSelection={clearSelection}
-        onBatchStockUpdate={bulkUpdateStock}
+        onBatchStockUpdate={handleBatchStockUpdate}
         selectedStrains={selectedStrains}
         inventoryLoading={isUpdating}
       />
