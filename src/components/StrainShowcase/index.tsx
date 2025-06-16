@@ -3,11 +3,9 @@ import { useState, useEffect } from 'react';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
 import ShowcaseSlide from './ShowcaseSlide';
-import ShowcaseProgress from './ShowcaseProgress';
 import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
 import FullscreenSceneManager from './FullscreenSceneManager';
-import SlideNavigation from './SlideNavigation';
 import { TransitionMode } from './FullscreenTransitions';
 
 interface StrainShowcaseProps {
@@ -73,6 +71,14 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
     }
   };
 
+  const handleFullscreen = () => {
+    setIsFullscreen(true);
+  };
+
+  const handleExitFullscreen = () => {
+    setIsFullscreen(false);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -89,6 +95,28 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
     );
   }
 
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 bg-black z-50">
+        <FullscreenSceneManager
+          strain={currentStrain}
+          mode={transitionMode}
+        >
+          <ShowcaseSlide
+            strain={currentStrain}
+            onStrainClick={handleStrainClick}
+          />
+        </FullscreenSceneManager>
+        <button
+          onClick={handleExitFullscreen}
+          className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 z-10"
+        >
+          ✕
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <ShowcaseFilters
@@ -100,31 +128,19 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
       />
 
       <div className="relative">
-        {isFullscreen ? (
-          <FullscreenSceneManager
-            strain={currentStrain}
-            mode={transitionMode}
-          >
-            <ShowcaseSlide
-              strain={currentStrain}
-              onStrainClick={handleStrainClick}
-            />
-          </FullscreenSceneManager>
-        ) : (
-          <ShowcaseSlide
-            strain={currentStrain}
-            onStrainClick={handleStrainClick}
-          />
-        )}
+        <ShowcaseSlide
+          strain={currentStrain}
+          onStrainClick={handleStrainClick}
+        />
 
         <ShowcaseControls
           isPlaying={isPlaying}
           onPlayPause={() => setIsPlaying(!isPlaying)}
           onNext={handleNext}
           onPrevious={handlePrevious}
-          onFullscreen={() => setIsFullscreen(true)}
-          transitionMode="fade"
-          onTransitionChange={() => {}}
+          onFullscreen={handleFullscreen}
+          transitionMode={transitionMode}
+          onTransitionChange={setTransitionMode}
           disabled={filteredStrains.length <= 1}
           total={filteredStrains.length}
           current={currentIndex}
@@ -132,41 +148,6 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
           currentStrain={currentStrain}
         />
       </div>
-
-      <ShowcaseProgress
-        total={filteredStrains.length}
-        current={currentIndex}
-        onNav={setCurrentIndex}
-      />
-
-      <SlideNavigation
-        strains={filteredStrains}
-        currentIndex={currentIndex}
-        onSelect={setCurrentIndex}
-        total={filteredStrains.length}
-        current={currentIndex}
-        onNav={setCurrentIndex}
-      />
-
-      {isFullscreen && (
-        <div className="fixed inset-0 bg-black z-50">
-          <FullscreenSceneManager
-            strain={currentStrain}
-            mode={transitionMode}
-          >
-            <ShowcaseSlide
-              strain={currentStrain}
-              onStrainClick={handleStrainClick}
-            />
-          </FullscreenSceneManager>
-          <button
-            onClick={() => setIsFullscreen(false)}
-            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 z-10"
-          >
-            ✕
-          </button>
-        </div>
-      )}
     </div>
   );
 };

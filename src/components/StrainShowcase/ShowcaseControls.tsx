@@ -6,6 +6,7 @@ import CurrentStrainInfo from './CurrentStrainInfo';
 import PlaybackControls from './PlaybackControls';
 import SlideNavigation from './SlideNavigation';
 import SettingsPanel from './SettingsPanel';
+import { TransitionMode } from './FullscreenTransitions';
 
 interface ShowcaseControlsProps {
   isPlaying: boolean;
@@ -13,12 +14,12 @@ interface ShowcaseControlsProps {
   onNext: () => void;
   onPrevious: () => void;
   onFullscreen: () => void;
-  transitionMode: 'fade' | 'slide';
-  onTransitionChange: (mode: 'fade' | 'slide') => void;
+  transitionMode: TransitionMode;
+  onTransitionChange: (mode: TransitionMode) => void;
   disabled: boolean;
-  total?: number;
-  current?: number;
-  onNav?: (index: number) => void;
+  total: number;
+  current: number;
+  onNav: (index: number) => void;
   currentStrain?: Strain;
 }
 
@@ -31,9 +32,9 @@ const ShowcaseControls = ({
   transitionMode,
   onTransitionChange,
   disabled,
-  total = 0,
-  current = 0,
-  onNav = () => {},
+  total,
+  current,
+  onNav,
   currentStrain,
 }: ShowcaseControlsProps) => {
   const [showSettings, setShowSettings] = useState(false);
