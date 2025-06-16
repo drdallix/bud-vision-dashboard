@@ -4,10 +4,11 @@ import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
-import ShowcaseFilters from './ShowcaseFilters';
 import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
 import { TransitionMode } from './FullscreenTransitions';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { useAdvancedFilters } from '@/components/BrowseStrains/hooks/useAdvancedFilters';
+import MobileFilters from '@/components/BrowseStrains/MobileFilters';
 
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
@@ -19,25 +20,28 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [filterType, setFilterType] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'thc'>('recent');
   const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
 
-  // Filter strains based on type
-  const filteredStrains = strains.filter(strain => {
-    if (filterType === 'all') return true;
-    return strain.type === filterType;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'name':
-        return a.name.localeCompare(b.name);
-      case 'thc':
-        return (b.thc || 0) - (a.thc || 0);
-      case 'recent':
-      default:
-        return new Date(b.scannedAt || '').getTime() - new Date(a.scannedAt || '').getTime();
-    }
-  });
+  // Use the same advanced filters as BrowseStrains
+  const {
+    searchTerm,
+    setSearchTerm,
+    filterType,
+    setFilterType,
+    sortBy,
+    setSortBy,
+    stockFilter,
+    setStockFilter,
+    selectedEffects,
+    selectedFlavors,
+    thcRange,
+    setThcRange,
+    handleEffectToggle,
+    handleFlavorToggle,
+    filteredStrains,
+    clearAllFilters,
+    hasActiveFilters
+  } = useAdvancedFilters(strains);
 
   const currentStrain = filteredStrains[currentIndex];
 
@@ -55,7 +59,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   // Reset index when filters change
   useEffect(() => {
     setCurrentIndex(0);
-  }, [filterType, sortBy]);
+  }, [filteredStrains.length]);
 
   const handleNext = () => {
     setCurrentIndex(prev => (prev + 1) % filteredStrains.length);
@@ -83,8 +87,26 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
 
   if (filteredStrains.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">No strains available for showcase</p>
+      <div className="space-y-4">
+        <MobileFilters
+          strains={strains}
+          filterType={filterType}
+          sortBy={sortBy}
+          selectedEffects={selectedEffects}
+          selectedFlavors={selectedFlavors}
+          thcRange={thcRange}
+          stockFilter={stockFilter}
+          onFilterChange={setFilterType}
+          onSortChange={setSortBy}
+          onEffectToggle={handleEffectToggle}
+          onFlavorToggle={handleFlavorToggle}
+          onThcRangeChange={setThcRange}
+          onStockFilterChange={setStockFilter}
+          onClearAll={clearAllFilters}
+        />
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No strains match your current filters</p>
+        </div>
       </div>
     );
   }
@@ -110,12 +132,21 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
 
   return (
     <div className="space-y-6">
-      <ShowcaseFilters
+      <MobileFilters
+        strains={strains}
         filterType={filterType}
-        onFilterChange={setFilterType}
         sortBy={sortBy}
+        selectedEffects={selectedEffects}
+        selectedFlavors={selectedFlavors}
+        thcRange={thcRange}
+        stockFilter={stockFilter}
+        onFilterChange={setFilterType}
         onSortChange={setSortBy}
-        strainCount={filteredStrains.length}
+        onEffectToggle={handleEffectToggle}
+        onFlavorToggle={handleFlavorToggle}
+        onThcRangeChange={setThcRange}
+        onStockFilterChange={setStockFilter}
+        onClearAll={clearAllFilters}
       />
 
       {/* Mobile-First Card Carousel */}
