@@ -2,6 +2,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Carousel, CarouselContent, CarouselItem, CarouselApi } from '@/components/ui/carousel';
 import { useStrainData } from '@/data/hooks/useStrainData';
+import { useAuth } from '@/contexts/AuthContext';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
@@ -9,9 +10,12 @@ import { Strain } from '@/types/strain';
 
 const StrainShowcase = () => {
   const { strains, isLoading } = useStrainData(true);
+  const { user } = useAuth();
   const [filteredStrains, setFilteredStrains] = useState<Strain[]>([]);
   const [current, setCurrent] = useState(0);
-  const [paused, setPaused] = useState(true);
+  
+  // Auto-play by default for signed-out users, paused for signed-in users
+  const [paused, setPaused] = useState(!!user);
   const [slideInterval, setSlideInterval] = useState(6000);
   const [showControls, setShowControls] = useState(true);
   const [api, setApi] = useState<CarouselApi>();
@@ -24,6 +28,11 @@ const StrainShowcase = () => {
   // Auto-hide controls timer
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
   
+  // Set initial auto-play state based on user status
+  useEffect(() => {
+    setPaused(!!user);
+  }, [user]);
+
   // Filter and sort strains
   useEffect(() => {
     let filtered = strains.filter(strain => 
@@ -62,18 +71,22 @@ const StrainShowcase = () => {
     return () => clearTimeout(timer);
   }, [current, filteredStrains.length, paused, slideInterval, api]);
 
-  // Auto-hide controls
+  // Auto-hide controls for signed-out users
   const resetControlsTimer = useCallback(() => {
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (!paused) {
-        setShowControls(false);
-      }
-    }, 4000);
-  }, [paused]);
+    
+    // Only auto-hide for signed-out users
+    if (!user) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        if (!paused) {
+          setShowControls(false);
+        }
+      }, 4000);
+    }
+  }, [paused, user]);
 
   // Handle user interaction
   const handleInteraction = useCallback(() => {
@@ -111,6 +124,17 @@ const StrainShowcase = () => {
   useEffect(() => {
     resetControlsTimer();
   }, [paused, resetControlsTimer]);
+
+  // Auto-start showcase for signed-out users after a brief delay
+  useEffect(() => {
+    if (!user && filteredStrains.length > 0) {
+      const startTimer = setTimeout(() => {
+        setPaused(false);
+      }, 2000); // Start auto-play after 2 seconds
+      
+      return () => clearTimeout(startTimer);
+    }
+  }, [user, filteredStrains.length]);
 
   if (isLoading) {
     return (
@@ -208,9 +232,9 @@ const StrainShowcase = () => {
         </div>
       </div>
 
-      {/* Enhanced Controls */}
+      {/* Enhanced Controls - Always visible for signed-in users, auto-hide for signed-out */}
       <div className={`transition-all duration-500 ${
-        showControls 
+        user || showControls
           ? 'opacity-100 transform-none' 
           : 'opacity-0 translate-y-4 pointer-events-none'
       }`}>
@@ -226,9 +250,9 @@ const StrainShowcase = () => {
         />
       </div>
 
-      {/* Filters - Now at the bottom with controls */}
+      {/* Filters - Always visible for signed-in users, auto-hide for signed-out */}
       <div className={`transition-all duration-500 ${
-        showControls 
+        user || showControls
           ? 'opacity-100 transform-none' 
           : 'opacity-0 translate-y-4 pointer-events-none'
       }`}>

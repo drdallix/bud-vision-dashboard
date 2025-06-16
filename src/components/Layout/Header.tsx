@@ -26,7 +26,7 @@ const Header = ({ onSettingsClick }: HeaderProps) => {
         </p>
       </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 absolute top-6 right-4">
         {user ? (
           <UserNav onSettingsClick={onSettingsClick} />
         ) : (

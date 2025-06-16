@@ -15,12 +15,20 @@ import StrainShowcase from '@/components/StrainShowcase';
 import { Strain } from '@/types/strain';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('browse');
-  const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  
   const { user, loading: authLoading } = useAuth();
   const { scans, addScan } = useScans();
+  
+  // Default to showcase for signed-out users, browse for signed-in users
+  const [activeTab, setActiveTab] = useState(user ? 'browse' : 'showcase');
+  const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Update default tab based on auth status
+  useEffect(() => {
+    if (!authLoading) {
+      setActiveTab(user ? 'browse' : 'showcase');
+    }
+  }, [user, authLoading]);
 
   // Register service worker for PWA
   useEffect(() => {
@@ -73,7 +81,7 @@ const Index = () => {
         <Header onSettingsClick={handleSettingsClick} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <Navigation />
+          {user && <Navigation />}
 
           <TabsContent value="browse" className="space-y-6">
             <BrowseStrains onStrainSelect={(strain) => {
@@ -94,10 +102,12 @@ const Index = () => {
         {user && <QuickStats scans={scans} />}
       </div>
 
-      <MobileNavigation 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
-      />
+      {user && (
+        <MobileNavigation 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab} 
+        />
+      )}
 
       {user && (
         <SettingsDialog
