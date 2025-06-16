@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
-import ShowcaseControls from './ShowcaseControls';
 import { TransitionMode } from './FullscreenTransitions';
 import { useAdvancedFilters } from '@/components/BrowseStrains/hooks/useAdvancedFilters';
 import MobileFilters from '@/components/BrowseStrains/MobileFilters';
@@ -77,7 +76,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
       <EmptyState
         strains={strains}
         filterType={filterType}
-        sortBy={sortBy}
+        sortBy={sortBy as 'name' | 'thc' | 'recent'}
         selectedEffects={selectedEffects}
         selectedFlavors={selectedFlavors}
         thcRange={thcRange}
@@ -100,6 +99,13 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
         currentIndex={currentIndex}
         transitionMode={transitionMode}
         onExitFullscreen={handleExitFullscreen}
+        filteredStrains={filteredStrains}
+        isPlaying={isPlaying}
+        setIsPlaying={setIsPlaying}
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+        onNavigateToIndex={handleNavigateToIndex}
+        setTransitionMode={setTransitionMode}
       />
     );
   }
@@ -109,7 +115,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
       <MobileFilters
         strains={strains}
         filterType={filterType}
-        sortBy={sortBy}
+        sortBy={sortBy as 'name' | 'thc' | 'recent'}
         selectedEffects={selectedEffects}
         selectedFlavors={selectedFlavors}
         thcRange={thcRange}
@@ -130,20 +136,44 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
         onNavigateToIndex={handleNavigateToIndex}
       />
 
-      <ShowcaseControls
-        isPlaying={isPlaying}
-        onPlayPause={() => setIsPlaying(!isPlaying)}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onFullscreen={handleFullscreen}
-        transitionMode={transitionMode}
-        onTransitionChange={setTransitionMode}
-        disabled={filteredStrains.length <= 1}
-        total={filteredStrains.length}
-        current={currentIndex}
-        onNav={handleNavigateToIndex}
-        currentStrain={currentStrain}
-      />
+      {/* Compact showcase controls */}
+      <div className="flex items-center justify-center gap-4 p-4 bg-white/90 backdrop-blur-sm rounded-lg">
+        <button
+          onClick={handlePrevious}
+          className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          disabled={filteredStrains.length <= 1}
+        >
+          ←
+        </button>
+        
+        <button
+          onClick={() => setIsPlaying(!isPlaying)}
+          className="p-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors"
+          disabled={filteredStrains.length <= 1}
+        >
+          {isPlaying ? '⏸️' : '▶️'}
+        </button>
+        
+        <button
+          onClick={handleNext}
+          className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          disabled={filteredStrains.length <= 1}
+        >
+          →
+        </button>
+        
+        <button
+          onClick={handleFullscreen}
+          className="p-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+          disabled={filteredStrains.length <= 1}
+        >
+          ⛶
+        </button>
+        
+        <span className="text-sm text-gray-600">
+          {currentIndex + 1} / {filteredStrains.length}
+        </span>
+      </div>
     </div>
   );
 };

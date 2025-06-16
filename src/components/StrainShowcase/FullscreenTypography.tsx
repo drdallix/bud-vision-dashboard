@@ -32,13 +32,13 @@ const FullscreenTypography = ({
   const getTypeScale = () => {
     switch (level) {
       case 'hero':
-        return 'text-6xl md:text-8xl lg:text-9xl font-black leading-none';
+        return 'text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black leading-none';
       case 'title':
-        return 'text-4xl md:text-6xl font-bold leading-tight';
+        return 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight';
       case 'subtitle':
-        return 'text-2xl md:text-3xl font-semibold leading-snug';
+        return 'text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold leading-snug';
       case 'body':
-        return 'text-lg md:text-xl leading-relaxed';
+        return 'text-base sm:text-lg md:text-xl lg:text-2xl leading-relaxed';
       default:
         return 'text-xl';
     }
@@ -51,24 +51,35 @@ const FullscreenTypography = ({
     
     switch (mode) {
       case 'psychedelic':
-        return `${baseClasses} animate-pulse`;
+        return `${baseClasses} animate-pulse hover:animate-bounce`;
       case 'dynamic':
-        return `${baseClasses} animate-bounce`;
+        return `${baseClasses} hover:scale-110 transition-transform duration-300`;
       case 'zen':
         return `${baseClasses} hover:scale-105 transition-transform duration-500`;
       default:
-        return baseClasses;
+        return `${baseClasses} hover:scale-102 transition-transform duration-300`;
+    }
+  };
+
+  const getTextShadow = () => {
+    switch (level) {
+      case 'hero':
+        return '0 0 40px rgba(255,255,255,0.4), 0 0 80px rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.3)';
+      case 'title':
+        return '0 0 30px rgba(255,255,255,0.3), 0 0 60px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.2)';
+      default:
+        return '0 0 20px rgba(255,255,255,0.2), 0 1px 2px rgba(0,0,0,0.1)';
     }
   };
 
   return (
     <div className={`${getTypeScale()} ${getAnimationClass()}`}>
       <span 
-        className={`${config.textEffect} drop-shadow-2xl`}
+        className={`${config.textEffect} drop-shadow-2xl cursor-default select-none`}
         style={{
-          textShadow: level === 'hero' 
-            ? '0 0 30px rgba(255,255,255,0.3), 0 0 60px rgba(255,255,255,0.1)' 
-            : '0 0 20px rgba(255,255,255,0.2)'
+          textShadow: getTextShadow(),
+          WebkitBackgroundClip: config.textEffect.includes('bg-clip-text') ? 'text' : undefined,
+          backgroundClip: config.textEffect.includes('bg-clip-text') ? 'text' : undefined,
         }}
       >
         {text}
