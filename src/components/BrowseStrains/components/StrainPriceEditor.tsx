@@ -86,7 +86,7 @@ const StrainPriceEditor = ({
               <option value="">Now</option>
               {PRESET_PRICES.map(val => <option key={val} value={val}>${val}</option>)}
             </select>
-            <select value={wasPrice ?? ''} onChange={e => setWasPrice(e.target.value === '' ? null : Number(e.target.value))} className="text-xs px-1 py-0.5 rounded border mr-1" disabled={loading}>
+            <select value={wasPrice ?? ''} onChange={e => setWasPrice(e.target.value === '' ? null : Number(e.target.value))} disabled={loading} className="text-xs px-1 py-0.5 rounded border mr-1 text-black ">
               <option value="">No Was</option>
               {PRESET_PRICES.map(val => <option key={val} value={val}>${val}</option>)}
             </select>
