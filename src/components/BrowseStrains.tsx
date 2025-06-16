@@ -4,7 +4,9 @@ import BrowseHeader from './BrowseStrains/components/BrowseHeader';
 import FilterControls from './BrowseStrains/FilterControls';
 import { SafeStrainGrid } from './BrowseStrains/components/SafeStrainGrid';
 import BatchActions from './BrowseStrains/BatchActions';
+import SmartOmnibar from '@/components/SmartOmnibar';
 import { useBrowseStrains } from '@/hooks/useBrowseStrains';
+import { Strain } from '@/types/strain';
 
 const BrowseStrains = memo(() => {
   const {
@@ -46,8 +48,24 @@ const BrowseStrains = memo(() => {
     return await bulkUpdateStock(inStock);
   };
 
+  // Handle AI strain generation
+  const handleStrainGenerated = (strain: Strain) => {
+    // For now, just clear the search term - could be enhanced to handle the generated strain
+    setSearchTerm('');
+  };
+
+  const hasResults = strains && strains.length > 0;
+
   return (
     <div className="space-y-6">
+      {/* Smart Omnibar for AI-powered search and generation */}
+      <SmartOmnibar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onStrainGenerated={handleStrainGenerated}
+        hasResults={hasResults}
+      />
+
       <BrowseHeader 
         selectedCount={selectedStrains.length}
         totalCount={stats.filteredStrains}
