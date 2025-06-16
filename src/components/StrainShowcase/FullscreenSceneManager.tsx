@@ -2,7 +2,6 @@
 import { ReactNode } from 'react';
 import { Strain } from '@/types/strain';
 import { TransitionMode } from './FullscreenTransitions';
-import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
 
 interface SceneConfig {
   backgroundGradient: string;
@@ -41,13 +40,15 @@ interface FullscreenSceneManagerProps {
   currentIndex: number;
   transitionMode: TransitionMode;
   onStrainClick?: (strain: Strain) => void;
+  children?: ReactNode;
 }
 
 const FullscreenSceneManager = ({ 
   strains, 
   currentIndex, 
   transitionMode, 
-  onStrainClick 
+  onStrainClick,
+  children 
 }: FullscreenSceneManagerProps) => {
   const currentStrain = strains[currentIndex];
   const scene = STRAIN_SCENES[currentStrain.type] || STRAIN_SCENES.Hybrid;
@@ -101,13 +102,8 @@ const FullscreenSceneManager = ({
         }}
       />
 
-      {/* Render the current strain slide */}
-      <FullscreenShowcaseSlide
-        strain={currentStrain}
-        isActive={true}
-        index={currentIndex}
-        transitionMode={transitionMode}
-      />
+      {/* Render children content */}
+      {children}
     </div>
   );
 };
