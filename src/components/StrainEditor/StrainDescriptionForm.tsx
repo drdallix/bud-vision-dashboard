@@ -39,9 +39,20 @@ const StrainDescriptionForm = ({
       return;
     }
 
+    // Validate that we have a proper UUID for the strain
+    if (!strain.id || typeof strain.id !== 'string') {
+      console.error('Invalid strain ID:', strain.id);
+      toast({
+        title: "Error",
+        description: "Invalid strain ID. Please refresh and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsRegenerating(true);
     try {
-      console.log('Calling regenerate-description edge function...');
+      console.log('Calling regenerate-description edge function with strain ID:', strain.id);
       const { data, error } = await supabase.functions.invoke('regenerate-description', {
         body: {
           strainName: strain.name,
@@ -101,11 +112,22 @@ const StrainDescriptionForm = ({
       return;
     }
 
+    // Validate that we have a proper UUID for the strain
+    if (!strain.id || typeof strain.id !== 'string') {
+      console.error('Invalid strain ID for save operation:', strain.id);
+      toast({
+        title: "Error",
+        description: "Invalid strain ID. Please refresh and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       console.log('Attempting to update strain description for strain ID:', strain.id);
       
-      // Update in database using the scans table - now all authenticated users can edit any strain
+      // Update in database using the scans table with proper UUID validation
       const { error } = await supabase
         .from('scans')
         .update({ 

@@ -1,158 +1,217 @@
 
-import { Pause, Play, ArrowLeft, ArrowRight, Settings, Minimize, Palette } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Play, Pause, SkipBack, SkipForward, Settings, Shuffle } from 'lucide-react';
 import { Strain } from '@/types/strain';
 import { TransitionMode, TRANSITION_MODES } from './FullscreenTransitions';
 
-interface FullscreenControlsProps {
+export interface FullscreenControlsProps {
   total: number;
   current: number;
   paused: boolean;
-  transitionMode: TransitionMode;
   slideInterval: number;
-  setPaused: (val: boolean) => void;
-  setTransitionMode: (mode: TransitionMode) => void;
-  setSlideInterval: (val: number) => void;
+  setPaused: (paused: boolean) => void;
+  setSlideInterval: (interval: number) => void;
   onNav: (index: number) => void;
-  currentStrain?: Strain;
+  currentStrain: Strain;
+  transitionMode?: TransitionMode;
+  setTransitionMode?: (mode: TransitionMode) => void;
+  shuffleTransitions?: boolean;
+  setShuffleTransitions?: (shuffle: boolean) => void;
 }
 
 const FullscreenControls = ({
-  total, current, paused, transitionMode, slideInterval, setPaused, 
-  setTransitionMode, setSlideInterval, onNav, currentStrain
+  total,
+  current,
+  paused,
+  slideInterval,
+  setPaused,
+  setSlideInterval,
+  onNav,
+  currentStrain,
+  transitionMode = 'elegant',
+  setTransitionMode = () => {},
+  shuffleTransitions = false,
+  setShuffleTransitions = () => {}
 }: FullscreenControlsProps) => {
-  
-  const exitFullscreen = async () => {
-    try {
-      await document.exitFullscreen();
-    } catch (error) {
-      console.error('Error exiting fullscreen:', error);
-    }
+  const [visible, setVisible] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [mouseY, setMouseY] = useState(0);
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMouseY(e.clientY);
+      const shouldShow = e.clientY > window.innerHeight - 200; // Show when near bottom 200px
+      
+      if (shouldShow !== visible) {
+        setVisible(shouldShow);
+        
+        // Clear existing timeout
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+        }
+        
+        // Set new timeout to hide after 3 seconds of inactivity
+        if (shouldShow) {
+          const timeout = setTimeout(() => {
+            setVisible(false);
+          }, 3000);
+          setHideTimeout(timeout);
+        }
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+      }
+    };
+  }, [visible, hideTimeout]);
+
+  const handlePrevious = () => {
+    onNav(current > 0 ? current - 1 : total - 1);
+  };
+
+  const handleNext = () => {
+    onNav(current < total - 1 ? current + 1 : 0);
   };
 
   return (
-    <Card className="bg-black/50 backdrop-blur-xl border-white/20 shadow-2xl">
-      <div className="p-6 space-y-6">
-        {/* Current Strain Info */}
-        {currentStrain && (
-          <div className="text-center space-y-2">
-            <h3 className="text-2xl font-bold text-white">{currentStrain.name}</h3>
-            <div className="flex items-center justify-center gap-4">
-              <Badge className="bg-purple-500/80 text-white">
-                {currentStrain.type}
-              </Badge>
-              <span className="text-white/80">
-                {current + 1} of {total}
-              </span>
+    <div 
+      className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+      }`}
+    >
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent backdrop-blur-sm" />
+      
+      {/* Controls */}
+      <div className="relative p-6">
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
+          {/* Left: Navigation */}
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={handlePrevious}
+              className="text-white hover:bg-white/20 transition-all duration-300"
+            >
+              <SkipBack className="h-6 w-6" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => setPaused(!paused)}
+              className="text-white hover:bg-white/20 transition-all duration-300"
+            >
+              {paused ? <Play className="h-6 w-6" /> : <Pause className="h-6 w-6" />}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={handleNext}
+              className="text-white hover:bg-white/20 transition-all duration-300"
+            >
+              <SkipForward className="h-6 w-6" />
+            </Button>
+          </div>
+
+          {/* Center: Progress and Info */}
+          <div className="flex-1 mx-8">
+            <div className="text-center mb-2">
+              <h3 className="text-white text-lg font-semibold truncate">
+                {currentStrain.name}
+              </h3>
+              <p className="text-white/70 text-sm">
+                {current + 1} of {total} • {currentStrain.type}
+              </p>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-white/20 rounded-full h-1">
+              <div 
+                className="bg-white rounded-full h-1 transition-all duration-300"
+                style={{ width: `${((current + 1) / total) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Right: Settings */}
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => setShuffleTransitions(!shuffleTransitions)}
+              className={`text-white hover:bg-white/20 transition-all duration-300 ${
+                shuffleTransitions ? 'bg-white/20' : ''
+              }`}
+            >
+              <Shuffle className="h-5 w-5" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => setShowSettings(!showSettings)}
+              className="text-white hover:bg-white/20 transition-all duration-300"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="absolute bottom-full right-6 mb-4 bg-black/90 backdrop-blur-sm rounded-lg p-4 min-w-[300px]">
+            <div className="space-y-4">
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">
+                  Transition Mode
+                </label>
+                <Select value={transitionMode} onValueChange={setTransitionMode}>
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-black/90 border-white/20">
+                    {Object.entries(TRANSITION_MODES).map(([key, config]) => (
+                      <SelectItem key={key} value={key} className="text-white hover:bg-white/10">
+                        <div>
+                          <div className="font-medium">{config.name}</div>
+                          <div className="text-sm text-white/70">{config.description}</div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-white text-sm font-medium mb-2 block">
+                  Slide Interval (seconds)
+                </label>
+                <Select value={slideInterval.toString()} onValueChange={(value) => setSlideInterval(Number(value))}>
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-black/90 border-white/20">
+                    <SelectItem value="3000" className="text-white hover:bg-white/10">3 seconds</SelectItem>
+                    <SelectItem value="5000" className="text-white hover:bg-white/10">5 seconds</SelectItem>
+                    <SelectItem value="8000" className="text-white hover:bg-white/10">8 seconds</SelectItem>
+                    <SelectItem value="10000" className="text-white hover:bg-white/10">10 seconds</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         )}
-
-        {/* Main Controls */}
-        <div className="flex items-center justify-center gap-4">
-          <Button 
-            variant="outline" 
-            size="lg" 
-            onClick={() => onNav(current === 0 ? total - 1 : current - 1)}
-            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          
-          <Button 
-            variant={paused ? "default" : "secondary"} 
-            size="lg" 
-            onClick={() => setPaused(!paused)}
-            className="px-8"
-          >
-            {paused ? <Play className="h-5 w-5 mr-2" /> : <Pause className="h-5 w-5 mr-2" />}
-            {paused ? 'Play' : 'Pause'}
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="lg" 
-            onClick={() => onNav((current + 1) % total)}
-            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-          >
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-        </div>
-
-        {/* Transition Mode Selection */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-white">
-            <span className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Visual Mode
-            </span>
-          </div>
-          <Select value={transitionMode} onValueChange={(value: TransitionMode) => setTransitionMode(value)}>
-            <SelectTrigger className="bg-white/10 border-white/30 text-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(TRANSITION_MODES).map(([key, config]) => (
-                <SelectItem key={key} value={key}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{config.name}</span>
-                    <span className="text-xs text-muted-foreground">{config.description}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Speed Control */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-white">
-            <span>Slide Speed</span>
-            <span>{slideInterval / 1000}s</span>
-          </div>
-          <Slider
-            value={[slideInterval]}
-            onValueChange={(value) => setSlideInterval(value[0])}
-            max={10000}
-            min={2000}
-            step={1000}
-            className="w-full"
-          />
-        </div>
-
-        {/* Advanced Controls */}
-        <div className="flex items-center justify-center gap-4">
-          <Button 
-            variant="outline" 
-            size="lg" 
-            onClick={exitFullscreen}
-            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-          >
-            <Minimize className="h-5 w-5 mr-2" />
-            Exit
-          </Button>
-        </div>
-
-        {/* Progress Dots */}
-        <div className="flex justify-center gap-2 flex-wrap">
-          {Array.from({ length: total }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => onNav(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                index === current 
-                  ? 'bg-white scale-150' 
-                  : 'bg-white/50 hover:bg-white/80'
-              }`}
-            />
-          ))}
-        </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
