@@ -42,6 +42,7 @@ const FullscreenControls = ({
   const [visible, setVisible] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isHoveringSettings, setIsHoveringSettings] = useState(false);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettingsType>({
     transitionMode: 'elegant',
     slideInterval: 5000,
@@ -76,58 +77,58 @@ const FullscreenControls = ({
     saveSettings();
   }, [animationSettings]);
 
-  // Enhanced visibility logic with longer timeout and hover detection
+  // Clear timeout helper
+  const clearHideTimeout = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+  };
+
+  // Set hide timeout helper
+  const setHideTimeoutDelayed = (delay: number = 3000) => {
+    clearHideTimeout();
+    const timeout = setTimeout(() => {
+      // Only hide if not hovering settings and not paused or settings not open
+      if (!isHoveringSettings && (!paused || !showSettings)) {
+        setVisible(false);
+      }
+    }, delay);
+    setHideTimeout(timeout);
+  };
+
+  // Enhanced visibility logic
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      const shouldShow = e.clientY > window.innerHeight - 250; // Increased trigger area
+      const shouldShow = e.clientY > window.innerHeight - 250;
       
       if (shouldShow !== visible) {
         setVisible(shouldShow);
         
-        if (hideTimeout) {
-          clearTimeout(hideTimeout);
-        }
-        
         if (shouldShow) {
-          const timeout = setTimeout(() => {
-            // Only hide if settings panel is not open and not hovering over controls
-            if (!showSettings && !isHoveringControls(e)) {
-              setVisible(false);
-            }
-          }, 5000); // Increased timeout to 5 seconds
-          setHideTimeout(timeout);
+          clearHideTimeout();
+          // When paused, don't auto-hide if settings are open
+          if (!paused || !showSettings) {
+            setHideTimeoutDelayed(paused ? 8000 : 4000); // Longer timeout when paused
+          }
         }
       }
-    };
-
-    const isHoveringControls = (e: MouseEvent) => {
-      const controlsElement = document.querySelector('[data-fullscreen-controls]');
-      if (controlsElement) {
-        const rect = controlsElement.getBoundingClientRect();
-        return e.clientX >= rect.left && e.clientX <= rect.right && 
-               e.clientY >= rect.top && e.clientY <= rect.bottom;
-      }
-      return false;
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-      }
+      clearHideTimeout();
     };
-  }, [visible, hideTimeout, showSettings]);
+  }, [visible, paused, showSettings, isHoveringSettings]);
 
-  // Keep controls visible when settings panel is open
+  // Keep controls visible when settings panel is open or when paused
   useEffect(() => {
-    if (showSettings) {
+    if (showSettings || paused) {
       setVisible(true);
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-      }
+      clearHideTimeout();
     }
-  }, [showSettings, hideTimeout]);
+  }, [showSettings, paused]);
 
   const handlePrevious = () => {
     onNav(current > 0 ? current - 1 : total - 1);
@@ -145,6 +146,14 @@ const FullscreenControls = ({
     setShuffleTransitions(newSettings.shuffleTransitions);
   };
 
+  const handleSettingsToggle = () => {
+    setShowSettings(!showSettings);
+    if (!showSettings) {
+      setVisible(true);
+      clearHideTimeout();
+    }
+  };
+
   return (
     <div 
       data-fullscreen-controls
@@ -153,17 +162,12 @@ const FullscreenControls = ({
       }`}
       onMouseEnter={() => {
         setVisible(true);
-        if (hideTimeout) {
-          clearTimeout(hideTimeout);
-        }
+        clearHideTimeout();
       }}
-      onMouseLeave={(e) => {
-        // Only start hide timer if not hovering over settings panel
-        if (!showSettings) {
-          const timeout = setTimeout(() => {
-            setVisible(false);
-          }, 2000);
-          setHideTimeout(timeout);
+      onMouseLeave={() => {
+        // Only start hide timer if not hovering over settings panel and not paused with settings open
+        if (!isHoveringSettings && (!paused || !showSettings)) {
+          setHideTimeoutDelayed(2000);
         }
       }}
     >
@@ -239,7 +243,7 @@ const FullscreenControls = ({
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={handleSettingsToggle}
               className={`text-white hover:bg-white/20 transition-all duration-300 hover:scale-110 ${
                 showSettings ? 'bg-white/20 shadow-lg' : ''
               }`}
@@ -251,23 +255,30 @@ const FullscreenControls = ({
             {showSettings && (
               <div
                 onMouseEnter={() => {
+                  setIsHoveringSettings(true);
                   setVisible(true);
-                  if (hideTimeout) {
-                    clearTimeout(hideTimeout);
-                  }
+                  clearHideTimeout();
                 }}
                 onMouseLeave={() => {
-                  // Give extra time before hiding when leaving settings panel
-                  const timeout = setTimeout(() => {
-                    setVisible(false);
-                  }, 3000);
-                  setHideTimeout(timeout);
+                  setIsHoveringSettings(false);
+                  // When paused, give extra time before hiding
+                  if (paused) {
+                    setHideTimeoutDelayed(5000);
+                  } else {
+                    setHideTimeoutDelayed(3000);
+                  }
                 }}
               >
                 <AnimationSettings
                   settings={animationSettings}
                   onSettingsChange={handleSettingsChange}
-                  onClose={() => setShowSettings(false)}
+                  onClose={() => {
+                    setShowSettings(false);
+                    setIsHoveringSettings(false);
+                    if (!paused) {
+                      setHideTimeoutDelayed(2000);
+                    }
+                  }}
                 />
               </div>
             )}
