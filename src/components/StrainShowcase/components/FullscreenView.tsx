@@ -1,8 +1,10 @@
 
+import { useState, useEffect } from 'react';
 import { Strain } from '@/types/strain';
 import FullscreenShowcaseSlide from '../FullscreenShowcaseSlide';
 import FullscreenControls from '../FullscreenControls';
 import { TransitionMode } from '../FullscreenTransitions';
+import { AnimationSettings, loadAnimationSettings } from '../AnimationSettings';
 
 interface FullscreenViewProps {
   currentStrain: Strain;
@@ -31,6 +33,16 @@ const FullscreenView = ({
   onNavigateToIndex,
   setTransitionMode
 }: FullscreenViewProps) => {
+  const [animationSettings, setAnimationSettings] = useState<AnimationSettings | null>(null);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const settings = await loadAnimationSettings();
+      setAnimationSettings(settings);
+    };
+    loadSettings();
+  }, []);
+
   return (
     <div className="fixed inset-0 bg-black z-50 overflow-hidden">
       {/* Main fullscreen slide */}
@@ -40,6 +52,7 @@ const FullscreenView = ({
           isActive={true}
           index={currentIndex}
           transitionMode={transitionMode}
+          animationSettings={animationSettings || undefined}
         />
       </div>
 
@@ -61,15 +74,15 @@ const FullscreenView = ({
         paused={!isPlaying}
         slideInterval={5000}
         setPaused={(paused) => setIsPlaying(!paused)}
-        setSlideInterval={() => {}} // Not implemented yet
+        setSlideInterval={() => {}} // Handled by AnimationSettings
         onNav={onNavigateToIndex}
         currentStrain={currentStrain}
         transitionMode={transitionMode}
         setTransitionMode={setTransitionMode}
         shuffleTransitions={false}
-        setShuffleTransitions={() => {}} // Not implemented yet
+        setShuffleTransitions={() => {}} // Handled by AnimationSettings
         shuffleMode={false}
-        setShuffleMode={() => {}} // Not implemented yet
+        setShuffleMode={() => {}} // Handled by AnimationSettings
       />
     </div>
   );

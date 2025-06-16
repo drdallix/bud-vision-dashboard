@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Pause, SkipBack, SkipForward, Settings, Shuffle } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Settings, Shuffle, Palette } from 'lucide-react';
 import { Strain } from '@/types/strain';
-import { TransitionMode, TRANSITION_MODES } from './FullscreenTransitions';
+import { TransitionMode } from './FullscreenTransitions';
+import AnimationSettings, { AnimationSettings as AnimationSettingsType } from './AnimationSettings';
+import { saveAnimationSettings, loadAnimationSettings } from '@/services/animationSettingsService';
 
 export interface FullscreenControlsProps {
   total: number;
@@ -42,20 +43,51 @@ const FullscreenControls = ({
   const [visible, setVisible] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [animationSettings, setAnimationSettings] = useState<AnimationSettingsType>({
+    transitionMode: 'elegant',
+    slideInterval: 5000,
+    textAnimationSpeed: 1000,
+    particleIntensity: 50,
+    glowIntensity: 50,
+    autoTransition: true,
+    shuffleTransitions: false,
+    emojiAnimations: true,
+    parallaxEffect: true,
+    backgroundMotion: true
+  });
+
+  // Load settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      const settings = await loadAnimationSettings();
+      setAnimationSettings(settings);
+      setTransitionMode(settings.transitionMode);
+      setSlideInterval(settings.slideInterval);
+      setPaused(!settings.autoTransition);
+      setShuffleTransitions(settings.shuffleTransitions);
+    };
+    loadSettings();
+  }, []);
+
+  // Save settings when they change
+  useEffect(() => {
+    const saveSettings = async () => {
+      await saveAnimationSettings(animationSettings);
+    };
+    saveSettings();
+  }, [animationSettings]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      const shouldShow = e.clientY > window.innerHeight - 200; // Show when near bottom 200px
+      const shouldShow = e.clientY > window.innerHeight - 200;
       
       if (shouldShow !== visible) {
         setVisible(shouldShow);
         
-        // Clear existing timeout
         if (hideTimeout) {
           clearTimeout(hideTimeout);
         }
         
-        // Set new timeout to hide after 3 seconds of inactivity
         if (shouldShow) {
           const timeout = setTimeout(() => {
             setVisible(false);
@@ -80,6 +112,14 @@ const FullscreenControls = ({
 
   const handleNext = () => {
     onNav(current < total - 1 ? current + 1 : 0);
+  };
+
+  const handleSettingsChange = (newSettings: AnimationSettingsType) => {
+    setAnimationSettings(newSettings);
+    setTransitionMode(newSettings.transitionMode);
+    setSlideInterval(newSettings.slideInterval);
+    setPaused(!newSettings.autoTransition);
+    setShuffleTransitions(newSettings.shuffleTransitions);
   };
 
   return (
@@ -145,7 +185,7 @@ const FullscreenControls = ({
           </div>
 
           {/* Right: Settings */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
             <Button
               variant="ghost"
               size="lg"
@@ -163,55 +203,19 @@ const FullscreenControls = ({
               onClick={() => setShowSettings(!showSettings)}
               className="text-white hover:bg-white/20 transition-all duration-300"
             >
-              <Settings className="h-5 w-5" />
+              <Palette className="h-5 w-5" />
             </Button>
+
+            {/* Animation Settings Panel */}
+            {showSettings && (
+              <AnimationSettings
+                settings={animationSettings}
+                onSettingsChange={handleSettingsChange}
+                onClose={() => setShowSettings(false)}
+              />
+            )}
           </div>
         </div>
-
-        {/* Settings Panel */}
-        {showSettings && (
-          <div className="absolute bottom-full right-6 mb-4 bg-black/90 backdrop-blur-sm rounded-lg p-4 min-w-[300px]">
-            <div className="space-y-4">
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">
-                  Transition Mode
-                </label>
-                <Select value={transitionMode} onValueChange={setTransitionMode}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-black/90 border-white/20">
-                    {Object.entries(TRANSITION_MODES).map(([key, config]) => (
-                      <SelectItem key={key} value={key} className="text-white hover:bg-white/10">
-                        <div>
-                          <div className="font-medium">{config.name}</div>
-                          <div className="text-sm text-white/70">{config.description}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-white text-sm font-medium mb-2 block">
-                  Slide Interval (seconds)
-                </label>
-                <Select value={slideInterval.toString()} onValueChange={(value) => setSlideInterval(Number(value))}>
-                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-black/90 border-white/20">
-                    <SelectItem value="3000" className="text-white hover:bg-white/10">3 seconds</SelectItem>
-                    <SelectItem value="5000" className="text-white hover:bg-white/10">5 seconds</SelectItem>
-                    <SelectItem value="8000" className="text-white hover:bg-white/10">8 seconds</SelectItem>
-                    <SelectItem value="10000" className="text-white hover:bg-white/10">10 seconds</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

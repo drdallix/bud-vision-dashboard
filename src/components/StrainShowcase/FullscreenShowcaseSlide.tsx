@@ -10,6 +10,7 @@ import { useStrainTHC } from '@/hooks/useStrainTHC';
 import FullscreenTypography from './FullscreenTypography';
 import FullscreenSceneManager from './FullscreenSceneManager';
 import { TransitionMode, getStrainTransitionMode, getRandomTransitionMode } from './FullscreenTransitions';
+import { AnimationSettings } from './AnimationSettings';
 
 interface FullscreenShowcaseSlideProps {
   strain: Strain;
@@ -17,6 +18,7 @@ interface FullscreenShowcaseSlideProps {
   index?: number;
   transitionMode?: TransitionMode;
   shuffleMode?: boolean;
+  animationSettings?: AnimationSettings;
 }
 
 const FullscreenShowcaseSlide = ({ 
@@ -24,7 +26,8 @@ const FullscreenShowcaseSlide = ({
   isActive = true, 
   index = 0, 
   transitionMode,
-  shuffleMode = false 
+  shuffleMode = false,
+  animationSettings
 }: FullscreenShowcaseSlideProps) => {
   const { thcDisplay } = useStrainTHC(strain.name);
   const [currentMode, setCurrentMode] = useState<TransitionMode>('elegant');
@@ -45,8 +48,10 @@ const FullscreenShowcaseSlide = ({
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'Indica': return 'from-purple-500 to-indigo-600';
-      case 'Sativa': return 'from-yellow-400 to-orange-500';
+      case 'Indica-Dominant': return 'from-purple-400 to-blue-500';
       case 'Hybrid': return 'from-green-500 to-blue-500';
+      case 'Sativa-Dominant': return 'from-green-400 to-yellow-500';
+      case 'Sativa': return 'from-yellow-400 to-orange-500';
       default: return 'from-gray-400 to-gray-600';
     }
   };
@@ -54,127 +59,140 @@ const FullscreenShowcaseSlide = ({
   const getStrainEmoji = (type: string) => {
     switch (type) {
       case 'Indica': return '🌙';
+      case 'Indica-Dominant': return '🌜';
+      case 'Hybrid': return '🌿';
+      case 'Sativa-Dominant': return '🌛';
       case 'Sativa': return '☀️';
-      case 'Hybrid': return '🌓';
       default: return '🌿';
     }
   };
 
   return (
     <FullscreenSceneManager strain={strain} mode={currentMode}>
-      <div className="h-screen w-screen flex flex-col justify-center items-center p-4 md:p-8 lg:p-16 overflow-hidden">
+      <div className="h-screen w-screen flex items-center p-8 lg:p-16 overflow-hidden">
         
-        {/* Hero section - optimized for fullscreen */}
-        <div className="flex-shrink-0 text-center space-y-6 max-w-7xl w-full mb-8">
-          <div className="space-y-4">
-            {/* Strain emoji with animation */}
-            <div className={`text-8xl md:text-9xl lg:text-[12rem] animate-bounce ${
-              isActive ? 'animate-pulse' : ''
-            }`} style={{ animationDuration: '3s' }}>
-              {getStrainEmoji(strain.type)}
-            </div>
+        {/* Main Content - Side by Side Layout */}
+        <div className="w-full h-full flex gap-12 items-center max-w-7xl mx-auto">
+          
+          {/* Left Side - Strain Info (60% width) */}
+          <div className="flex-[3] flex flex-col justify-center space-y-8 min-w-0">
             
-            <FullscreenTypography
-              text={strain.name}
-              level="hero"
-              mode={currentMode}
-              isActive={isActive}
-              delay={200}
-            />
-            
-            <div className="flex items-center justify-center gap-6 flex-wrap">
-              <Badge 
-                className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-2xl text-2xl px-8 py-4 rounded-full`}
-              >
-                {strain.type}
-              </Badge>
-              <Badge className="bg-green-500/90 text-white border-0 shadow-2xl text-2xl px-8 py-4 rounded-full animate-pulse">
-                <Sparkles className="h-6 w-6 mr-3" />
-                Premium
-              </Badge>
+            {/* Hero Section */}
+            <div className="space-y-6">
+              {/* Strain emoji with enhanced animation */}
+              <div className={`text-8xl lg:text-9xl xl:text-[10rem] ${
+                animationSettings?.emojiAnimations ? 'animate-bounce' : ''
+              }`} style={{ 
+                animationDuration: animationSettings?.emojiAnimations ? '3s' : undefined,
+                filter: `drop-shadow(0 0 ${(animationSettings?.glowIntensity || 50) / 2}px rgba(255,255,255,0.5))`
+              }}>
+                {getStrainEmoji(strain.type)}
+              </div>
+              
+              <FullscreenTypography
+                text={strain.name}
+                level="hero"
+                mode={currentMode}
+                isActive={isActive}
+                delay={200}
+              />
+              
+              <div className="flex items-center gap-6 flex-wrap">
+                <Badge 
+                  className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-2xl text-xl px-6 py-3 rounded-full`}
+                  style={{
+                    boxShadow: animationSettings?.glowIntensity ? 
+                      `0 0 ${animationSettings.glowIntensity}px rgba(255,255,255,0.3)` : 
+                      '0 0 20px rgba(255,255,255,0.3)'
+                  }}
+                >
+                  {strain.type}
+                </Badge>
+                <Badge className="bg-green-500/90 text-white border-0 shadow-2xl text-xl px-6 py-3 rounded-full animate-pulse">
+                  <Sparkles className="h-5 w-5 mr-2" />
+                  Premium
+                </Badge>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* THC Display - prominent and animated */}
-        <div className={`flex-shrink-0 flex items-center justify-center gap-6 mb-12 transform transition-all duration-1000 ${
-          isActive ? 'scale-100 opacity-100' : 'scale-90 opacity-70'
-        }`}>
-          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-8 shadow-2xl animate-pulse">
-            <Zap className="h-12 w-12 text-white" />
-          </div>
-          <div className="text-center">
-            <FullscreenTypography
-              text={thcDisplay}
-              level="hero"
-              mode={currentMode}
-              isActive={isActive}
-              delay={600}
-            />
-            <FullscreenTypography
-              text="THC"
-              level="title"
-              mode={currentMode}
-              isActive={isActive}
-              delay={700}
-            />
-          </div>
-        </div>
-
-        {/* Description - centered and readable */}
-        <div className="flex-shrink-0 max-w-5xl text-center mb-12">
-          <FullscreenTypography
-            text={strain.description}
-            level="body"
-            mode={currentMode}
-            isActive={isActive}
-            delay={400}
-          />
-        </div>
-        
-        {/* Effects and Flavors Grid - optimized for fullscreen viewing */}
-        <div className="flex-1 w-full max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 h-full max-h-96">
-            <div className={`transform transition-all duration-1000 delay-800 ${
-              isActive ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-8 opacity-0 scale-95'
+            {/* THC Display */}
+            <div className={`flex items-center gap-8 transform transition-all duration-1000 ${
+              isActive ? 'scale-100 opacity-100' : 'scale-90 opacity-70'
             }`}>
-              <Card className="border-0 bg-gradient-to-br from-purple-900/60 to-pink-900/60 backdrop-blur-lg shadow-2xl h-full flex flex-col">
-                <div className="p-8 flex-1">
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="text-4xl animate-bounce" style={{ animationDelay: '0.5s' }}>⚡</span>
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full p-6 shadow-2xl animate-pulse">
+                <Zap className="h-10 w-10 text-white" />
+              </div>
+              <div>
+                <FullscreenTypography
+                  text={thcDisplay}
+                  level="title"
+                  mode={currentMode}
+                  isActive={isActive}
+                  delay={600}
+                />
+                <FullscreenTypography
+                  text="THC Content"
+                  level="subtitle"
+                  mode={currentMode}
+                  isActive={isActive}
+                  delay={700}
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="max-w-3xl">
+              <FullscreenTypography
+                text={strain.description}
+                level="body"
+                mode={currentMode}
+                isActive={isActive}
+                delay={400}
+              />
+            </div>
+          </div>
+          
+          {/* Right Side - Effects and Flavors (40% width) */}
+          <div className="flex-[2] h-full flex flex-col justify-center gap-8 min-w-0">
+            
+            {/* Effects Card */}
+            <div className={`transform transition-all duration-1000 delay-800 ${
+              isActive ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-8 opacity-0 scale-95'
+            }`}>
+              <Card className="border-0 bg-gradient-to-br from-purple-900/60 to-pink-900/60 backdrop-blur-lg shadow-2xl h-full">
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-3xl animate-bounce" style={{ animationDelay: '0.5s' }}>⚡</span>
                     <FullscreenTypography
                       text="Effects"
-                      level="title"
+                      level="subtitle"
                       mode={currentMode}
                       isActive={isActive}
                       delay={900}
                     />
                   </div>
-                  <div className="flex-1">
-                    <StrainEffectsVisual effectProfiles={strain.effectProfiles} />
-                  </div>
+                  <StrainEffectsVisual effectProfiles={strain.effectProfiles} />
                 </div>
               </Card>
             </div>
             
+            {/* Flavors Card */}
             <div className={`transform transition-all duration-1000 delay-1000 ${
-              isActive ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-8 opacity-0 scale-95'
+              isActive ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-8 opacity-0 scale-95'
             }`}>
-              <Card className="border-0 bg-gradient-to-br from-orange-900/60 to-yellow-900/60 backdrop-blur-lg shadow-2xl h-full flex flex-col">
-                <div className="p-8 flex-1">
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="text-4xl animate-bounce" style={{ animationDelay: '1s' }}>🍃</span>
+              <Card className="border-0 bg-gradient-to-br from-orange-900/60 to-yellow-900/60 backdrop-blur-lg shadow-2xl h-full">
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-3xl animate-bounce" style={{ animationDelay: '1s' }}>🍃</span>
                     <FullscreenTypography
                       text="Flavors"
-                      level="title"
+                      level="subtitle"
                       mode={currentMode}
                       isActive={isActive}
                       delay={1100}
                     />
                   </div>
-                  <div className="flex-1">
-                    <StrainFlavorsVisual flavorProfiles={strain.flavorProfiles} />
-                  </div>
+                  <StrainFlavorsVisual flavorProfiles={strain.flavorProfiles} />
                 </div>
               </Card>
             </div>
