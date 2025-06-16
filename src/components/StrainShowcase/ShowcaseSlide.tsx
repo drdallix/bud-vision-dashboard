@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Strain } from '@/types/strain';
 import StrainEffectsVisual from '@/components/StrainDashboard/StrainEffectsVisual';
@@ -6,8 +5,10 @@ import StrainFlavorsVisual from '@/components/StrainDashboard/StrainFlavorsVisua
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Zap, Heart } from 'lucide-react';
+import { Sparkles, Zap, Heart, DollarSign } from 'lucide-react';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
+import { useStrainPrices } from '@/hooks/useStrainPrices';
+import PriceBadges from '@/components/BrowseStrains/components/PriceBadges';
 
 interface ShowcaseSlideProps {
   strain: Strain;
@@ -27,6 +28,7 @@ const ShowcaseSlide = ({
   onToggleFavorite
 }: ShowcaseSlideProps) => {
   const { thcDisplay } = useStrainTHC(strain.name);
+  const { prices, isLoading: pricesLoading } = useStrainPrices(strain.id);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -76,6 +78,21 @@ const ShowcaseSlide = ({
                   In Stock
                 </Badge>
               </div>
+              
+              {/* Always show prices prominently */}
+              {!pricesLoading && !!prices.length && (
+                <div className="mb-2">
+                  <PriceBadges prices={prices} />
+                </div>
+              )}
+              
+              {/* Show no pricing message when no prices but in stock */}
+              {strain.inStock && !pricesLoading && !prices.length && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground bg-gray-100 px-2 py-1 rounded">
+                  <DollarSign className="h-3 w-3" />
+                  No pricing set
+                </div>
+              )}
               
               <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
                 {strain.description}

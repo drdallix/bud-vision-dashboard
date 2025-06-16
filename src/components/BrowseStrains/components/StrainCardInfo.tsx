@@ -17,6 +17,8 @@ interface StrainCardInfoProps {
   localInStock: boolean;
   prices: PricePoint[];
   pricesLoading: boolean;
+  description?: string;
+  showFullDescription?: boolean;
 }
 
 const StrainCardInfo = ({
@@ -25,14 +27,25 @@ const StrainCardInfo = ({
   scannedAt,
   localInStock,
   prices,
-  pricesLoading
+  pricesLoading,
+  description,
+  showFullDescription = false
 }: StrainCardInfoProps) => {
   return (
-    <div className="flex-1 min-w-0">
-      {/* Price badges (show only if in stock) */}
-      {localInStock && !pricesLoading && !!prices.length && (
+    <div className="flex-1 min-w-0 space-y-2">
+      {/* Always show price badges when available */}
+      {!pricesLoading && !!prices.length && (
         <div className="mb-2">
           <PriceBadges prices={prices} />
+        </div>
+      )}
+
+      {/* Show placeholder when no prices but in stock */}
+      {localInStock && !pricesLoading && !prices.length && (
+        <div className="mb-2">
+          <div className="text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded">
+            No pricing set
+          </div>
         </div>
       )}
 
@@ -41,6 +54,15 @@ const StrainCardInfo = ({
           THC: {thcDisplay}
         </div>
       </div>
+
+      {/* Full description when requested */}
+      {showFullDescription && description && (
+        <div className="mb-2">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {description}
+          </p>
+        </div>
+      )}
 
       <StrainCardEffects effects={effects} />
 

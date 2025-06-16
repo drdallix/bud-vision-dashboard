@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Strain } from '@/types/strain';
@@ -133,6 +134,8 @@ const StrainCard = ({
                 localInStock={localInStock}
                 prices={prices}
                 pricesLoading={pricesLoading}
+                description={strain.description}
+                showFullDescription={true}
               />
             </div>
           </div>
