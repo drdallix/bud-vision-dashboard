@@ -1,128 +1,155 @@
 
 import { useState, useEffect } from 'react';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { useScans } from '@/hooks/useScans';
-import StrainDashboard from '@/components/StrainDashboard';
-import BrowseStrains from '@/components/BrowseStrains';
-import SettingsDialog from '@/components/SettingsDialog';
-import InstallBanner from '@/components/InstallBanner';
-import Header from '@/components/Layout/Header';
-import Navigation from '@/components/Layout/Navigation';
-import MobileNavigation from '@/components/Layout/MobileNavigation';
-import QuickStats from '@/components/Layout/QuickStats';
-import StrainShowcase from '@/components/StrainShowcase';
+import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import BrowseStrains from '@/components/BrowseStrains';
+import StrainShowcase from '@/components/StrainShowcase';
+import StrainDashboard from '@/components/StrainDashboard';
+import SmartOmnibar from '@/components/SmartOmnibar';
+import Header from '@/components/Layout/Header';
+import MobileNavigation from '@/components/Layout/MobileNavigation';
+import Navigation from '@/components/Layout/Navigation';
+import QuickStats from '@/components/Layout/QuickStats';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
-  const { scans, addScan } = useScans();
-  
-  // Default to showcase for signed-out users, browse for signed-in users
-  const [activeTab, setActiveTab] = useState(user ? 'browse' : 'showcase');
+  const navigate = useNavigate();
+  const { strains, isLoading } = useRealtimeStrainStore();
+  const [activeTab, setActiveTab] = useState('showcase');
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Update default tab based on auth status
+  // Set default tab based on authentication
   useEffect(() => {
     if (!authLoading) {
-      setActiveTab(user ? 'browse' : 'showcase');
+      if (user) {
+        setActiveTab('browse'); // Authenticated users default to browse
+      } else {
+        setActiveTab('showcase'); // Unauthenticated users default to showcase
+      }
     }
   }, [user, authLoading]);
 
-  // Register service worker for PWA
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(registration => {
-        console.log('SW registered: ', registration);
-      }).catch(registrationError => {
-        console.log('SW registration failed: ', registrationError);
-      });
-    }
-  }, []);
-
-  const handleStrainGenerated = async (strain: Strain) => {
-    console.log('Strain generated in Index:', strain.name);
-    const completeStrain: Strain = {
-      ...strain,
-      inStock: true,
-      userId: user?.id || ''
-    };
-    
-    setCurrentStrain(completeStrain);
-    if (user) {
-      await addScan(completeStrain);
-    }
-    setActiveTab('details');
-  };
-
-  const handleDataRestore = (data: Strain[]) => {
-    console.log('Data restore requested:', data);
-  };
-
-  const handleSettingsClick = () => {
-    setSettingsOpen(true);
-  };
-
   const handleStrainSelect = (strain: Strain) => {
-    console.log('Strain selected in Index:', strain.name);
     setCurrentStrain(strain);
     setActiveTab('details');
   };
 
-  // Show loading state but still render the full component structure
+  const handleStrainGenerated = (strain: Strain) => {
+    setCurrentStrain(strain);
+    setActiveTab('details');
+  };
+
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading DoobieDB...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 pb-20">
-        <Header onSettingsClick={handleSettingsClick} />
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+      <Header />
+      
+      <main className="container mx-auto px-4 py-6">
+        {/* Authentication Status & Quick Actions */}
+        <div className="mb-6">
+          {user ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-800">
+                  <span className="font-semibold">✓ Authenticated</span> - You can add, edit, and manage all strains in the shared database
+                </p>
+              </div>
+              <QuickStats />
+            </div>
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-800">
+                  <span className="font-semibold">👁️ Viewing Mode</span> - Browse and search all strains, but sign in to add new ones
+                </p>
+              </div>
+              <Button 
+                onClick={() => navigate('/auth')}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Sign In
+              </Button>
+            </div>
+          )}
+        </div>
 
+        {/* Smart Omnibar - Only show for authenticated users */}
+        {user && (
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <SmartOmnibar onStrainGenerated={handleStrainGenerated} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {user && <Navigation />}
+          {/* Navigation */}
+          <div className="flex flex-col space-y-4">
+            <div className="hidden md:block">
+              <Navigation 
+                activeTab={activeTab} 
+                onTabChange={setActiveTab}
+                showBrowse={!!user} // Only show browse tab for authenticated users
+              />
+            </div>
+            
+            <div className="md:hidden">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="showcase">Live Showcase</TabsTrigger>
+                {user && <TabsTrigger value="browse">Browse & Edit</TabsTrigger>}
+              </TabsList>
+            </div>
+          </div>
 
-          <TabsContent value="browse" className="space-y-6">
-            <BrowseStrains onStrainSelect={handleStrainSelect} />
-          </TabsContent>
-
-          <TabsContent value="details" className="space-y-6">
-            <StrainDashboard strain={currentStrain} />
-          </TabsContent>
-
+          {/* Content */}
           <TabsContent value="showcase" className="space-y-6">
             <StrainShowcase onStrainSelect={handleStrainSelect} />
           </TabsContent>
+
+          {user && (
+            <TabsContent value="browse" className="space-y-6">
+              <BrowseStrains onStrainSelect={handleStrainSelect} />
+            </TabsContent>
+          )}
+
+          <TabsContent value="details" className="space-y-6">
+            {currentStrain ? (
+              <StrainDashboard strain={currentStrain} />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Select a strain to view details</p>
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
 
-        {user && <QuickStats scans={scans} />}
-      </div>
+        {/* AI Disclaimer */}
+        <div className="mt-8 p-4 bg-gray-100 rounded-lg">
+          <p className="text-xs text-gray-600 text-center">
+            ⚠️ All information generated by AI • For recreation and enjoyment only • Not for medical purposes
+          </p>
+        </div>
+      </main>
 
-      {user && (
-        <MobileNavigation 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab} 
-        />
-      )}
-
-      {user && (
-        <SettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          scanHistory={scans}
-          onDataRestore={handleDataRestore}
-        />
-      )}
-      
-      <InstallBanner />
+      <MobileNavigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        showBrowse={!!user}
+      />
     </div>
   );
 };

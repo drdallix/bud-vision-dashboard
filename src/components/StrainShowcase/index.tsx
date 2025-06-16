@@ -1,13 +1,13 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
 import ShowcaseSlide from './ShowcaseSlide';
 import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
-import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
+import FullscreenGallery from './FullscreenGallery';
 import { TransitionMode } from './FullscreenTransitions';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from '@/components/ui/carousel';
 
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
@@ -22,6 +22,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'thc'>('recent');
   const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
+  const [api, setApi] = useState<CarouselApi>();
 
   // Filter strains based on type
   const filteredStrains = strains.filter(strain => {
@@ -41,28 +42,52 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
 
   const currentStrain = filteredStrains[currentIndex];
 
+  // Set up carousel API to track active slide
+  useEffect(() => {
+    if (!api) return;
+
+    const onSelect = () => {
+      setCurrentIndex(api.selectedScrollSnap());
+    };
+
+    api.on('select', onSelect);
+    onSelect(); // Set initial index
+
+    return () => {
+      api.off('select', onSelect);
+    };
+  }, [api]);
+
   // Auto-advance logic
   useEffect(() => {
-    if (!isPlaying || filteredStrains.length <= 1) return;
+    if (!isPlaying || filteredStrains.length <= 1 || !api) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % filteredStrains.length);
+      const nextIndex = (currentIndex + 1) % filteredStrains.length;
+      api.scrollTo(nextIndex);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, filteredStrains.length]);
+  }, [isPlaying, filteredStrains.length, currentIndex, api]);
 
   // Reset index when filters change
   useEffect(() => {
     setCurrentIndex(0);
-  }, [filterType, sortBy]);
+    if (api) {
+      api.scrollTo(0);
+    }
+  }, [filterType, sortBy, api]);
 
   const handleNext = () => {
-    setCurrentIndex(prev => (prev + 1) % filteredStrains.length);
+    if (api) {
+      api.scrollNext();
+    }
   };
 
   const handlePrevious = () => {
-    setCurrentIndex(prev => (prev - 1 + filteredStrains.length) % filteredStrains.length);
+    if (api) {
+      api.scrollPrev();
+    }
   };
 
   const handleFullscreen = () => {
@@ -71,6 +96,12 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
 
   const handleExitFullscreen = () => {
     setIsFullscreen(false);
+  };
+
+  const handleNavigation = (index: number) => {
+    if (api) {
+      api.scrollTo(index);
+    }
   };
 
   if (isLoading) {
@@ -91,20 +122,13 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 bg-black z-50">
-        <FullscreenShowcaseSlide
-          strain={currentStrain}
-          isActive={true}
-          index={currentIndex}
-          transitionMode={transitionMode}
-        />
-        <button
-          onClick={handleExitFullscreen}
-          className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 z-10"
-        >
-          ✕
-        </button>
-      </div>
+      <FullscreenGallery
+        strains={filteredStrains}
+        currentIndex={currentIndex}
+        onIndexChange={setCurrentIndex}
+        onExit={handleExitFullscreen}
+        transitionMode={transitionMode}
+      />
     );
   }
 
@@ -122,6 +146,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
       <div className="relative">
         <Carousel 
           className="w-full"
+          setApi={setApi}
           opts={{
             align: "center",
             loop: true,
@@ -155,7 +180,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
                 className={`w-2 h-2 rounded-full transition-colors ${
                   index === currentIndex ? 'bg-green-600' : 'bg-gray-300'
                 }`}
-                onClick={() => setCurrentIndex(index)}
+                onClick={() => handleNavigation(index)}
               />
             ))}
           </div>
@@ -173,7 +198,7 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
         disabled={filteredStrains.length <= 1}
         total={filteredStrains.length}
         current={currentIndex}
-        onNav={setCurrentIndex}
+        onNav={handleNavigation}
         currentStrain={currentStrain}
       />
     </div>
