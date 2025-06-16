@@ -8,19 +8,19 @@ interface BrowseHeaderProps {
   totalCount: number;
   onSelectAll: () => void;
   onClearSelection: () => void;
-  onBatchStockUpdate: (strainIds: string[], inStock: boolean) => Promise<boolean>;
-  selectedStrains: string[];
-  inventoryLoading: boolean;
+  isAllSelected: boolean;
+  showBatchActions: boolean;
+  onToggleBatchActions: () => void;
 }
 
 const BrowseHeader = ({ 
   selectedCount, 
   totalCount, 
   onSelectAll, 
-  onClearSelection, 
-  onBatchStockUpdate, 
-  selectedStrains, 
-  inventoryLoading 
+  onClearSelection,
+  isAllSelected,
+  showBatchActions,
+  onToggleBatchActions
 }: BrowseHeaderProps) => {
   return (
     <div className="flex items-center justify-between py-2 px-1">
@@ -38,25 +38,14 @@ const BrowseHeader = ({
       
       <div className="flex items-center gap-2">
         {selectedCount > 0 && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClearSelection}
-              className="h-7 px-3 text-xs"
-            >
-              Clear Selection
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => onBatchStockUpdate(selectedStrains, true)}
-              disabled={inventoryLoading}
-              className="h-7 px-3 text-xs"
-            >
-              {inventoryLoading ? 'Updating...' : 'Mark In Stock'}
-            </Button>
-          </>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearSelection}
+            className="h-7 px-3 text-xs"
+          >
+            Clear Selection
+          </Button>
         )}
         <Button
           variant="outline"
@@ -64,7 +53,7 @@ const BrowseHeader = ({
           onClick={onSelectAll}
           className="h-7 px-3 text-xs"
         >
-          Select All
+          {isAllSelected ? 'Deselect All' : 'Select All'}
         </Button>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { Filter, TrendingUp, DollarSign } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dispatch, SetStateAction } from 'react';
 
 const PRESET_PRICES = [30, 40, 50, 60, 80, 100, 120, 200, 300];
 
@@ -9,8 +10,8 @@ interface FilterControlsProps {
   filterType: string;
   sortBy: string;
   priceFilter: string | null;
-  onFilterChange: (type: string) => void;
-  onSortChange: (sort: string) => void;
+  onFilterChange: Dispatch<SetStateAction<string>>;
+  onSortChange: Dispatch<SetStateAction<string>>;
   onPriceFilterChange: (price: string | null) => void;
 }
 
