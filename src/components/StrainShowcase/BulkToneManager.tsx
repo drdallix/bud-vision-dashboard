@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Wand2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Globe, Wand2, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,7 @@ const BulkToneManager = () => {
   const [availableTones, setAvailableTones] = useState<Tone[]>([]);
   const [selectedToneId, setSelectedToneId] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isBackgroundGenerating, setIsBackgroundGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processedCount, setProcessedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -34,6 +35,7 @@ const BulkToneManager = () => {
 
   const fetchTones = async () => {
     try {
+      // Fetch all available tones (system + user)
       const { data: tones, error } = await supabase
         .from('user_tones')
         .select('*')
@@ -132,6 +134,84 @@ const BulkToneManager = () => {
       description: `Processed ${processedCount} strains. ${newErrors.length} errors.`,
       variant: newErrors.length > 0 ? "destructive" : "default"
     });
+  };
+
+  const generateAllTonesForNewStrains = async () => {
+    if (!user) return;
+    
+    setIsBackgroundGenerating(true);
+    setProgress(0);
+    setProcessedCount(0);
+    
+    // Find strains that don't have descriptions for all tones
+    const strainsNeedingTones = [];
+    
+    for (const strain of strains) {
+      const { data: existingDescs } = await supabase
+        .from('strain_tone_descriptions')
+        .select('tone_id')
+        .eq('strain_id', strain.id);
+      
+      const existingToneIds = existingDescs?.map(d => d.tone_id) || [];
+      const missingTones = availableTones.filter(tone => !existingToneIds.includes(tone.id));
+      
+      if (missingTones.length > 0) {
+        strainsNeedingTones.push({ strain, missingTones });
+      }
+    }
+    
+    const totalOperations = strainsNeedingTones.reduce((sum, item) => sum + item.missingTones.length, 0);
+    setTotalCount(totalOperations);
+    
+    let completed = 0;
+    
+    for (const { strain, missingTones } of strainsNeedingTones) {
+      for (const tone of missingTones) {
+        try {
+          const { data, error } = await supabase.functions.invoke('regenerate-description', {
+            body: {
+              strainName: strain.name,
+              strainType: strain.type,
+              currentDescription: strain.description,
+              humanGuidance: 'Generate a description in the selected tone style',
+              effects: strain.effectProfiles?.map(e => e.name) || [],
+              flavors: strain.flavorProfiles?.map(f => f.name) || [],
+              toneId: tone.id
+            }
+          });
+
+          if (!error && !data?.error) {
+            await supabase
+              .from('strain_tone_descriptions')
+              .insert({
+                strain_id: strain.id,
+                tone_id: tone.id,
+                generated_description: data.description
+              });
+          }
+          
+          completed++;
+          setProcessedCount(completed);
+          setProgress((completed / totalOperations) * 100);
+          
+          // Longer delay for background processing
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+        } catch (error) {
+          console.error(`Background generation error for ${strain.name}:`, error);
+          completed++;
+        }
+      }
+    }
+    
+    setIsBackgroundGenerating(false);
+    
+    if (completed > 0) {
+      toast({
+        title: "Background Generation Complete",
+        description: `Generated ${completed} tone descriptions across all strains.`
+      });
+    }
   };
 
   const applyToneToAllStrains = async () => {
@@ -260,10 +340,12 @@ const BulkToneManager = () => {
         </div>
 
         {/* Progress */}
-        {isProcessing && (
+        {(isProcessing || isBackgroundGenerating) && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Progress:</span>
+              <span className="text-sm font-medium">
+                {isBackgroundGenerating ? 'Background Generation:' : 'Progress:'}
+              </span>
               <span className="text-sm">{processedCount}/{totalCount}</span>
             </div>
             <Progress value={progress} className="w-full" />
@@ -271,10 +353,10 @@ const BulkToneManager = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <Button
             onClick={generateDescriptionsForAllStrains}
-            disabled={!selectedToneId || isProcessing}
+            disabled={!selectedToneId || isProcessing || isBackgroundGenerating}
             variant="default"
           >
             <Wand2 className="h-4 w-4 mr-2" />
@@ -283,11 +365,20 @@ const BulkToneManager = () => {
 
           <Button
             onClick={applyToneToAllStrains}
-            disabled={!selectedToneId || isProcessing}
+            disabled={!selectedToneId || isProcessing || isBackgroundGenerating}
             variant="secondary"
           >
             <Globe className="h-4 w-4 mr-2" />
             Apply Tone to All
+          </Button>
+          
+          <Button
+            onClick={generateAllTonesForNewStrains}
+            disabled={isProcessing || isBackgroundGenerating}
+            variant="outline"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            Generate Missing Tones (Background)
           </Button>
         </div>
 
@@ -309,7 +400,7 @@ const BulkToneManager = () => {
         )}
 
         {/* Success indicator */}
-        {!isProcessing && processedCount > 0 && errors.length === 0 && (
+        {!isProcessing && !isBackgroundGenerating && processedCount > 0 && errors.length === 0 && (
           <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
             <CheckCircle className="h-4 w-4" />
             All operations completed successfully!
