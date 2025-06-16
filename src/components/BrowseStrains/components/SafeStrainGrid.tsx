@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { StrainGrid } from './StrainGrid';
+import StrainGrid from './StrainGrid';
 import { Strain } from '@/types/strain';
 import { PricePoint } from '@/types/price';
 
@@ -13,7 +13,6 @@ interface SafeStrainGridProps {
   onToggleStrain: (strainId: string) => void;
 }
 
-// Memoize to prevent unnecessary re-renders
 const SafeStrainGrid = memo(({ 
   strains, 
   selectedStrains, 
@@ -22,8 +21,6 @@ const SafeStrainGrid = memo(({
   pricesLoading, 
   onToggleStrain 
 }: SafeStrainGridProps) => {
-  // Remove excessive logging that causes performance issues
-  // Only log when there are actual changes that matter
   if (process.env.NODE_ENV === 'development' && strains.length === 0 && !pricesLoading) {
     console.log('SafeStrainGrid: No strains available');
   }

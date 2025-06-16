@@ -5,110 +5,58 @@ import { useBrowseFilters } from '@/components/BrowseStrains/hooks/useBrowseFilt
 import { useStrainSelection } from '@/components/BrowseStrains/hooks/useStrainSelection';
 import { useInventoryActions } from '@/components/BrowseStrains/hooks/useInventoryActions';
 import { useBulkStrainPrices } from './useBulkStrainPrices';
-import { Strain } from '@/types/strain';
 
 export const useBrowseStrains = () => {
   const { strains, isLoading, refetch } = useStrainData(false);
-  const { data: pricesMap = {}, isLoading: pricesLoading } = useBulkStrainPrices();
+  const { pricesMap = {}, isLoading: pricesLoading } = useBulkStrainPrices(strains);
 
   const {
     searchTerm,
-    typeFilter,
-    stockFilter,
+    filterType: typeFilter,
     sortBy,
-    sortOrder,
+    priceFilter: stockFilter,
     setSearchTerm,
-    setTypeFilter,
-    setStockFilter,
+    setFilterType: setTypeFilter,
     setSortBy,
-    setSortOrder,
-    clearFilters
-  } = useBrowseFilters();
+    setPriceFilter: setStockFilter,
+    updateFilters,
+    filteredStrains: filteredAndSortedStrains
+  } = useBrowseFilters(strains);
+
+  // Create sortOrder from sortBy for backward compatibility
+  const sortOrder = sortBy === 'recent' ? 'desc' : 'asc';
+  const setSortOrder = (order: string) => {
+    // Convert sort order back to sortBy format
+    if (order === 'desc') setSortBy('recent');
+    else setSortBy('name');
+  };
+
+  const clearFilters = () => {
+    updateFilters({
+      searchTerm: '',
+      filterType: 'all',
+      sortBy: 'recent',
+      priceFilter: null
+    });
+  };
 
   const {
     selectedStrains,
-    editMode,
-    setEditMode,
-    selectStrain,
-    deselectStrain,
-    selectAll,
-    clearSelection,
-    toggleStrain
+    toggleSelection,
+    selectAll: selectAllStrains,
+    clearSelection
   } = useStrainSelection();
 
+  // Create editMode based on selection
+  const editMode = selectedStrains.length > 0;
+  const setEditMode = (mode: boolean) => {
+    if (!mode) clearSelection();
+  };
+
   const {
-    bulkUpdateStock,
-    isUpdating
-  } = useInventoryActions(selectedStrains, clearSelection, refetch);
-
-  // Memoize filtered and sorted strains to prevent infinite re-renders
-  const filteredAndSortedStrains = useMemo(() => {
-    let filtered = [...strains];
-
-    // Apply filters
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(strain =>
-        strain.name.toLowerCase().includes(searchLower) ||
-        strain.description?.toLowerCase().includes(searchLower) ||
-        strain.effectProfiles?.some(effect => 
-          effect.name.toLowerCase().includes(searchLower)
-        ) ||
-        strain.flavorProfiles?.some(flavor => 
-          flavor.name.toLowerCase().includes(searchLower)
-        )
-      );
-    }
-
-    if (typeFilter && typeFilter !== 'all') {
-      filtered = filtered.filter(strain => strain.type.toLowerCase() === typeFilter.toLowerCase());
-    }
-
-    if (stockFilter && stockFilter !== 'all') {
-      filtered = filtered.filter(strain => 
-        stockFilter === 'in-stock' ? strain.inStock : !strain.inStock
-      );
-    }
-
-    // Apply sorting
-    if (sortBy) {
-      filtered.sort((a, b) => {
-        let aValue: any;
-        let bValue: any;
-
-        switch (sortBy) {
-          case 'name':
-            aValue = a.name.toLowerCase();
-            bValue = b.name.toLowerCase();
-            break;
-          case 'type':
-            aValue = a.type.toLowerCase();
-            bValue = b.type.toLowerCase();
-            break;
-          case 'thc':
-            aValue = a.thc || 0;
-            bValue = b.thc || 0;
-            break;
-          case 'date':
-            aValue = new Date(a.scannedAt);
-            bValue = new Date(b.scannedAt);
-            break;
-          case 'confidence':
-            aValue = a.confidence || 0;
-            bValue = b.confidence || 0;
-            break;
-          default:
-            return 0;
-        }
-
-        if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return filtered;
-  }, [strains, searchTerm, typeFilter, stockFilter, sortBy, sortOrder]);
+    handleBatchStockUpdate,
+    inventoryLoading
+  } = useInventoryActions();
 
   // Memoize stats to prevent recalculation
   const stats = useMemo(() => ({
@@ -118,6 +66,16 @@ export const useBrowseStrains = () => {
     inStockCount: strains.filter(s => s.inStock).length,
     outOfStockCount: strains.filter(s => !s.inStock).length
   }), [strains.length, filteredAndSortedStrains.length, selectedStrains.length, strains]);
+
+  const selectAll = () => selectAllStrains(filteredAndSortedStrains.map(s => s.id));
+  const toggleStrain = (strainId: string) => {
+    const isSelected = selectedStrains.includes(strainId);
+    toggleSelection(strainId, !isSelected);
+  };
+
+  const bulkUpdateStock = async (inStock: boolean) => {
+    return await handleBatchStockUpdate(selectedStrains, inStock);
+  };
 
   return {
     // Data
@@ -147,15 +105,13 @@ export const useBrowseStrains = () => {
     selectedStrains,
     editMode,
     setEditMode,
-    selectStrain,
-    deselectStrain,
-    selectAll: () => selectAll(filteredAndSortedStrains),
+    selectAll,
     clearSelection,
     toggleStrain,
     
     // Actions
     bulkUpdateStock,
-    isUpdating,
+    isUpdating: inventoryLoading,
     refetch
   };
 };

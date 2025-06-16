@@ -1,9 +1,9 @@
 
 import React, { memo } from 'react';
-import { BrowseHeader } from './BrowseStrains/components/BrowseHeader';
-import { FilterControls } from './BrowseStrains/FilterControls';
+import BrowseHeader from './BrowseStrains/components/BrowseHeader';
+import FilterControls from './BrowseStrains/FilterControls';
 import { SafeStrainGrid } from './BrowseStrains/components/SafeStrainGrid';
-import { BatchActions } from './BrowseStrains/BatchActions';
+import BatchActions from './BrowseStrains/BatchActions';
 import { useBrowseStrains } from '@/hooks/useBrowseStrains';
 
 const BrowseStrains = memo(() => {
@@ -35,9 +35,7 @@ const BrowseStrains = memo(() => {
     isUpdating
   } = useBrowseStrains();
 
-  // Only log significant state changes to reduce console noise
   if (process.env.NODE_ENV === 'development') {
-    // Only log when loading state changes or when there are actual errors
     if (isLoading !== undefined && totalStrains > 0) {
       console.log(`BrowseStrains: Loaded ${totalStrains} strains, filtered to ${stats.filteredStrains}`);
     }
