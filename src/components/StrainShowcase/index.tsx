@@ -10,20 +10,27 @@ import ShowcaseCarousel from './components/ShowcaseCarousel';
 import FullscreenView from './components/FullscreenView';
 import EmptyState from './components/EmptyState';
 import FavoritesComparison from './components/FavoritesComparison';
-
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
 }
-
-const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
-  const { strains, isLoading } = useRealtimeStrainStore(true);
-  
+const StrainShowcase = ({
+  onStrainSelect
+}: StrainShowcaseProps) => {
+  const {
+    strains,
+    isLoading
+  } = useRealtimeStrainStore(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [transitionMode, setTransitionMode] = useState<TransitionMode>('elegant');
 
   // Favorites management
-  const { favoriteStrains, toggleFavorite, isFavorite, clearFavorites } = useFavoriteStrains();
+  const {
+    favoriteStrains,
+    toggleFavorite,
+    isFavorite,
+    clearFavorites
+  } = useFavoriteStrains();
 
   // Use the same advanced filters as BrowseStrains
   const {
@@ -55,143 +62,61 @@ const StrainShowcase = ({ onStrainSelect }: StrainShowcaseProps) => {
     handleNext,
     handlePrevious,
     handleNavigateToIndex
-  } = useShowcaseCarousel({ filteredStrains, isPlaying });
-
+  } = useShowcaseCarousel({
+    filteredStrains,
+    isPlaying
+  });
   const currentStrain = filteredStrains[currentIndex];
-
   const handleFullscreen = () => {
     setIsFullscreen(true);
   };
-
   const handleExitFullscreen = () => {
     setIsFullscreen(false);
   };
-
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
+    return <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-      </div>
-    );
+      </div>;
   }
-
   if (filteredStrains.length === 0) {
-    return (
-      <EmptyState
-        strains={strains}
-        filterType={filterType}
-        sortBy={sortBy as 'name' | 'thc' | 'recent'}
-        selectedEffects={selectedEffects}
-        selectedFlavors={selectedFlavors}
-        thcRange={thcRange}
-        stockFilter={stockFilter}
-        onFilterChange={setFilterType}
-        onSortChange={setSortBy}
-        onEffectToggle={handleEffectToggle}
-        onFlavorToggle={handleFlavorToggle}
-        onThcRangeChange={setThcRange}
-        onStockFilterChange={setStockFilter}
-        onClearAll={clearAllFilters}
-      />
-    );
+    return <EmptyState strains={strains} filterType={filterType} sortBy={sortBy as 'name' | 'thc' | 'recent'} selectedEffects={selectedEffects} selectedFlavors={selectedFlavors} thcRange={thcRange} stockFilter={stockFilter} onFilterChange={setFilterType} onSortChange={setSortBy} onEffectToggle={handleEffectToggle} onFlavorToggle={handleFlavorToggle} onThcRangeChange={setThcRange} onStockFilterChange={setStockFilter} onClearAll={clearAllFilters} />;
   }
-
   if (isFullscreen && currentStrain) {
-    return (
-      <FullscreenView
-        currentStrain={currentStrain}
-        currentIndex={currentIndex}
-        transitionMode={transitionMode}
-        onExitFullscreen={handleExitFullscreen}
-        filteredStrains={filteredStrains}
-        isPlaying={isPlaying}
-        setIsPlaying={setIsPlaying}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
-        onNavigateToIndex={handleNavigateToIndex}
-        setTransitionMode={setTransitionMode}
-      />
-    );
+    return <FullscreenView currentStrain={currentStrain} currentIndex={currentIndex} transitionMode={transitionMode} onExitFullscreen={handleExitFullscreen} filteredStrains={filteredStrains} isPlaying={isPlaying} setIsPlaying={setIsPlaying} onNext={handleNext} onPrevious={handlePrevious} onNavigateToIndex={handleNavigateToIndex} setTransitionMode={setTransitionMode} />;
   }
-
-  return (
-    <div className="space-y-4">
-      <MobileFilters
-        strains={strains}
-        filterType={filterType}
-        sortBy={sortBy as 'name' | 'thc' | 'recent'}
-        selectedEffects={selectedEffects}
-        selectedFlavors={selectedFlavors}
-        thcRange={thcRange}
-        stockFilter={stockFilter}
-        onFilterChange={setFilterType}
-        onSortChange={setSortBy}
-        onEffectToggle={handleEffectToggle}
-        onFlavorToggle={handleFlavorToggle}
-        onThcRangeChange={setThcRange}
-        onStockFilterChange={setStockFilter}
-        onClearAll={clearAllFilters}
-      />
+  return <div className="space-y-4">
+      <MobileFilters strains={strains} filterType={filterType} sortBy={sortBy as 'name' | 'thc' | 'recent'} selectedEffects={selectedEffects} selectedFlavors={selectedFlavors} thcRange={thcRange} stockFilter={stockFilter} onFilterChange={setFilterType} onSortChange={setSortBy} onEffectToggle={handleEffectToggle} onFlavorToggle={handleFlavorToggle} onThcRangeChange={setThcRange} onStockFilterChange={setStockFilter} onClearAll={clearAllFilters} />
 
       {/* Modified ShowcaseCarousel with favorites integration */}
       <div className="space-y-4">
-        <ShowcaseCarousel
-          filteredStrains={filteredStrains}
-          currentIndex={currentIndex}
-          setCarouselApi={setCarouselApi}
-          onNavigateToIndex={handleNavigateToIndex}
-          isFavorite={isFavorite}
-          onToggleFavorite={toggleFavorite}
-        />
+        <ShowcaseCarousel filteredStrains={filteredStrains} currentIndex={currentIndex} setCarouselApi={setCarouselApi} onNavigateToIndex={handleNavigateToIndex} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />
 
         {/* Compact mobile-first controls */}
-        <div className="flex items-center justify-center gap-3 p-3 bg-white/90 backdrop-blur-sm rounded-lg">
-          <button
-            onClick={handlePrevious}
-            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
-            disabled={filteredStrains.length <= 1}
-          >
+        <div className="flex items-center justify-center gap-3 p-3 backdrop-blur-sm rounded-lg bg-teal-800">
+          <button onClick={handlePrevious} disabled={filteredStrains.length <= 1} className="p-2 rounded-full transition-colors active:scale-95 min-h-[44px] min-w-[44px] bg-sky-600 hover:bg-sky-500">
             ←
           </button>
           
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="p-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
-            disabled={filteredStrains.length <= 1}
-          >
+          <button onClick={() => setIsPlaying(!isPlaying)} disabled={filteredStrains.length <= 1} className="p-2 rounded-full text-white transition-colors active:scale-95 min-h-[44px] min-w-[44px] bg-green-600 hover:bg-green-500">
             {isPlaying ? '⏸️' : '▶️'}
           </button>
           
-          <button
-            onClick={handleNext}
-            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
-            disabled={filteredStrains.length <= 1}
-          >
+          <button onClick={handleNext} disabled={filteredStrains.length <= 1} className="p-2 rounded-full transition-colors active:scale-95 min-h-[44px] min-w-[44px] bg-sky-600 hover:bg-sky-500">
             →
           </button>
           
-          <button
-            onClick={handleFullscreen}
-            className="p-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
-            disabled={filteredStrains.length <= 1}
-          >
+          <button onClick={handleFullscreen} className="p-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition-colors active:scale-95 min-h-[44px] min-w-[44px]" disabled={filteredStrains.length <= 1}>
             ⛶
           </button>
           
-          <span className="text-sm text-gray-600 ml-2">
+          <span className="text-sm ml-2 text-slate-50">
             {currentIndex + 1} / {filteredStrains.length}
           </span>
         </div>
       </div>
 
       {/* Favorites Comparison Table */}
-      <FavoritesComparison 
-        favoriteStrains={favoriteStrains}
-        onRemoveFavorite={toggleFavorite}
-        onClearAll={clearFavorites}
-      />
-    </div>
-  );
+      <FavoritesComparison favoriteStrains={favoriteStrains} onRemoveFavorite={toggleFavorite} onClearAll={clearFavorites} />
+    </div>;
 };
-
 export default StrainShowcase;
