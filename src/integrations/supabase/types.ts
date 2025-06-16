@@ -84,7 +84,6 @@ export type Database = {
       }
       scans: {
         Row: {
-          cbd: number | null
           confidence: number | null
           created_at: string
           description: string | null
@@ -102,7 +101,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          cbd?: number | null
           confidence?: number | null
           created_at?: string
           description?: string | null
@@ -120,7 +118,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          cbd?: number | null
           confidence?: number | null
           created_at?: string
           description?: string | null

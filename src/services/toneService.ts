@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Strain } from '@/types/strain';
 import type { Tables } from '@/integrations/supabase/types';
@@ -20,7 +21,7 @@ export const safelyFetchAvailableTones = async (userId?: string): Promise<Tone[]
     
     const { data: tones, error } = await supabase
       .from('user_tones')
-      .select('id, name, description, persona_prompt, user_id, is_default')
+      .select('id, name, description, persona_prompt, user_id, is_default, created_at, updated_at')
       .or(`user_id.is.null,user_id.eq.${userId || 'null'}`)
       .order('created_at', { ascending: true })
       .limit(20); // Limit to prevent memory issues

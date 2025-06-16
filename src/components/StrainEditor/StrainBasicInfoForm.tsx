@@ -94,45 +94,24 @@ const StrainBasicInfoForm = ({ strain, errors, onUpdate, isLoading }: StrainBasi
         {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
       </div>
 
-      {/* THC/CBD Percentages */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="thc">THC Percentage</Label>
-          <div className="relative">
-            <Input
-              id="thc"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={strain.thc || ''}
-              onChange={(e) => onUpdate('thc', parseFloat(e.target.value) || null)}
-              disabled={isLoading}
-              className={errors.thc ? 'border-red-500' : ''}
-            />
-            <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-          </div>
-          {errors.thc && <p className="text-sm text-red-500">{errors.thc}</p>}
+      {/* THC Percentage */}
+      <div className="space-y-2">
+        <Label htmlFor="thc">THC Percentage</Label>
+        <div className="relative">
+          <Input
+            id="thc"
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value={strain.thc || ''}
+            onChange={(e) => onUpdate('thc', parseFloat(e.target.value) || null)}
+            disabled={isLoading}
+            className={errors.thc ? 'border-red-500' : ''}
+          />
+          <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="cbd">CBD Percentage</Label>
-          <div className="relative">
-            <Input
-              id="cbd"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={strain.cbd || ''}
-              onChange={(e) => onUpdate('cbd', parseFloat(e.target.value) || null)}
-              disabled={isLoading}
-              className={errors.cbd ? 'border-red-500' : ''}
-            />
-            <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-          </div>
-          {errors.cbd && <p className="text-sm text-red-500">{errors.cbd}</p>}
-        </div>
+        {errors.thc && <p className="text-sm text-red-500">{errors.thc}</p>}
       </div>
 
       {/* Confidence Score (Read-only) */}
