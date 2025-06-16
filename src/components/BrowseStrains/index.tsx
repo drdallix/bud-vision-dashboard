@@ -9,8 +9,17 @@ import SearchBar from './SearchBar';
 import FilterControls from './FilterControls';
 import BatchActions from './BatchActions';
 import SafeStrainGrid from './components/SafeStrainGrid';
+import SmartOmnibar from '@/components/SmartOmnibar';
+import { useAuth } from '@/contexts/AuthContext';
+import { Strain } from '@/types/strain';
 
-const BrowseStrains = () => {
+interface BrowseStrainosProps {
+  onStrainSelect?: (strain: Strain) => void;
+}
+
+const BrowseStrains = ({ onStrainSelect }: BrowseStrainosProps) => {
+  const { user } = useAuth();
+  
   // Use real-time enabled strain store
   const { 
     strains, 
@@ -57,9 +66,40 @@ const BrowseStrains = () => {
     }
   };
 
+  const handleStrainGenerated = (strain: Strain) => {
+    // Auto-select the generated strain
+    if (onStrainSelect) {
+      onStrainSelect(strain);
+    }
+  };
+
+  const handleStrainClick = (strain: Strain) => {
+    if (onStrainSelect) {
+      onStrainSelect(strain);
+    }
+  };
+
+  const hasResults = filteredStrains.length > 0;
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      <BrowseHeader />
+      <BrowseHeader 
+        selectedCount={selectedStrains.length}
+        totalCount={filteredStrains.length}
+        onSelectAll={selectAll}
+        onClearSelection={clearSelection}
+        isAllSelected={isAllSelected}
+        showBatchActions={selectedStrains.length > 0}
+        onToggleBatchActions={() => setShowBatchActions(!showBatchActions)}
+      />
+      
+      {/* Smart AI-powered input */}
+      <SmartOmnibar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onStrainGenerated={handleStrainGenerated}
+        hasResults={hasResults}
+      />
       
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
@@ -70,7 +110,7 @@ const BrowseStrains = () => {
         </div>
         <FilterControls
           filterType={filterType}
-          onFilterTypeChange={setFilterType}
+          onFilterChange={setFilterType}
           sortBy={sortBy}
           onSortChange={setSortBy}
         />
@@ -94,10 +134,10 @@ const BrowseStrains = () => {
         strains={filteredStrains}
         editMode={true}
         selectedStrains={selectedStrains}
-        user={null} // Will be properly passed from parent
+        user={user}
         onSelect={handleStrainSelect}
         onStockToggle={handleStockToggle}
-        onStrainClick={(strain) => console.log('Strain clicked:', strain)}
+        onStrainClick={handleStrainClick}
         inventoryLoading={inventoryLoading}
         pricesMap={pricesMap || {}}
         pricesLoading={isLoading}

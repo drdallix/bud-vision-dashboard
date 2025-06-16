@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -88,7 +89,7 @@ const Index = () => {
           {user && <Navigation />}
 
           <TabsContent value="browse" className="space-y-6">
-            <BrowseStrains />
+            <BrowseStrains onStrainSelect={handleStrainSelect} />
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">
@@ -96,7 +97,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="showcase" className="space-y-6">
-            <StrainShowcase />
+            <StrainShowcase onStrainSelect={handleStrainSelect} />
           </TabsContent>
         </Tabs>
 
