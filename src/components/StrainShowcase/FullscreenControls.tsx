@@ -1,27 +1,29 @@
 
-import { Pause, Play, ArrowLeft, ArrowRight, Shuffle, Settings, Minimize } from 'lucide-react';
+import { Pause, Play, ArrowLeft, ArrowRight, Settings, Minimize, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Strain } from '@/types/strain';
+import { TransitionMode, TRANSITION_MODES } from './FullscreenTransitions';
 
 interface FullscreenControlsProps {
   total: number;
   current: number;
   paused: boolean;
-  shuffleMode: boolean;
+  transitionMode: TransitionMode;
   slideInterval: number;
   setPaused: (val: boolean) => void;
-  setShuffleMode: (val: boolean) => void;
+  setTransitionMode: (mode: TransitionMode) => void;
   setSlideInterval: (val: number) => void;
   onNav: (index: number) => void;
   currentStrain?: Strain;
 }
 
 const FullscreenControls = ({
-  total, current, paused, shuffleMode, slideInterval, setPaused, setShuffleMode, 
-  setSlideInterval, onNav, currentStrain
+  total, current, paused, transitionMode, slideInterval, setPaused, 
+  setTransitionMode, setSlideInterval, onNav, currentStrain
 }: FullscreenControlsProps) => {
   
   const exitFullscreen = async () => {
@@ -81,27 +83,29 @@ const FullscreenControls = ({
           </Button>
         </div>
 
-        {/* Advanced Controls */}
-        <div className="flex items-center justify-center gap-4">
-          <Button 
-            variant={shuffleMode ? "default" : "outline"}
-            size="lg"
-            onClick={() => setShuffleMode(!shuffleMode)}
-            className={shuffleMode ? "bg-purple-600 hover:bg-purple-700" : "bg-white/10 border-white/30 text-white hover:bg-white/20"}
-          >
-            <Shuffle className="h-5 w-5 mr-2" />
-            Shuffle
-          </Button>
-
-          <Button 
-            variant="outline" 
-            size="lg" 
-            onClick={exitFullscreen}
-            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-          >
-            <Minimize className="h-5 w-5 mr-2" />
-            Exit
-          </Button>
+        {/* Transition Mode Selection */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-white">
+            <span className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Visual Mode
+            </span>
+          </div>
+          <Select value={transitionMode} onValueChange={(value: TransitionMode) => setTransitionMode(value)}>
+            <SelectTrigger className="bg-white/10 border-white/30 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(TRANSITION_MODES).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{config.name}</span>
+                    <span className="text-xs text-muted-foreground">{config.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Speed Control */}
@@ -118,6 +122,19 @@ const FullscreenControls = ({
             step={1000}
             className="w-full"
           />
+        </div>
+
+        {/* Advanced Controls */}
+        <div className="flex items-center justify-center gap-4">
+          <Button 
+            variant="outline" 
+            size="lg" 
+            onClick={exitFullscreen}
+            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+          >
+            <Minimize className="h-5 w-5 mr-2" />
+            Exit
+          </Button>
         </div>
 
         {/* Progress Dots */}

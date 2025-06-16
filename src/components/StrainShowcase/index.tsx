@@ -8,6 +8,7 @@ import ShowcaseControls from './ShowcaseControls';
 import ShowcaseFilters from './ShowcaseFilters';
 import FullscreenShowcaseSlide from './FullscreenShowcaseSlide';
 import FullscreenControls from './FullscreenControls';
+import { TransitionMode, TRANSITION_MODES } from './FullscreenTransitions';
 import { Strain } from '@/types/strain';
 
 const StrainShowcase = () => {
