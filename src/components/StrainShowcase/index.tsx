@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
@@ -12,6 +11,7 @@ import ShowcaseCarousel from './components/ShowcaseCarousel';
 import FullscreenView from './components/FullscreenView';
 import EmptyState from './components/EmptyState';
 import FavoritesComparison from './components/FavoritesComparison';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
@@ -22,7 +22,8 @@ const StrainShowcase = ({
 }: StrainShowcaseProps) => {
   const {
     strains,
-    isLoading
+    isLoading,
+    isRefreshing
   } = useRealtimeStrainStore(true);
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -99,10 +100,37 @@ const StrainShowcase = ({
     setIsFullscreen(false);
   };
 
-  if (isLoading) {
+  // Show skeleton loading during refresh for seamless UX
+  if (isLoading || isRefreshing) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      <div className="space-y-4">
+        <div className="flex justify-center gap-2 mb-4">
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-16" />
+        </div>
+        <div className="min-h-[500px] md:min-h-[600px] bg-gradient-to-br from-background to-muted/20 rounded-xl md:rounded-2xl p-3 md:p-6 shadow-md">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <Skeleton className="w-16 h-16 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton className="h-32 rounded-lg" />
+              <Skeleton className="h-32 rounded-lg" />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-center gap-3">
+          <Skeleton className="h-11 w-11 rounded-full" />
+          <Skeleton className="h-11 w-11 rounded-full" />
+          <Skeleton className="h-11 w-11 rounded-full" />
+          <Skeleton className="h-11 w-11 rounded-full" />
+        </div>
       </div>
     );
   }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +12,7 @@ import MobileNavigation from '@/components/Layout/MobileNavigation';
 import QuickStats from '@/components/Layout/QuickStats';
 import StrainShowcase from '@/components/StrainShowcase';
 import { Strain } from '@/types/strain';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -22,6 +22,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState(user ? 'browse' : 'showcase');
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Update default tab based on auth status
   useEffect(() => {
@@ -66,8 +67,14 @@ const Index = () => {
 
   const handleStrainSelect = (strain: Strain) => {
     console.log('Strain selected in Index:', strain.name);
+    setIsTransitioning(true);
     setCurrentStrain(strain);
-    setActiveTab('details');
+    
+    // Brief transition effect for seamless UX
+    setTimeout(() => {
+      setActiveTab('details');
+      setIsTransitioning(false);
+    }, 150);
   };
 
   // Show loading state but still render the full component structure
@@ -82,27 +89,54 @@ const Index = () => {
     );
   }
 
+  // Show skeleton during strain selection transition
+  const renderTabContent = () => {
+    if (isTransitioning) {
+      return (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-8 w-48" />
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-16" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-64 rounded-lg" />
+            <Skeleton className="h-64 rounded-lg" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-32 rounded-lg" />
+            <Skeleton className="h-32 rounded-lg" />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        {user && <Navigation />}
+
+        <TabsContent value="browse" className="space-y-6">
+          <BrowseStrains onStrainSelect={handleStrainSelect} />
+        </TabsContent>
+
+        <TabsContent value="details" className="space-y-6">
+          <StrainDashboard strain={currentStrain} />
+        </TabsContent>
+
+        <TabsContent value="showcase" className="space-y-6">
+          <StrainShowcase onStrainSelect={handleStrainSelect} />
+        </TabsContent>
+      </Tabs>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 pb-20">
         <Header onSettingsClick={handleSettingsClick} />
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {user && <Navigation />}
-
-          <TabsContent value="browse" className="space-y-6">
-            <BrowseStrains onStrainSelect={handleStrainSelect} />
-          </TabsContent>
-
-          <TabsContent value="details" className="space-y-6">
-            <StrainDashboard strain={currentStrain} />
-          </TabsContent>
-
-          <TabsContent value="showcase" className="space-y-6">
-            <StrainShowcase onStrainSelect={handleStrainSelect} />
-          </TabsContent>
-        </Tabs>
-
+        {renderTabContent()}
         {user && <QuickStats scans={scans} />}
       </div>
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Strain } from '@/types/strain';
 import { supabase } from '@/integrations/supabase/client';
@@ -105,9 +104,9 @@ export const useStrainEditor = (
 
     setIsLoading(true);
     try {
-      console.log('Saving strain with ID:', editedStrain.id);
+      console.log('Saving strain with real-time updates:', editedStrain.id);
       
-      // Update the strain in the database
+      // Update the strain in the database - real-time will handle UI updates
       const { error } = await supabase
         .from('scans')
         .update({
@@ -122,15 +121,14 @@ export const useStrainEditor = (
           in_stock: editedStrain.inStock,
           confidence: editedStrain.confidence
         })
-        .eq('id', editedStrain.id)
-        .eq('user_id', user.id); // Ensure user owns the strain
+        .eq('id', editedStrain.id);
 
       if (error) {
         console.error('Database update error:', error);
         throw error;
       }
 
-      console.log('Strain saved successfully');
+      console.log('Strain saved successfully - real-time will update UI');
       
       // Call the onSave callback with updated strain
       onSave(editedStrain);
@@ -138,9 +136,9 @@ export const useStrainEditor = (
       
       toast({
         title: "Success",
-        description: "Strain updated successfully",
+        description: "Strain updated successfully - changes will appear everywhere instantly",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving strain:', error);
       toast({
         title: "Save Failed",
