@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Strain } from '@/types/strain';
 import StrainEffectsVisual from '@/components/StrainDashboard/StrainEffectsVisual';
@@ -7,8 +8,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Zap, Heart, DollarSign } from 'lucide-react';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
+import { usePriceStore } from '@/stores/usePriceStore';
 import { useStrainPrices } from '@/hooks/useStrainPrices';
 import PriceBadges from '@/components/BrowseStrains/components/PriceBadges';
+
 interface ShowcaseSlideProps {
   strain: Strain;
   onStrainClick?: (strain: Strain) => void;
@@ -17,6 +20,7 @@ interface ShowcaseSlideProps {
   isFavorite?: boolean;
   onToggleFavorite?: (strain: Strain) => void;
 }
+
 const ShowcaseSlide = ({
   strain,
   onStrainClick,
@@ -28,10 +32,18 @@ const ShowcaseSlide = ({
   const {
     thcDisplay
   } = useStrainTHC(strain.name);
+  
+  // Use both the centralized price store and hook for maximum reliability
+  const { getOptimisticPrices } = usePriceStore();
   const {
-    prices,
+    prices: fetchedPrices,
     isLoading: pricesLoading
   } = useStrainPrices(strain.id);
+  
+  // Use optimistic prices if available, otherwise use fetched prices
+  const optimisticPrices = getOptimisticPrices(strain.id);
+  const prices = optimisticPrices || fetchedPrices;
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'Indica':
@@ -44,6 +56,7 @@ const ShowcaseSlide = ({
         return 'from-gray-400 to-gray-600';
     }
   };
+
   const getStrainEmoji = (type: string) => {
     switch (type) {
       case 'Indica':
@@ -56,11 +69,13 @@ const ShowcaseSlide = ({
         return '🌿';
     }
   };
+
   const handleHeartClick = () => {
     if (onToggleFavorite) {
       onToggleFavorite(strain);
     }
   };
+
   return <div className="space-y-3 md:space-y-4">
       {/* Enhanced Header */}
       <Card className="border-0 bg-theme-card shadow-lg">
@@ -83,12 +98,12 @@ const ShowcaseSlide = ({
                 </Badge>
               </div>
               
-              {/* Always show prices prominently */}
+              {/* Always show prices prominently - using consistent data source */}
               {!pricesLoading && !!prices.length && <div className="mb-2">
                   <PriceBadges prices={prices} />
                 </div>}
               
-              {/* Show no pricing message when no prices but in stock */}
+              {/* Show no pricing message when no prices but in stock - using consistent data source */}
               {strain.inStock && !pricesLoading && !prices.length && <div className="flex items-center gap-1 text-sm text-muted-foreground bg-gray-100 px-2 py-1 rounded">
                   <DollarSign className="h-3 w-3" />
                   No pricing set
@@ -147,4 +162,5 @@ const ShowcaseSlide = ({
       </div>
     </div>;
 };
+
 export default ShowcaseSlide;
