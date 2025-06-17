@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { Strain } from '@/types/strain';
@@ -12,6 +11,7 @@ import ShowcaseCarousel from './components/ShowcaseCarousel';
 import FullscreenView from './components/FullscreenView';
 import EmptyState from './components/EmptyState';
 import FavoritesComparison from './components/FavoritesComparison';
+import ShowcaseSkeleton from '@/components/ui/skeletons/ShowcaseSkeleton';
 
 interface StrainShowcaseProps {
   onStrainSelect?: (strain: Strain) => void;
@@ -100,11 +100,7 @@ const StrainShowcase = ({
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-      </div>
-    );
+    return <ShowcaseSkeleton />;
   }
 
   if (filteredStrains.length === 0) {
