@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -35,15 +36,12 @@ import {
   CommandShortcut,
 } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
-import { useOrigin } from "@/hooks/use-origin"
 import { useAuth } from '@/contexts/AuthContext';
 import { useBrowseStrains } from '@/hooks/useBrowseStrains';
 import { Strain } from '@/types/strain';
-import StrainCard from './components/StrainCard';
+import StrainCard from './StrainCard';
 import BrowseHeader from './components/BrowseHeader';
-import StrainEditorDialog from '@/components/StrainEditor/StrainEditorDialog';
-import BatchEditDialog from './components/BatchEditDialog';
-import BatchPricingDialog from './components/BatchPricingDialog';
+import { StrainEditModal } from '@/components/StrainEditor';
 import BrowseGridSkeleton from '@/components/ui/skeletons/BrowseGridSkeleton';
 
 interface BrowseStrainingsProps {
@@ -51,7 +49,6 @@ interface BrowseStrainingsProps {
 }
 
 const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
-  const origin = useOrigin();
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,8 +56,7 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
   const [sortBy, setSortBy] = useState('name');
   const [selectedStrains, setSelectedStrains] = useState<string[]>([]);
   const [editStrainId, setEditStrainId] = useState<string | null>(null);
-  const [batchEditOpen, setBatchEditOpen] = useState(false);
-  const [batchPricingOpen, setBatchPricingOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const { 
     strains, 
     allStrains,
@@ -116,6 +112,13 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
     updateStrainInCache(updatedStrain);
   };
 
+  const handleEditModeToggle = () => {
+    setEditMode(!editMode);
+    if (editMode) {
+      clearSelection();
+    }
+  };
+
   const handleBatchEditClick = () => {
     if (selectedStrains.length === 0) {
       toast({
@@ -124,11 +127,11 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
       });
       return;
     }
-    setBatchEditOpen(true);
-  };
-
-  const handleBatchEditClose = () => {
-    setBatchEditOpen(false);
+    // Placeholder for batch edit logic
+    toast({
+      title: "Batch Edit",
+      description: `Editing ${selectedStrains.length} strains. (Not Implemented)`,
+    });
   };
 
   const handleBatchPricingClick = () => {
@@ -139,11 +142,11 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
       });
       return;
     }
-    setBatchPricingOpen(true);
-  };
-
-  const handleBatchPricingClose = () => {
-    setBatchPricingOpen(false);
+    // Placeholder for batch pricing logic
+    toast({
+      title: "Batch Pricing",
+      description: `Setting prices for ${selectedStrains.length} strains. (Not Implemented)`,
+    });
   };
 
   const handleDeleteClick = () => {
@@ -167,12 +170,15 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
     return (
       <div className="space-y-6">
         <BrowseHeader 
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
+          editMode={editMode}
+          onEditModeToggle={handleEditModeToggle}
           selectedCount={selectedStrains.length}
-          totalCount={0}
-          onBatchEdit={() => {}}
-          onBatchDelete={() => {}}
-          onBatchPricing={() => {}}
-          onClearSelection={() => {}}
+          onClearSelection={clearSelection}
+          showMobileFilters={false}
+          onToggleMobileFilters={() => {}}
+          strains={[]}
         />
         <BrowseGridSkeleton />
       </div>
@@ -182,12 +188,15 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
   return (
     <div className="space-y-6">
       <BrowseHeader 
+        searchTerm={searchTerm}
+        onSearchChange={handleSearchChange}
+        editMode={editMode}
+        onEditModeToggle={handleEditModeToggle}
         selectedCount={selectedStrains.length}
-        totalCount={strains.length}
-        onBatchEdit={handleBatchEditClick}
-        onBatchDelete={handleDeleteClick}
-        onBatchPricing={handleBatchPricingClick}
         onClearSelection={clearSelection}
+        showMobileFilters={false}
+        onToggleMobileFilters={() => {}}
+        strains={strains}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -195,33 +204,34 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
           <StrainCard
             key={strain.id}
             strain={strain}
-            onSelect={handleStrainSelect}
+            editMode={editMode}
             isSelected={isSelected(strain.id)}
-            onToggleSelect={toggleSelectStrain}
-            onEditClick={handleEditClick}
+            canEdit={true}
+            onSelect={(strainId, checked) => {
+              if (checked) {
+                setSelectedStrains(prev => [...prev, strainId]);
+              } else {
+                setSelectedStrains(prev => prev.filter(id => id !== strainId));
+              }
+            }}
+            onStockToggle={async (strainId, currentStock) => {
+              // Placeholder for stock toggle logic
+              console.log('Toggle stock for strain:', strainId, 'current:', currentStock);
+              return true;
+            }}
+            onStrainClick={handleStrainSelect}
+            inventoryLoading={false}
+            prices={[]}
+            pricesLoading={false}
           />
         ))}
       </div>
 
-      <StrainEditorDialog
-        isOpen={!!editStrainId}
+      <StrainEditModal
+        strain={editStrainId ? strains.find(s => s.id === editStrainId) || null : null}
+        open={!!editStrainId}
         onClose={handleEditDialogClose}
-        strainId={editStrainId}
-        onStrainUpdate={handleStrainUpdate}
-      />
-
-      <BatchEditDialog
-        open={batchEditOpen}
-        onOpenChange={setBatchEditOpen}
-        strainIds={selectedStrains}
-        onClose={handleBatchEditClose}
-      />
-
-      <BatchPricingDialog
-        open={batchPricingOpen}
-        onOpenChange={setBatchPricingOpen}
-        strainIds={selectedStrains}
-        onClose={handleBatchPricingClose}
+        onSave={handleStrainUpdate}
       />
     </div>
   );
