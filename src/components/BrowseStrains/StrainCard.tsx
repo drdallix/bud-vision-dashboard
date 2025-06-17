@@ -10,24 +10,32 @@ import QuickPriceModal from './components/QuickPriceModal';
 
 interface StrainCardProps {
   strain: Strain;
+  editMode?: boolean;
   isSelected?: boolean;
-  onSelect?: (strain: Strain) => void;
+  canEdit?: boolean;
+  onSelect?: (strainId: string, checked: boolean) => void;
   onEdit?: (strain: Strain) => void;
   onStockToggle?: (strainId: string, inStock: boolean) => void;
   localInStock?: boolean;
   onStrainClick?: (strain: Strain) => void;
   showFullDescription?: boolean;
+  inventoryLoading?: boolean;
+  prices?: any[];
+  pricesLoading?: boolean;
 }
 
 const StrainCard = ({
   strain,
+  editMode = false,
   isSelected = false,
+  canEdit = true,
   onSelect,
   onEdit,
   onStockToggle,
   localInStock,
   onStrainClick,
-  showFullDescription = false
+  showFullDescription = false,
+  inventoryLoading = false
 }: StrainCardProps) => {
   const [showPriceModal, setShowPriceModal] = useState(false);
   const { thcDisplay } = useStrainTHC(strain.name);
@@ -52,6 +60,37 @@ const StrainCard = ({
     onStockToggle?.(strain.id, newStockStatus);
   };
 
+  const handleSelection = (checked: boolean) => {
+    onSelect?.(strain.id, checked);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.(strain);
+  };
+
+  const handleQuickPriceClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowPriceModal(true);
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'Indica':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'Sativa':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'Hybrid':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Indica-Dominant':
+        return 'bg-purple-50 text-purple-700 border-purple-150';
+      case 'Sativa-Dominant':
+        return 'bg-green-50 text-green-700 border-green-150';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   const finalInStock = localInStock !== undefined ? localInStock : strain.inStock;
 
   return (
@@ -70,13 +109,18 @@ const StrainCard = ({
       >
         <div className="p-4 space-y-3">
           <StrainCardHeader
-            strain={strain}
+            strainName={strain.name}
+            strainType={strain.type}
+            editMode={editMode}
             isSelected={isSelected}
-            onSelect={onSelect}
-            onEdit={onEdit}
+            canEdit={canEdit}
+            localInStock={finalInStock}
+            inventoryLoading={inventoryLoading}
+            onSelect={handleSelection}
             onStockToggle={handleStockToggle}
-            finalInStock={finalInStock}
-            onPriceClick={() => setShowPriceModal(true)}
+            onEditClick={handleEditClick}
+            onQuickPriceClick={handleQuickPriceClick}
+            getTypeColor={getTypeColor}
           />
 
           <StrainCardInfo
