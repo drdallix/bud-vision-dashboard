@@ -35,13 +35,13 @@ serve(async (req) => {
       )
     }
 
-    const prompt = `You are a cannabis expert writing product descriptions for a dispensary. 
+    const descriptionPrompt = `You are a cannabis expert writing product descriptions for a dispensary. 
 
 Strain: ${strainName}
 Type: ${strainType}
 Current Description: ${currentDescription || 'None'}
-Effects: ${effects?.join(', ') || 'None specified'}
-Flavors: ${flavors?.join(', ') || 'None specified'}
+Current Effects: ${effects?.join(', ') || 'None specified'}
+Current Flavors: ${flavors?.join(', ') || 'None specified'}
 
 Human Guidance/Corrections: ${humanGuidance}
 
@@ -54,9 +54,9 @@ Based on the human guidance provided, please regenerate an improved product desc
 
 Write only the new description, nothing else.`
 
-    console.log('Sending request to OpenAI...')
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Generate new description
+    console.log('Generating new description...')
+    const descriptionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
@@ -71,7 +71,7 @@ Write only the new description, nothing else.`
           },
           {
             role: 'user',
-            content: prompt
+            content: descriptionPrompt
           }
         ],
         max_tokens: 200,
@@ -79,33 +79,154 @@ Write only the new description, nothing else.`
       }),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
+    if (!descriptionResponse.ok) {
+      const errorText = await descriptionResponse.text()
       console.error('OpenAI API error:', errorText)
       
-      // Handle rate limiting specifically
-      if (response.status === 429) {
+      if (descriptionResponse.status === 429) {
         return new Response(
           JSON.stringify({ error: 'OpenAI API rate limit exceeded. Please try again in a moment.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
       
-      throw new Error(`OpenAI API error: ${response.status}`)
+      throw new Error(`OpenAI API error: ${descriptionResponse.status}`)
     }
 
-    const data = await response.json()
-    console.log('OpenAI response received:', data)
-
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    const descriptionData = await descriptionResponse.json()
+    if (!descriptionData.choices || !descriptionData.choices[0] || !descriptionData.choices[0].message) {
       throw new Error('Invalid response from OpenAI API')
     }
 
-    const description = data.choices[0].message.content.trim()
-    console.log('Generated description:', description)
+    const description = descriptionData.choices[0].message.content.trim()
+
+    // Generate new effects that match the description
+    console.log('Generating matching effects...')
+    const effectsPrompt = `Based on this cannabis strain description and guidance, generate 4-6 realistic effects that match the description:
+
+Strain: ${strainName} (${strainType})
+New Description: ${description}
+Human Guidance: ${humanGuidance}
+
+Generate effects that are:
+1. Appropriate for ${strainType} strains
+2. Match the tone and content of the new description
+3. Realistic and commonly used cannabis effects
+4. Varied and interesting (not the same generic effects)
+
+Common effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry, Energetic, Giggly, Talkative, Aroused, Tingley, Calm
+
+Return only a JSON array of effect names: ["effect1", "effect2", ...]`
+
+    const effectsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a cannabis expert. Generate realistic effect arrays that match strain descriptions.'
+          },
+          {
+            role: 'user',
+            content: effectsPrompt
+          }
+        ],
+        max_tokens: 100,
+        temperature: 0.8,
+      }),
+    })
+
+    // Generate new flavors that match the description
+    console.log('Generating matching flavors...')
+    const flavorsPrompt = `Based on this cannabis strain description and guidance, generate 3-5 realistic flavors that match the description:
+
+Strain: ${strainName} (${strainType})
+New Description: ${description}
+Human Guidance: ${humanGuidance}
+
+Generate flavors that are:
+1. Appropriate for ${strainType} strains
+2. Match the tone and content of the new description
+3. Realistic and commonly used cannabis flavors
+4. Varied and interesting (not the same generic flavors)
+
+Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy, Woody, Herbal, Fruity, Vanilla, Coffee, Chocolate
+
+Return only a JSON array of flavor names: ["flavor1", "flavor2", ...]`
+
+    const flavorsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a cannabis sommelier. Generate realistic flavor arrays that match strain descriptions.'
+          },
+          {
+            role: 'user',
+            content: flavorsPrompt
+          }
+        ],
+        max_tokens: 100,
+        temperature: 0.8,
+      }),
+    })
+
+    let newEffects = effects || []
+    let newFlavors = flavors || []
+
+    // Parse effects response
+    if (effectsResponse.ok) {
+      const effectsData = await effectsResponse.json()
+      if (effectsData.choices && effectsData.choices[0] && effectsData.choices[0].message) {
+        try {
+          const effectsContent = effectsData.choices[0].message.content.trim()
+          const parsedEffects = JSON.parse(effectsContent)
+          if (Array.isArray(parsedEffects)) {
+            newEffects = parsedEffects
+            console.log('Generated new effects:', newEffects)
+          }
+        } catch (e) {
+          console.log('Failed to parse effects, keeping original:', e)
+        }
+      }
+    }
+
+    // Parse flavors response
+    if (flavorsResponse.ok) {
+      const flavorsData = await flavorsResponse.json()
+      if (flavorsData.choices && flavorsData.choices[0] && flavorsData.choices[0].message) {
+        try {
+          const flavorsContent = flavorsData.choices[0].message.content.trim()
+          const parsedFlavors = JSON.parse(flavorsContent)
+          if (Array.isArray(parsedFlavors)) {
+            newFlavors = parsedFlavors
+            console.log('Generated new flavors:', newFlavors)
+          }
+        } catch (e) {
+          console.log('Failed to parse flavors, keeping original:', e)
+        }
+      }
+    }
+
+    console.log('Final regeneration result:', { description, effects: newEffects, flavors: newFlavors })
 
     return new Response(
-      JSON.stringify({ description }),
+      JSON.stringify({ 
+        description,
+        effects: newEffects,
+        flavors: newFlavors
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 

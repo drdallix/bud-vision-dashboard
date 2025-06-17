@@ -28,14 +28,16 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
     - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
     - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
     
+    IMPORTANT: Generate effects and flavors that specifically match and complement the strain type and description. Be creative and varied - don't always use the same combinations.
+    
     Return a JSON object with this exact structure:
     {
       "name": "corrected and properly formatted strain name",
       "type": "Indica" | "Sativa" | "Hybrid",
       "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
       "cbd": number (realistic for strain type, typically 0.1-5), 
-      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
-      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
+      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type and description - be creative and varied),
+      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors that match the strain's character - be diverse),
       "terpenes": [
         {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
         ...
@@ -47,7 +49,7 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
   },
   {
     role: 'user',
-    content: `Please analyze and correct this strain name/description, then generate complete strain information: "${textQuery}"`
+    content: `Please analyze and correct this strain name/description, then generate complete strain information with unique effects and flavors that match the strain's character: "${textQuery}"`
   }
 ];
 
@@ -79,14 +81,16 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
     - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
     
+    IMPORTANT: Generate effects and flavors that specifically match the identified strain and its characteristics. Be creative and varied.
+    
     Return a JSON object with this exact structure:
     {
       "name": "strain name from package (if visible) or educated guess",
       "type": "Indica" | "Sativa" | "Hybrid",
       "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
       "cbd": number (realistic, typically 0.1-5), 
-      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type),
-      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors typical for strain),
+      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type and strain - be creative),
+      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors that match the strain's profile - be diverse),
       "terpenes": [
         {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
         ...
@@ -101,7 +105,7 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     content: [
       {
         type: 'text',
-        text: 'Please analyze this cannabis package image and identify the strain. Focus on strain characteristics without mentioning potency.'
+        text: 'Please analyze this cannabis package image and identify the strain. Generate unique effects and flavors that match the strain characteristics.'
       },
       {
         type: 'image_url',

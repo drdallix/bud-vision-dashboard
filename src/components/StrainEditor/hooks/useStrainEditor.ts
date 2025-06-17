@@ -138,8 +138,13 @@ export const useStrainEditor = (
       
       toast({
         title: "Success",
-        description: "Strain updated successfully",
+        description: "Strain updated successfully. Refreshing page...",
       });
+
+      // Wait 500ms for database sync, then refresh the page
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (error) {
       console.error('Error saving strain:', error);
       toast({

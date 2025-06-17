@@ -23,7 +23,11 @@ const StrainDescriptionForm = ({
 }: StrainDescriptionFormProps) => {
   const [humanGuidance, setHumanGuidance] = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [proposedDescription, setProposedDescription] = useState('');
+  const [proposedChanges, setProposedChanges] = useState<{
+    description: string;
+    effects: string[];
+    flavors: string[];
+  } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -39,7 +43,6 @@ const StrainDescriptionForm = ({
       return;
     }
 
-    // Validate that we have a proper UUID for the strain
     if (!strain.id || typeof strain.id !== 'string') {
       console.error('Invalid strain ID:', strain.id);
       toast({
@@ -74,16 +77,20 @@ const StrainDescriptionForm = ({
         throw new Error(data.error);
       }
 
-      console.log('Generated description:', data.description);
-      setProposedDescription(data.description);
+      console.log('Generated new content:', data);
+      setProposedChanges({
+        description: data.description,
+        effects: data.effects || [],
+        flavors: data.flavors || []
+      });
+      
       toast({
-        title: "Description Generated",
-        description: "Review the new description and approve or reject it."
+        title: "Content Generated",
+        description: "Review the new description, effects, and flavors, then approve or reject them."
       });
     } catch (error) {
       console.error('Error regenerating description:', error);
       
-      // Handle specific error types
       if (error.message?.includes('rate limit')) {
         toast({
           title: "Rate Limit Exceeded",
@@ -93,7 +100,7 @@ const StrainDescriptionForm = ({
       } else {
         toast({
           title: "Generation Failed",
-          description: error.message || "Failed to generate new description. Please try again.",
+          description: error.message || "Failed to generate new content. Please try again.",
           variant: "destructive"
         });
       }
@@ -102,17 +109,16 @@ const StrainDescriptionForm = ({
     }
   };
 
-  const handleApproveDescription = async () => {
-    if (!user) {
+  const handleApproveChanges = async () => {
+    if (!user || !proposedChanges) {
       toast({
-        title: "Authentication Required",
-        description: "You must be logged in to save changes.",
+        title: "Error",
+        description: "Missing data for approval.",
         variant: "destructive"
       });
       return;
     }
 
-    // Validate that we have a proper UUID for the strain
     if (!strain.id || typeof strain.id !== 'string') {
       console.error('Invalid strain ID for save operation:', strain.id);
       toast({
@@ -125,13 +131,14 @@ const StrainDescriptionForm = ({
 
     setIsSaving(true);
     try {
-      console.log('Attempting to update strain description for strain ID:', strain.id);
+      console.log('Updating strain with new content for strain ID:', strain.id);
       
-      // Update in database using the scans table with proper UUID validation
       const { error } = await supabase
         .from('scans')
         .update({ 
-          description: proposedDescription 
+          description: proposedChanges.description,
+          effects: proposedChanges.effects,
+          flavors: proposedChanges.flavors
         })
         .eq('id', strain.id);
 
@@ -140,22 +147,25 @@ const StrainDescriptionForm = ({
         throw error;
       }
 
-      console.log('Description updated successfully in database');
+      console.log('Content updated successfully in database');
 
       // Update local state
-      onUpdate('description', proposedDescription);
-      setProposedDescription('');
+      onUpdate('description', proposedChanges.description);
+      onUpdate('effects', proposedChanges.effects);
+      onUpdate('flavors', proposedChanges.flavors);
+      
+      setProposedChanges(null);
       setHumanGuidance('');
       
       toast({
-        title: "Description Updated",
-        description: "The new description has been applied and saved to the strain."
+        title: "Content Updated",
+        description: "The new description, effects, and flavors have been applied and saved."
       });
     } catch (error) {
-      console.error('Error saving description:', error);
+      console.error('Error saving content:', error);
       toast({
         title: "Save Failed",
-        description: error.message || "Failed to save description. Please try again.",
+        description: error.message || "Failed to save changes. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -163,11 +173,11 @@ const StrainDescriptionForm = ({
     }
   };
 
-  const handleRejectDescription = () => {
-    setProposedDescription('');
+  const handleRejectChanges = () => {
+    setProposedChanges(null);
     toast({
-      title: "Description Rejected",
-      description: "The proposed description has been discarded."
+      title: "Changes Rejected",
+      description: "The proposed changes have been discarded."
     });
   };
 
@@ -209,7 +219,7 @@ const StrainDescriptionForm = ({
           <Textarea 
             value={humanGuidance} 
             onChange={(e) => setHumanGuidance(e.target.value)} 
-            placeholder="Provide corrections, additional information, or specific changes you want made to the description..." 
+            placeholder="Provide corrections, additional information, or specific changes you want made to the description, effects, or flavors..." 
             className="min-h-[80px] sm:min-h-[100px] text-sm" 
             disabled={isLoading || isRegenerating} 
           />
@@ -228,38 +238,66 @@ const StrainDescriptionForm = ({
             ) : (
               <>
                 <Wand2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                Regenerate Description
+                Regenerate Description & Profiles
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Proposed Description Review */}
-      {proposedDescription && (
+      {/* Proposed Changes Review */}
+      {proposedChanges && (
         <Card className="border-purple-200">
           <CardHeader className="pb-3 sm:pb-6">
             <CardTitle className="text-sm sm:text-base text-purple-900">
-              Proposed New Description
+              Proposed Changes
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4">
-            <div className="p-2 sm:p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs sm:text-sm text-black">
-              {proposedDescription}
+          <CardContent className="space-y-4">
+            {/* New Description */}
+            <div>
+              <h4 className="font-medium text-sm mb-2">New Description:</h4>
+              <div className="p-2 sm:p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs sm:text-sm text-black">
+                {proposedChanges.description}
+              </div>
+            </div>
+
+            {/* New Effects */}
+            <div>
+              <h4 className="font-medium text-sm mb-2">New Effects:</h4>
+              <div className="flex flex-wrap gap-1">
+                {proposedChanges.effects.map((effect, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {effect}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* New Flavors */}
+            <div>
+              <h4 className="font-medium text-sm mb-2">New Flavors:</h4>
+              <div className="flex flex-wrap gap-1">
+                {proposedChanges.flavors.map((flavor, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {flavor}
+                  </Badge>
+                ))}
+              </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <Button 
-                onClick={handleApproveDescription} 
+                onClick={handleApproveChanges} 
                 className="flex-1 bg-green-600 hover:bg-green-700 text-sm" 
                 disabled={isLoading || isSaving} 
                 size="sm"
               >
                 <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Approve & Apply'}
+                {isSaving ? 'Saving...' : 'Approve & Apply All'}
               </Button>
               <Button 
-                onClick={handleRejectDescription} 
+                onClick={handleRejectChanges} 
                 variant="outline" 
                 className="flex-1 text-red-600 border-red-300 hover:bg-red-50 text-sm" 
                 disabled={isLoading || isSaving} 
@@ -276,12 +314,12 @@ const StrainDescriptionForm = ({
       {/* Guidelines */}
       <Card className="bg-blue-50 border-blue-200">
         <CardContent className="pt-4 sm:pt-6">
-          <h4 className="font-medium text-blue-900 mb-2 text-sm">Description Tips</h4>
+          <h4 className="font-medium text-blue-900 mb-2 text-sm">Tips</h4>
           <ul className="text-xs sm:text-sm text-blue-800 space-y-1">
-            <li>• Be specific about corrections needed</li>
-            <li>• Mention unique characteristics or effects</li>
-            <li>• Include customer feedback or observations</li>
-            <li>• Note any medical uses or warnings</li>
+            <li>• Be specific about corrections needed for description, effects, or flavors</li>
+            <li>• Mention unique characteristics or customer feedback</li>
+            <li>• The AI will generate matching effects and flavors for the new description</li>
+            <li>• All changes are applied together to maintain consistency</li>
           </ul>
         </CardContent>
       </Card>
