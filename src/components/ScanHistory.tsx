@@ -31,8 +31,8 @@ interface ScanHistoryProps {
 // Map of effect names to their corresponding emojis
 const effectToEmoji: { [key: string]: string } = {
   'Relaxed': '😌',
-  'Happy': '😊',
-  'Euphoric': '�',
+  'Happy': '�',
+  'Euphoric': '🤩',
   'Uplifted': '⬆️',
   'Creative': '🎨',
   'Focused': '🎯',
