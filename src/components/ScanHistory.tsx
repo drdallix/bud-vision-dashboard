@@ -28,23 +28,41 @@ interface ScanHistoryProps {
   onStrainSelect: (strain: Strain) => void;
 }
 
+/**
+ * Generates a consistent, visually appealing HSL color based on a string input.
+ * This ensures that the same effect (e.g., "Happy") always has the same color.
+ * @param {string} str The input string (e.g., an effect name).
+ * @returns An object with HSL color strings for inline styling.
+ */
+const generateHslColorFromString = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    // A simple hashing function to create a number from the string
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  // Convert the hash to a hue value between 0 and 360
+  const hue = hash % 360;
+  // Return a set of HSL colors with fixed saturation and lightness for a consistent, pastel look
+  return {
+    backgroundColor: `hsl(${hue}, 80%, 90%)`, // Light pastel background
+    color: `hsl(${hue}, 70%, 35%)`,          // Darker text for contrast
+    borderColor: `hsl(${hue}, 80%, 80%)`,     // A matching border color
+    borderWidth: '1px',
+  };
+};
+
 // --- StrainCard Component ---
 // This self-contained component renders a single strain card.
-// It includes the logic to shuffle effects, preventing repetitive UI patterns.
 const StrainCard = ({ strain, onStrainSelect }: { strain: Strain, onStrainSelect: (strain: Strain) => void }) => {
-  // We use useMemo to shuffle the effects list only when the strain data changes.
-  // This is more performant than shuffling on every single render.
   const shuffledEffects = useMemo(() => {
-    const effectsCopy = [...strain.effects]; // Create a copy to avoid changing the original data
-    // A common and efficient shuffling algorithm (Fisher-Yates)
+    const effectsCopy = [...strain.effects];
     for (let i = effectsCopy.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [effectsCopy[i], effectsCopy[j]] = [effectsCopy[j], effectsCopy[i]]; // Swap elements
+      [effectsCopy[i], effectsCopy[j]] = [effectsCopy[j], effectsCopy[i]];
     }
     return effectsCopy;
-  }, [strain.effects]); // The dependency array ensures this runs only when effects change
+  }, [strain.effects]);
 
-  // Helper to get a specific color for each strain type badge
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'Indica': return 'bg-purple-100 text-purple-800 border-purple-200';
@@ -66,10 +84,8 @@ const StrainCard = ({ strain, onStrainSelect }: { strain: Strain, onStrainSelect
             src={strain.imageUrl}
             alt={strain.name}
             className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-            // Fallback in case the image URL is broken
             onError={(e) => { e.currentTarget.src = `https://placehold.co/64x64/222/fff?text=${strain.name.charAt(0)}`; }}
           />
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-semibold truncate">{strain.name}</h3>
@@ -77,16 +93,18 @@ const StrainCard = ({ strain, onStrainSelect }: { strain: Strain, onStrainSelect
                 {strain.type}
               </Badge>
             </div>
-
             <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
               <span>THC: {strain.thc}%</span>
               <span>CBD: {strain.cbd}%</span>
             </div>
-
             <div className="flex flex-wrap gap-1">
-              {/* Here we map over the SHUFFLED effects array */}
+              {/* Map over shuffled effects and apply dynamic colors */}
               {shuffledEffects.slice(0, 2).map((effect) => (
-                <Badge key={effect} variant="outline" className="text-xs">
+                <Badge
+                  key={effect}
+                  className="text-xs" // Base classes
+                  style={generateHslColorFromString(effect)} // Apply dynamic, name-based colors
+                >
                   {effect}
                 </Badge>
               ))}
@@ -98,17 +116,13 @@ const StrainCard = ({ strain, onStrainSelect }: { strain: Strain, onStrainSelect
             </div>
           </div>
         </div>
-        
-        {/* The description with a 2-line clamp */}
         <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mt-auto">
           {strain.description}
         </p>
-
       </CardContent>
     </Card>
   );
 };
-
 
 // --- Main ScanHistory Component ---
 const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
@@ -116,7 +130,6 @@ const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
 
-  // Filter and sort the strains based on user input
   const filteredAndSortedStrains = strains
     .filter(strain => {
       const lowerSearchTerm = searchTerm.toLowerCase();
@@ -141,7 +154,6 @@ const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
       }
     });
 
-  // Display a message if there are no strains in the history at all
   if (strains.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -160,7 +172,6 @@ const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Filters and Search Bar */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -182,7 +193,6 @@ const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
                 className="pl-10"
               />
             </div>
-            
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-full md:w-48">
                 <Filter className="h-4 w-4 mr-2" />
@@ -195,7 +205,6 @@ const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
                 <SelectItem value="Hybrid">Hybrid</SelectItem>
               </SelectContent>
             </Select>
-            
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-full md:w-48">
                 <TrendingUp className="h-4 w-4 mr-2" />
@@ -212,14 +221,12 @@ const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
         </CardContent>
       </Card>
 
-      {/* Strain Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredAndSortedStrains.map((strain) => (
           <StrainCard key={strain.id} strain={strain} onStrainSelect={onStrainSelect} />
         ))}
       </div>
 
-      {/* Display a message if filters result in no matches */}
       {filteredAndSortedStrains.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
