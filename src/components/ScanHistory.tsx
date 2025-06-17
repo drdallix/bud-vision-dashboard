@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Calendar, Filter, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,31 +28,45 @@ interface ScanHistoryProps {
   onStrainSelect: (strain: Strain) => void;
 }
 
-// Map of effect names to their corresponding emojis
-const effectToEmoji: { [key: string]: string } = {
-  'Relaxed': '😌',
-  'Happy': '�',
-  'Euphoric': '🤩',
-  'Uplifted': '⬆️',
-  'Creative': '🎨',
-  'Focused': '🎯',
-  'Sleepy': '😴',
-  'Hungry': '🍽️',
+/**
+ * Generates a consistent, visually appealing HSL color based on a string input.
+ * This ensures that the same effect (e.g., "Happy") always has the same color.
+ * @param {string} str The input string (e.g., an effect name).
+ * @returns An object with HSL color strings for inline styling.
+ */
+const generateHslColorFromString = (str: string) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = hash % 360;
+  return {
+    backgroundColor: `hsl(${hue}, 80%, 90%)`,
+    color: `hsl(${hue}, 70%, 35%)`,
+    borderColor: `hsl(${hue}, 80%, 80%)`,
+    borderWidth: '1px',
+  };
 };
 
 // --- StrainCard Component ---
-// This component now displays emojis for effects instead of badges.
+// This component now uses useEffect to ensure shuffling happens on the client-side,
+// avoiding issues with Server-Side Rendering (SSR) hydration.
 const StrainCard = ({ strain, onStrainSelect }: { strain: Strain, onStrainSelect: (strain: Strain) => void }) => {
+  // Initialize state with the original, unshuffled effects.
   const [shuffledEffects, setShuffledEffects] = useState(strain.effects);
 
+  // This effect runs once when the component mounts on the client.
+  // This is the key to ensuring a different shuffle on each page load.
   useEffect(() => {
     const effectsCopy = [...strain.effects];
+    // Fisher-Yates shuffle algorithm
     for (let i = effectsCopy.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [effectsCopy[i], effectsCopy[j]] = [effectsCopy[j], effectsCopy[i]];
     }
+    // Update the state with the newly shuffled array, triggering a re-render.
     setShuffledEffects(effectsCopy);
-  }, [strain.effects]);
+  }, [strain.effects]); // Dependency array ensures this re-runs if the strain prop changes.
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -88,21 +102,20 @@ const StrainCard = ({ strain, onStrainSelect }: { strain: Strain, onStrainSelect
               <span>THC: {strain.thc}%</span>
               <span>CBD: {strain.cbd}%</span>
             </div>
-            {/* Display emojis for effects */}
-            <div className="flex flex-wrap items-center gap-2">
-              {shuffledEffects.slice(0, 3).map((effect) => (
-                <span
+            <div className="flex flex-wrap gap-1">
+              {shuffledEffects.slice(0, 2).map((effect) => (
+                <Badge
                   key={effect}
-                  title={effect} // Tooltip to show the effect name
-                  className="text-2xl bg-slate-100 rounded-md p-1 leading-none"
+                  className="text-xs"
+                  style={generateHslColorFromString(effect)}
                 >
-                  {effectToEmoji[effect] || '🌿'}
-                </span>
+                  {effect}
+                </Badge>
               ))}
-              {shuffledEffects.length > 3 && (
-                <span className="text-xs text-muted-foreground font-medium">
-                  +{shuffledEffects.length - 3} more
-                </span>
+              {shuffledEffects.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{shuffledEffects.length - 2} more
+                </Badge>
               )}
             </div>
           </div>
@@ -234,4 +247,3 @@ const ScanHistory = ({ strains, onStrainSelect }: ScanHistoryProps) => {
 };
 
 export default ScanHistory;
-�
