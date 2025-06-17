@@ -82,20 +82,22 @@ const StrainBasicInfoForm = ({ strain, errors, onUpdate, isLoading }: StrainBasi
         >
           {strainTypes.map((type) => (
             <div key={type} className="flex items-center space-x-2">
-              <RadioGroupItem value={type} id={type} />
-              <Label 
-                htmlFor={type} 
-                className={`flex-1 p-3 border rounded-lg cursor-pointer transition-all text-sm text-white bg-transparent ${
+                <RadioGroupItem value={type} id={type} />
+                <Label
+                    htmlFor={type}
+                    className="flex-1 cursor-pointer"
+                >
+                    <div className={`h-full w-full flex items-center p-3 border rounded-lg transition-all text-sm text-white bg-transparent ${
                         strain.type === type 
                         ? 'border-sky-400 shadow-[0_0_15px_-3px_theme(colors.sky.400)]' 
                         : 'border-gray-600'
-                    }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{getTypeEmoji(type)}</span>
-                  <span className="font-medium text-xs">{type}</span>
-                </div>
-              </Label>
+                    }`}>
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg">{getTypeEmoji(type)}</span>
+                            <span className="font-medium text-xs">{type}</span>
+                        </div>
+                    </div>
+                </Label>
             </div>
           ))}
         </RadioGroup>
