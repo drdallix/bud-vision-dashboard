@@ -65,8 +65,8 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainingsProps) => {
     updateStrainInCache
   } = useBrowseStrains(searchTerm, filterType, sortBy);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
   };
 
   const handleFilterChange = (value: string) => {

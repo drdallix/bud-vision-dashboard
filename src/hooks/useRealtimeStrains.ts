@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { convertDatabaseScansToStrains } from '@/data/converters/strainConverters';
@@ -7,12 +7,20 @@ import { DatabaseScan } from '@/types/strain';
 
 export const useRealtimeStrains = (includeAllStrains = false) => {
   const queryClient = useQueryClient();
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
+    // Clean up existing channel if it exists
+    if (channelRef.current) {
+      console.log('Cleaning up existing real-time subscription');
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     console.log('Setting up real-time subscription for strains');
     
     const channel = supabase
-      .channel('strain-changes')
+      .channel(`strain-changes-${includeAllStrains ? 'all' : 'user'}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -78,9 +86,14 @@ export const useRealtimeStrains = (includeAllStrains = false) => {
         console.log('Real-time subscription status:', status);
       });
 
+    channelRef.current = channel;
+
     return () => {
       console.log('Cleaning up real-time subscription');
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [queryClient, includeAllStrains]);
 };

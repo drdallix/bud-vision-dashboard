@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -10,12 +10,20 @@ import { useQueryClient } from '@tanstack/react-query';
 export const useRealtimeShowcaseFilters = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState(Date.now());
   const queryClient = useQueryClient();
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
+    // Clean up existing channel if it exists
+    if (channelRef.current) {
+      console.log('Cleaning up existing showcase filter subscription');
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     console.log('Setting up real-time showcase filter subscription');
     
     const channel = supabase
-      .channel('showcase-filter-sync')
+      .channel(`showcase-filter-sync-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -40,9 +48,14 @@ export const useRealtimeShowcaseFilters = () => {
         console.log('Showcase filter subscription status:', status);
       });
 
+    channelRef.current = channel;
+
     return () => {
       console.log('Cleaning up showcase filter subscription');
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [queryClient]);
 
