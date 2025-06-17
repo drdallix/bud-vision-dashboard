@@ -1,11 +1,13 @@
+// index.ts
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 import { corsHeaders } from './cors.ts';
 import { createTextAnalysisMessages, createImageAnalysisMessages, createEffectProfilesMessages, createFlavorProfilesMessages, callOpenAI } from './openai.ts';
-import { parseOpenAIResponse, validateStrainData } from './validation.ts';
+import { parseOpenAIResponse, validateStrainData, createFallbackStrain } from './validation.ts';
 import { getDeterministicTHCRange } from './thcGenerator.ts';
+import { SUPPORTED_EFFECTS, SUPPORTED_FLAVORS, DEFAULT_EFFECT_PROFILE, DEFAULT_FLAVOR_PROFILE } from './profileConstants.ts'; // Import our new constants
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -20,145 +22,96 @@ serve(async (req) => {
     const { imageData, textQuery, userId } = await req.json();
     
     if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
-      return new Response(JSON.stringify({ 
-        error: 'OpenAI API key not configured',
-        fallbackStrain: null
-      }), {
+      return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log('Processing strain analysis request:', {
-      hasImage: !!imageData,
-      hasText: !!textQuery,
-      userId: userId || 'anonymous'
-    });
+    console.log('Processing request:', { hasImage: !!imageData, hasText: !!textQuery, userId: userId || 'anonymous' });
 
-    let strainName = textQuery || "Mystery Strain";
-    let initialMessages;
-    let thcRange: [number, number];
+    let strainNameToAnalyze = textQuery || (imageData ? "Mystery Strain from Image" : "Mystery Strain");
 
-    if (textQuery) {
-      // For text queries, we need to clean the name first to get consistent THC
-      const cleanedName = textQuery.replace(/[^\w\s]/g, '').trim();
-      strainName = cleanedName || "Mystery Strain";
-      thcRange = getDeterministicTHCRange(strainName);
-      initialMessages = createTextAnalysisMessages(textQuery, thcRange);
-    } else {
-      // For image analysis, use a default name initially, we'll update after getting the real name
-      thcRange = getDeterministicTHCRange("Mystery Strain");
-      initialMessages = createImageAnalysisMessages(imageData!, strainName, thcRange);
+    // For image queries, a preliminary call might be needed to identify the strain name first
+    // This logic can be refined, but for now we assume text query provides the name
+    if (imageData && !textQuery) {
+        const imageToTextMessages = createImageAnalysisMessages(imageData);
+        const preliminaryResponse = await callOpenAI(imageToTextMessages, openAIApiKey);
+        const preliminaryData = parseOpenAIResponse(preliminaryResponse.choices[0].message.content);
+        strainNameToAnalyze = preliminaryData.name || "Mystery Strain from Image";
+        console.log('Identified strain from image:', strainNameToAnalyze);
     }
+    
+    const cleanedName = strainNameToAnalyze.replace(/[^\w\s]/g, '').trim();
+    const finalStrainName = cleanedName || "Mystery Strain";
+    const thcRange = getDeterministicTHCRange(finalStrainName);
+    console.log(`Using deterministic THC range for "${finalStrainName}":`, thcRange);
 
-    console.log('Using THC range for', strainName, ':', thcRange);
-
-    // Get initial strain analysis from OpenAI
+    const initialMessages = createTextAnalysisMessages(finalStrainName, thcRange);
+    
     const analysisResponse = await callOpenAI(initialMessages, openAIApiKey);
     const analysisText = analysisResponse.choices[0].message.content;
     
-    let strainData = parseOpenAIResponse(analysisText, textQuery);
-    
-    // If we got a strain name from image analysis, recalculate THC range with the actual name
-    if (!textQuery && strainData.name && strainData.name !== "Mystery Strain") {
-      const actualThcRange = getDeterministicTHCRange(strainData.name);
-      console.log('Recalculating THC range for discovered strain:', strainData.name, actualThcRange);
-      
-      // Update the THC values to match our deterministic system
-      strainData.thc = actualThcRange[0]; // Use the minimum as the main THC value
-      thcRange = actualThcRange;
-    } else {
-      // Ensure THC matches our deterministic calculation
-      strainData.thc = thcRange[0];
-    }
+    let strainData = parseOpenAIResponse(analysisText, finalStrainName);
+    const validatedData = validateStrainData(strainData, finalStrainName);
+    validatedData.thc = thcRange[0]; // Ensure deterministic THC
 
-    // Validate and clean the strain data
-    const validatedData = validateStrainData(strainData, textQuery);
-    
-    // Override THC with our deterministic value to ensure consistency
-    validatedData.thc = thcRange[0];
+    console.log('Validated data:', { name: validatedData.name, effects: validatedData.effects, flavors: validatedData.flavors });
 
-    console.log('Validated strain data with consistent THC:', {
-      name: validatedData.name,
-      thc: validatedData.thc,
-      thcRange: thcRange
-    });
-
-    // Generate enhanced effect profiles
+    // --- REVISED PROFILE GENERATION ---
     let effectProfiles = [];
     if (validatedData.effects && validatedData.effects.length > 0) {
       try {
-        const effectMessages = createEffectProfilesMessages(
-          validatedData.name, 
-          validatedData.type, 
-          validatedData.effects
-        );
+        const effectMessages = createEffectProfilesMessages(validatedData.name, validatedData.type, validatedData.effects);
         const effectResponse = await callOpenAI(effectMessages, openAIApiKey);
         const effectText = effectResponse.choices[0].message.content;
         effectProfiles = JSON.parse(effectText.replace(/```json\n?|\n?```/g, ''));
-        console.log('Generated effect profiles:', effectProfiles.length);
+        console.log('Successfully generated dynamic effect profiles from OpenAI.');
       } catch (error) {
-        console.error('Error generating effect profiles:', error);
-        effectProfiles = validatedData.effects.slice(0, 4).map((effect: string, index: number) => ({
-          name: effect,
-          intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
-          emoji: ['😌', '😊', '🤩', '💭'][index] || '✨',
-          color: ['#8B5CF6', '#F59E0B', '#EF4444', '#10B981'][index] || '#6B7280'
-        }));
+        console.error('Error generating dynamic effect profiles, creating profiles from validated data instead:', error.message);
+        // SMART FALLBACK: Map the effects from the initial call to our constants.
+        effectProfiles = validatedData.effects.map(effect => {
+            const profile = SUPPORTED_EFFECTS[effect] || { ...DEFAULT_EFFECT_PROFILE, name: effect };
+            return { ...profile, intensity: 3 }; // Add a default intensity
+        });
       }
     }
 
-    // Generate enhanced flavor profiles
     let flavorProfiles = [];
     if (validatedData.flavors && validatedData.flavors.length > 0) {
       try {
-        const flavorMessages = createFlavorProfilesMessages(
-          validatedData.name, 
-          validatedData.type, 
-          validatedData.flavors
-        );
+        const flavorMessages = createFlavorProfilesMessages(validatedData.name, validatedData.type, validatedData.flavors);
         const flavorResponse = await callOpenAI(flavorMessages, openAIApiKey);
         const flavorText = flavorResponse.choices[0].message.content;
         flavorProfiles = JSON.parse(flavorText.replace(/```json\n?|\n?```/g, ''));
-        console.log('Generated flavor profiles:', flavorProfiles.length);
+        console.log('Successfully generated dynamic flavor profiles from OpenAI.');
       } catch (error) {
-        console.error('Error generating flavor profiles:', error);
-        flavorProfiles = validatedData.flavors.slice(0, 3).map((flavor: string, index: number) => ({
-          name: flavor,
-          intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
-          emoji: ['🌍', '🍯', '🌲'][index] || '🌿',
-          color: ['#78716C', '#F59E0B', '#10B981'][index] || '#6B7280'
-        }));
+        console.error('Error generating dynamic flavor profiles, creating profiles from validated data instead:', error.message);
+        // SMART FALLBACK: Map the flavors from the initial call to our constants.
+        flavorProfiles = validatedData.flavors.map(flavor => {
+            const profile = SUPPORTED_FLAVORS[flavor] || { ...DEFAULT_FLAVOR_PROFILE, name: flavor };
+            return { ...profile, intensity: 3 }; // Add a default intensity
+        });
       }
     }
-
-    // Create the final strain object with consistent THC
+    
     const finalStrain = {
       name: validatedData.name,
       type: validatedData.type,
-      thc: thcRange[0], // Always use our deterministic calculation
-      effectProfiles: effectProfiles,
-      flavorProfiles: flavorProfiles,
+      thc: validatedData.thc,
+      effectProfiles, // Use the generated or fallback profiles
+      flavorProfiles, // Use the generated or fallback profiles
       terpenes: validatedData.terpenes || [],
       description: validatedData.description,
       confidence: validatedData.confidence
     };
 
-    console.log('Final strain object created:', {
-      name: finalStrain.name,
-      thc: finalStrain.thc,
-      thcRange: thcRange,
-      effectsCount: finalStrain.effectProfiles.length,
-      flavorsCount: finalStrain.flavorProfiles.length
-    });
+    console.log('Final strain object created:', { name: finalStrain.name, thc: finalStrain.thc });
 
-    // Save to database if userId is provided
     if (userId) {
       try {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        
-        const scanData = {
+        const { error } = await supabase.from('scans').insert({
           user_id: userId,
           strain_name: finalStrain.name,
           strain_type: finalStrain.type,
@@ -170,21 +123,9 @@ serve(async (req) => {
           medical_uses: validatedData.medicalUses || [],
           description: finalStrain.description,
           confidence: finalStrain.confidence,
-          scanned_at: new Date().toISOString(),
-          in_stock: true
-        };
-
-        const { data, error } = await supabase
-          .from('scans')
-          .insert(scanData)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Database save error:', error);
-        } else {
-          console.log('Strain saved to database with ID:', data.id);
-        }
+        });
+        if (error) console.error('Database save error:', error);
+        else console.log('Scan saved to database for user:', userId);
       } catch (dbError) {
         console.error('Database operation failed:', dbError);
       }
@@ -195,10 +136,10 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Edge function error:', error);
+    console.error('Edge function error:', error.message);
     return new Response(JSON.stringify({ 
-      error: 'Internal server error',
-      fallbackStrain: null
+      error: 'An unexpected error occurred.',
+      fallbackStrain: createFallbackStrain(req.body ? (await req.json()).textQuery : undefined) 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
