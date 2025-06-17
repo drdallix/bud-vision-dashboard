@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -65,6 +64,16 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
     }
   };
 
+  // --- NEW: Keydown handler to trigger generation on "Enter" ---
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    // Check if the pressed key is "Enter" and if generation is allowed
+    if (event.key === 'Enter' && canGenerate) {
+      // Prevent the default action (e.g., form submission)
+      event.preventDefault();
+      handleGenerate();
+    }
+  };
+
   return (
     <div className="space-y-2">
       {/* Main omnibar input */}
@@ -74,6 +83,7 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
           placeholder="Search strains or describe what you're looking for..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={handleKeyDown} // --- NEW: Added onKeyDown event listener ---
           disabled={isGenerating}
           className={`pl-10 pr-32 h-11 text-base border-2 transition-colors ${
             isGenerating ? 'border-green-500 bg-green-50/50' : 'focus:border-primary/50'
