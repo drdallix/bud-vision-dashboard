@@ -4,6 +4,7 @@ import { Strain } from '@/types/strain';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ValidationErrors {
   [key: string]: string;
@@ -19,6 +20,7 @@ export const useStrainEditor = (
   const [errors, setErrors] = useState<ValidationErrors>({});
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Initialize edited strain when initial strain changes
   useEffect(() => {
@@ -70,6 +72,20 @@ export const useStrainEditor = (
     
     return newErrors;
   }, []);
+
+  const triggerDataSync = useCallback(async () => {
+    console.log('Triggering complete data sync after strain edit');
+    
+    // Invalidate all strain-related queries to force complete refresh
+    await queryClient.invalidateQueries({ queryKey: ['strains-user'] });
+    await queryClient.invalidateQueries({ queryKey: ['strains-all'] });
+    
+    // Force refetch all queries to ensure UI updates
+    await queryClient.refetchQueries({ queryKey: ['strains-user'] });
+    await queryClient.refetchQueries({ queryKey: ['strains-all'] });
+    
+    console.log('Data sync completed - UI should now reflect changes');
+  }, [queryClient]);
 
   const handleSave = useCallback(async () => {
     if (!editedStrain || !user) {
@@ -130,7 +146,10 @@ export const useStrainEditor = (
         throw error;
       }
 
-      console.log('Strain saved successfully');
+      console.log('Strain saved successfully, triggering data sync');
+      
+      // Trigger complete data refresh to ensure UI updates
+      await triggerDataSync();
       
       // Call the onSave callback with updated strain
       onSave(editedStrain);
@@ -138,7 +157,7 @@ export const useStrainEditor = (
       
       toast({
         title: "Success",
-        description: "Strain updated successfully",
+        description: "Strain updated successfully - UI refreshed",
       });
     } catch (error) {
       console.error('Error saving strain:', error);
@@ -150,7 +169,7 @@ export const useStrainEditor = (
     } finally {
       setIsLoading(false);
     }
-  }, [editedStrain, user, validateStrain, onSave, toast]);
+  }, [editedStrain, user, validateStrain, onSave, toast, triggerDataSync]);
 
   const handleReset = useCallback(() => {
     if (initialStrain) {
@@ -167,6 +186,7 @@ export const useStrainEditor = (
     errors,
     updateField,
     handleSave,
-    handleReset
+    handleReset,
+    triggerDataSync
   };
 };

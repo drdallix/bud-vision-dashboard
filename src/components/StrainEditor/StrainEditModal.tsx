@@ -28,18 +28,24 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
     errors,
     updateField,
     handleSave: originalHandleSave,
-    handleReset
+    handleReset,
+    triggerDataSync
   } = useStrainEditor(strain, onSave);
 
-  // Enhanced save handler with refresh feedback
+  // Enhanced save handler with complete data refresh
   const handleSave = async () => {
     setIsRefreshing(true);
     try {
       await originalHandleSave();
-      // Brief delay to show refresh state
-      setTimeout(() => {
+      
+      // Add a brief delay to show refresh state and ensure sync completes
+      console.log('Save completed, refreshing UI data...');
+      setTimeout(async () => {
+        // Additional sync trigger to ensure UI updates
+        await triggerDataSync();
         setIsRefreshing(false);
-      }, 500);
+        console.log('UI refresh completed');
+      }, 1000);
     } catch (error) {
       setIsRefreshing(false);
       throw error;
@@ -69,7 +75,12 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
 
         <div className="px-2 sm:px-6">
           {isRefreshing ? (
-            <StrainEditSkeleton />
+            <div className="space-y-4">
+              <StrainEditSkeleton />
+              <div className="text-center text-sm text-green-600 font-medium">
+                Refreshing strain data to ensure UI accuracy...
+              </div>
+            </div>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
@@ -124,7 +135,7 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t gap-3 sm:gap-0">
             <div className="text-xs sm:text-sm text-muted-foreground">
               {isDirty && "• Unsaved changes"}
-              {isRefreshing && "• Refreshing data..."}
+              {isRefreshing && "• Syncing data for UI accuracy..."}
             </div>
             
             <div className="flex gap-2 w-full sm:w-auto">
@@ -140,7 +151,7 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
                 disabled={!isDirty || isLoading || isRefreshing}
                 className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
               >
-                {isLoading || isRefreshing ? 'Saving...' : 'Save Changes'}
+                {isLoading || isRefreshing ? 'Saving & Syncing...' : 'Save Changes'}
               </button>
             </div>
           </div>
