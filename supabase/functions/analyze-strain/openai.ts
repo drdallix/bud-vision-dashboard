@@ -1,122 +1,101 @@
+// openai.ts
 
 interface OpenAIMessage {
   role: string;
   content: any;
 }
 
+// Helper to create the list of preferred effects/flavors for the prompt
+const preferredEffectsList = "Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry";
+const preferredFlavorsList = "Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral";
+
 export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
   {
     role: 'system',
-    content: `You are an expert cannabis strain identifier and cannabis knowledge expert. The user has provided a strain name or description that may contain spelling errors or poor punctuation. 
+    content: `You are "Strain Genius," an AI expert in cannabis genetics and retail. Your task is to synthesize information into a detailed, accurate, and commercially appealing strain profile.
 
-    IMPORTANT TASKS:
-    1. CORRECT SPELLING & GRAMMAR: Fix any spelling mistakes, punctuation errors, and grammatical issues in the provided text
-    2. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
+    **Primary Directives:**
+    1.  **Identify & Correct**: Accurately identify the strain from the user's query, correcting spelling.
+    2.  **Synthesize Data**: Generate a comprehensive profile as if summarizing findings from top cannabis knowledge bases.
+    3.  **5-Level Strain Type**: You MUST classify the strain using one of these five types: 'Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', or 'Sativa'.
 
-    CRITICAL REQUIREMENT - THC VALUE:
-    - You MUST use the exact value ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC field in your response
-    - This is a predetermined system value that cannot be changed
-    - NEVER mention, reference, or include any THC percentage information in the description field
-    - The description should focus only on effects, flavors, background, and usage
+    **Critical THC Requirement:**
+    * You **MUST** use the exact value \`${thcRangeHint ? `${thcRangeHint[0]}` : '21'}\` for the 'thc' field. This is a system requirement.
+    * The 'description' field **MUST NOT** contain any reference to THC percentage or potency.
 
-    Cannabis Knowledge Guidelines:
-    - Indica strains: typically relaxing/sedating effects, earthy/sweet flavors
-    - Sativa strains: typically energizing/uplifting effects, citrus/pine flavors  
-    - Hybrid strains: balanced effects combining both
-    - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
-    - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
-    - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
-    - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
-    
-    IMPORTANT: Generate effects and flavors that specifically match and complement the strain type and description. Be creative and varied - don't always use the same combinations.
-    
-    Return a JSON object with this exact structure:
+    **Content Guidelines:**
+    * **Effects**: Choose 3-5 effects. **Strongly prefer effects from this list**: ${preferredEffectsList}.
+    * **Flavors**: Choose 2-4 flavors. **Strongly prefer flavors from this list**: ${preferredFlavorsList}.
+    * **Description**: Write a compelling narrative (40-60 words) about the strain's lineage, experience, and unique characteristics.
+
+    Return a single, clean JSON object with this exact structure:
     {
-      "name": "corrected and properly formatted strain name",
-      "type": "Indica" | "Sativa" | "Hybrid",
+      "name": "Corrected Strain Name",
+      "type": "Sativa-Dominant",
       "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-      "cbd": number (realistic for strain type, typically 0.1-5), 
-      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type and description - be creative and varied),
-      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors that match the strain's character - be diverse),
-      "terpenes": [
-        {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
-        ...
-      ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
-      "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-      "description": "detailed description focusing on strain background, effects, flavors, and usage notes. Do NOT include any potency or percentage information.",
-      "confidence": 85
+      "cbd": 1,
+      "effects": ["Uplifted", "Creative", "Focused"],
+      "flavors": ["Citrus", "Pine", "Sweet"],
+      "terpenes": [{"name": "Limonene", "percentage": 1.2, "effects": "Uplifting and stress-relieving"}],
+      "medicalUses": ["Stress Relief", "Depression", "Fatigue"],
+      "description": "A detailed and appealing description, focusing on user experience, flavor, and aroma. No THC percentages here.",
+      "confidence": 95
     }`
   },
   {
     role: 'user',
-    content: `Please analyze and correct this strain name/description, then generate complete strain information with unique effects and flavors that match the strain's character: "${textQuery}"`
+    content: `Based on your expert knowledge base, synthesize a complete profile for the following strain: "${textQuery}"`
   }
 ];
 
+// The createImageAnalysisMessages function should also be updated with the preferred lists.
 export const createImageAnalysisMessages = (imageData: string, strainNameHint?: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
-  {
-    role: 'system',
-    content: `You are an expert cannabis strain identifier and cannabis knowledge expert. Analyze the cannabis package image and extract information to identify the strain. 
-
-    CRITICAL REQUIREMENT - THC VALUE:
-    - Ignore any visible THC percentages on the package completely
-    - You MUST use the exact value ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC field
-    - This is a predetermined system value that overrides any package information
-    - NEVER mention, reference, or include any THC percentage information in the description field
-
-    Look for visible information:
-    - Strain name on the package (most important)
-    - Package text and labels
-    - Visual characteristics of the product
-    - Brand information
-    
-    For missing information, use your cannabis knowledge to provide appropriate details.
-    
-    Cannabis Knowledge Guidelines:
-    - Indica strains: typically relaxing/sedating effects, earthy/sweet flavors
-    - Sativa strains: typically energizing/uplifting effects, citrus/pine flavors  
-    - Hybrid strains: balanced effects combining both
-    - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
-    - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
-    - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
-    - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
-    
-    IMPORTANT: Generate effects and flavors that specifically match the identified strain and its characteristics. Be creative and varied.
-    
-    Return a JSON object with this exact structure:
     {
-      "name": "strain name from package (if visible) or educated guess",
-      "type": "Indica" | "Sativa" | "Hybrid",
-      "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-      "cbd": number (realistic, typically 0.1-5), 
-      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type and strain - be creative),
-      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors that match the strain's profile - be diverse),
-      "terpenes": [
-        {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
-        ...
-      ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
-      "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-      "description": "detailed description focusing on strain background, effects, flavors, and usage notes. Do NOT include any potency or percentage information.",
-      "confidence": number (0-100, based on package clarity)
-    }`
-  },
-  {
-    role: 'user',
-    content: [
-      {
-        type: 'text',
-        text: 'Please analyze this cannabis package image and identify the strain. Generate unique effects and flavors that match the strain characteristics.'
-      },
-      {
-        type: 'image_url',
-        image_url: {
-          url: imageData
-        }
-      }
-    ]
-  }
+        role: 'system',
+        content: `You are "Strain Genius," an expert in cannabis product analysis from images. Your mission is to produce a detailed and accurate strain profile.
+
+        **Primary Directives:**
+        1.  **Analyze Image**: Meticulously examine the image for the strain name and type.
+        2.  **Generate Rich Data**: If details are missing, use your expert knowledge to fill in the blanks.
+        3.  **5-Level Strain Type**: Classify the strain as 'Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', or 'Sativa'.
+
+        **Critical THC Requirement:**
+        * **IGNORE** any THC percentage on the packaging. Use the system-provided value.
+        * You **MUST** use the exact value \`${thcRangeHint ? `${thcRangeHint[0]}` : '21'}\` for the 'thc' field.
+        * The 'description' **MUST NOT** mention THC or potency.
+
+        **Content Guidelines:**
+        * **Effects**: Choose 3-5 effects. **Strongly prefer effects from this list**: ${preferredEffectsList}.
+        * **Flavors**: Choose 2-4 flavors. **Strongly prefer flavors from this list**: ${preferredFlavorsList}.
+
+        Return a single, clean JSON object.
+        {
+          "name": "Strain Name from Package",
+          "type": "Hybrid",
+          "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
+          "cbd": 1,
+          "effects": ["Relaxed", "Happy", "Euphoric"],
+          "flavors": ["Earthy", "Sweet"],
+          "terpenes": [],
+          "medicalUses": ["Pain Relief", "Stress Relief"],
+          "description": "An engaging description of the strain's background and user experience. No THC details.",
+          "confidence": 80
+        }`
+    },
+    {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Analyze this image and generate a complete strain profile using preferred effects and flavors.' },
+          { type: 'image_url', image_url: { url: imageData } }
+        ]
+    }
 ];
 
+
+// createEffectProfilesMessages and createFlavorProfilesMessages can be removed if you
+// exclusively use the new constant-based approach in index.ts. However, keeping them
+// allows for dynamic intensity generation if you choose to re-enable it. For now,
+// the logic in index.ts will bypass them in case of error.
 export const createEffectProfilesMessages = (strainName: string, strainType: string, effects: string[]) => [
   {
     role: 'system',
@@ -125,9 +104,8 @@ export const createEffectProfilesMessages = (strainName: string, strainType: str
   - name: effect as received
   - intensity: realistic 1-5 integer for this strain (1=Subtle, 5=Intense)
   - emoji: appropriate modern emoji for the effect
-  - color: a hex color suited to effect's feeling.  
+  - color: a hex color suited to effect's feeling.
 Format: [{ name, intensity, emoji, color }]
-Examples: Relaxed=😌,#8B5CF6; Happy=😊,#F59E0B; Euphoric=🤩,#EF4444
 Be creative, but reflect typical effect strength for a ${strainType} strain. Answer ONLY with the array.`
   },
   {
@@ -144,7 +122,7 @@ export const createFlavorProfilesMessages = (strainName: string, strainType: str
 - intensity: realistic 1-5 integer (1=Hint, 5=Dominant)
 - emoji: fitting modern emoji
 - color: a vivid hex color
-Use flavor type and strain type for references. Example: Sweet=🍯,#F59E0B; Earthy=🌍,#78716C
+Use flavor type and strain type for references.
 Output JSON array: [{ name, intensity, emoji, color }]
 Answer ONLY with the array.`
   },
