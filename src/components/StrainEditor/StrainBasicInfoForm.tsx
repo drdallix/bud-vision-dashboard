@@ -85,9 +85,11 @@ const StrainBasicInfoForm = ({ strain, errors, onUpdate, isLoading }: StrainBasi
               <RadioGroupItem value={type} id={type} />
               <Label 
                 htmlFor={type} 
-                className={`flex-1 p-3 border-2 rounded-lg cursor-pointer transition-colors text-sm ${
-                  strain.type === type ? getTypeColor(type) : 'border-gray-200'
-                }`}
+                className={`flex-1 p-3 border rounded-lg cursor-pointer transition-all text-sm text-white bg-transparent ${
+                        strain.type === type 
+                        ? 'border-sky-400 shadow-[0_0_15px_-3px_theme(colors.sky.400)]' 
+                        : 'border-gray-600'
+                    }`}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{getTypeEmoji(type)}</span>
@@ -108,9 +110,9 @@ const StrainBasicInfoForm = ({ strain, errors, onUpdate, isLoading }: StrainBasi
             <Input
               id="thc"
               type="number"
-              min="0"
-              max="100"
-              step="0.1"
+              min="15"
+              max="35"
+              step="1.25"
               value={strain.thc || ''}
               onChange={(e) => onUpdate('thc', parseFloat(e.target.value) || null)}
               disabled={isLoading}
