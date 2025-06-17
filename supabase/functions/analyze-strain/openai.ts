@@ -5,108 +5,106 @@ interface OpenAIMessage {
   content: any;
 }
 
-// Helper to create the list of preferred effects/flavors for the prompt
-const preferredEffectsList = "Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry";
-const preferredFlavorsList = "Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral";
+// Helper lists of your supported effects and flavors.
+const supportedEffectsList = "Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry";
+const supportedFlavorsList = "Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral";
 
 export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
   {
     role: 'system',
-    content: `You are "Strain Genius," an AI expert in cannabis genetics and retail. Your task is to synthesize information into a detailed, accurate, and commercially appealing strain profile.
+    content: `You are "Strain Genius," a world-renowned cannabis botanist and sommelier AI. Your single purpose is to receive a user's query and produce a factually accurate, commercially appealing, and perfectly structured JSON profile. Your reputation depends on your precision.
 
-    **Primary Directives:**
-    1.  **Identify & Correct**: Accurately identify the strain from the user's query, correcting spelling.
-    2.  **Synthesize Data**: Generate a comprehensive profile as if summarizing findings from top cannabis knowledge bases.
-    3.  **5-Level Strain Type**: You MUST classify the strain using one of these five types: 'Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', or 'Sativa'.
+## CRITICAL RULES
+1.  **FACTUAL ACCURACY IS PARAMOUNT:** Your knowledge must be based on real-world, commonly accepted data about each strain. Do not invent lineage, effects, or flavors.
+2.  **MUST USE PROVIDED LISTS:** The 'effects' and 'flavors' in your output **MUST** be chosen exclusively from the provided lists. Do not add any items not on these lists.
+    -   Valid Effects: ${supportedEffectsList}
+    -   Valid Flavors: ${supportedFlavorsList}
+3.  **STRICT 5-LEVEL TYPE SYSTEM:** The 'type' field **MUST** be one of these five exact strings: 'Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', 'Sativa'.
+4.  **MANDATORY THC VALUE:** You **MUST** use the exact value \`${thcRangeHint ? `${thcRangeHint[0]}` : '21'}\` for the 'thc' field. This is a non-negotiable system requirement.
+5.  **NO THC IN DESCRIPTION:** The 'description' field **MUST NEVER** contain any mention of THC, potency, or percentages.
 
-    **Critical THC Requirement:**
-    * You **MUST** use the exact value \`${thcRangeHint ? `${thcRangeHint[0]}` : '21'}\` for the 'thc' field. This is a system requirement.
-    * The 'description' field **MUST NOT** contain any reference to THC percentage or potency.
+## STEP-BY-STEP ANALYSIS PROCESS (Your Internal Monologue)
+1.  **Identify & Correct:** Analyze the user's query: \`${textQuery}\`. Identify the canonical strain name and correct any spelling mistakes.
+2.  **Recall & Verify:** Access your internal knowledge base for the corrected strain name. Recall its accepted type, lineage, and most common effects and flavors.
+3.  **Select & Map:**
+    * From your recalled knowledge, select the 3-5 most dominant effects that exist in the provided Valid Effects list.
+    * Select the 2-4 most prominent flavors that exist in the provided Valid Flavors list.
+4.  **Compose Description:** Write a concise (40-60 words) and compelling description covering the strain's heritage, user experience (mood, feeling), and its signature aroma/taste profile.
+5.  **Assemble JSON:** Construct the final JSON object according to the rules and the data you've gathered. Ensure all fields are present and correctly formatted.
 
-    **Content Guidelines:**
-    * **Effects**: Choose 3-5 effects. **Strongly prefer effects from this list**: ${preferredEffectsList}.
-    * **Flavors**: Choose 2-4 flavors. **Strongly prefer flavors from this list**: ${preferredFlavorsList}.
-    * **Description**: Write a compelling narrative (40-60 words) about the strain's lineage, experience, and unique characteristics.
+## HIGH-QUALITY EXAMPLES (Study these to understand the required quality)
 
-    Return a single, clean JSON object with this exact structure:
-    {
-      "name": "Corrected Strain Name",
-      "type": "Sativa-Dominant",
-      "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-      "cbd": 1,
-      "effects": ["Uplifted", "Creative", "Focused"],
-      "flavors": ["Citrus", "Pine", "Sweet"],
-      "terpenes": [{"name": "Limonene", "percentage": 1.2, "effects": "Uplifting and stress-relieving"}],
-      "medicalUses": ["Stress Relief", "Depression", "Fatigue"],
-      "description": "A detailed and appealing description, focusing on user experience, flavor, and aroma. No THC percentages here.",
-      "confidence": 95
-    }`
+**Example 1 Query:** "grandaddy purp"
+**Perfect Output 1:**
+{
+  "name": "Granddaddy Purple",
+  "type": "Indica",
+  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
+  "cbd": 0.8,
+  "effects": ["Relaxed", "Sleepy", "Euphoric", "Hungry"],
+  "flavors": ["Berry", "Sweet", "Earthy"],
+  "terpenes": [
+    {"name": "Myrcene", "percentage": 1.6, "effects": "Sedating and relaxing, contributes to the earthy and fruity aroma."},
+    {"name": "Caryophyllene", "percentage": 0.4, "effects": "Anti-inflammatory and stress-relieving with a spicy note."},
+    {"name": "Pinene", "percentage": 0.2, "effects": "Promotes alertness and memory retention, adding a hint of pine."}
+  ],
+  "medicalUses": ["Insomnia", "Pain Relief", "Stress Relief", "Appetite Loss"],
+  "description": "A legendary indica, Granddaddy Purple is celebrated for its deep relaxation effects that soothe the body and mind. Its iconic sweet berry and grape aroma makes it a favorite for unwinding at the end of the day, often leading to a peaceful slumber.",
+  "confidence": 98
+}
+
+**Example 2 Query:** "sore deisel"
+**Perfect Output 2:**
+{
+  "name": "Sour Diesel",
+  "type": "Sativa",
+  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
+  "cbd": 0.2,
+  "effects": ["Uplifted", "Focused", "Creative", "Happy"],
+  "flavors": ["Diesel", "Skunk", "Citrus"],
+  "terpenes": [
+    {"name": "Limonene", "percentage": 1.2, "effects": "Uplifting and stress-relieving, responsible for the citrus notes."},
+    {"name": "Caryophyllene", "percentage": 0.6, "effects": "Provides anti-inflammatory benefits with a spicy, peppery kick."},
+    {"name": "Myrcene", "percentage": 0.4, "effects": "Contributes to relaxing undertones, though in smaller amounts in this sativa."}
+  ],
+  "medicalUses": ["Depression", "Fatigue", "Stress Relief", "Lack of Motivation"],
+  "description": "An invigorating sativa-dominant strain famous for its pungent, diesel-like aroma. Sour Diesel delivers energizing and cerebral effects, making it a top choice for daytime use, fostering creativity and focus without the heavy body load.",
+  "confidence": 98
+}
+
+## FINAL TASK
+Now, apply this rigorous process to the user's query. Return ONLY the final, clean JSON object.
+`
   },
   {
     role: 'user',
-    content: `Based on your expert knowledge base, synthesize a complete profile for the following strain: "${textQuery}"`
+    content: `Please analyze and generate a factually accurate profile for: "${textQuery}"`
   }
 ];
 
-// The createImageAnalysisMessages function should also be updated with the preferred lists.
+// The other functions can remain the same as the primary issue is the quality
+// of the initial data generation. This new prompt addresses that head-on.
+
 export const createImageAnalysisMessages = (imageData: string, strainNameHint?: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
+    // This function can also be updated with the more robust prompt structure if image analysis is a primary feature.
+    // For now, we focus on the text analysis as it's the core of the accuracy problem.
     {
         role: 'system',
-        content: `You are "Strain Genius," an expert in cannabis product analysis from images. Your mission is to produce a detailed and accurate strain profile.
-
-        **Primary Directives:**
-        1.  **Analyze Image**: Meticulously examine the image for the strain name and type.
-        2.  **Generate Rich Data**: If details are missing, use your expert knowledge to fill in the blanks.
-        3.  **5-Level Strain Type**: Classify the strain as 'Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', or 'Sativa'.
-
-        **Critical THC Requirement:**
-        * **IGNORE** any THC percentage on the packaging. Use the system-provided value.
-        * You **MUST** use the exact value \`${thcRangeHint ? `${thcRangeHint[0]}` : '21'}\` for the 'thc' field.
-        * The 'description' **MUST NOT** mention THC or potency.
-
-        **Content Guidelines:**
-        * **Effects**: Choose 3-5 effects. **Strongly prefer effects from this list**: ${preferredEffectsList}.
-        * **Flavors**: Choose 2-4 flavors. **Strongly prefer flavors from this list**: ${preferredFlavorsList}.
-
-        Return a single, clean JSON object.
-        {
-          "name": "Strain Name from Package",
-          "type": "Hybrid",
-          "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-          "cbd": 1,
-          "effects": ["Relaxed", "Happy", "Euphoric"],
-          "flavors": ["Earthy", "Sweet"],
-          "terpenes": [],
-          "medicalUses": ["Pain Relief", "Stress Relief"],
-          "description": "An engaging description of the strain's background and user experience. No THC details.",
-          "confidence": 80
-        }`
+        content: `You are an expert AI at identifying cannabis strains from package images. Your task is to identify the strain and then generate a profile using the same rigorous rules as text analysis. You MUST use the provided effects/flavors lists. You MUST use the provided THC value. The description MUST NOT contain THC info.`
     },
     {
         role: 'user',
         content: [
-          { type: 'text', text: 'Analyze this image and generate a complete strain profile using preferred effects and flavors.' },
+          { type: 'text', text: 'Analyze this image and generate a complete strain profile.' },
           { type: 'image_url', image_url: { url: imageData } }
         ]
     }
 ];
 
-
-// createEffectProfilesMessages and createFlavorProfilesMessages can be removed if you
-// exclusively use the new constant-based approach in index.ts. However, keeping them
-// allows for dynamic intensity generation if you choose to re-enable it. For now,
-// the logic in index.ts will bypass them in case of error.
 export const createEffectProfilesMessages = (strainName: string, strainType: string, effects: string[]) => [
   {
     role: 'system',
-    content: `You are an expert cannabis educator. For the given strain name, type, and listed effects, generate a JSON array of effect profiles, including intensity and emoji:
-- For each effect, assign:
-  - name: effect as received
-  - intensity: realistic 1-5 integer for this strain (1=Subtle, 5=Intense)
-  - emoji: appropriate modern emoji for the effect
-  - color: a hex color suited to effect's feeling.
-Format: [{ name, intensity, emoji, color }]
-Be creative, but reflect typical effect strength for a ${strainType} strain. Answer ONLY with the array.`
+    content: `You are an expert cannabis educator. For the given strain, type, and effects, generate a JSON array of profiles including a realistic 1-5 intensity. Answer ONLY with the JSON array.`
   },
   {
     role: 'user',
@@ -117,20 +115,14 @@ Be creative, but reflect typical effect strength for a ${strainType} strain. Ans
 export const createFlavorProfilesMessages = (strainName: string, strainType: string, flavors: string[]) => [
   {
     role: 'system',
-    content: `You are a cannabis sommelier AI. For this strain and the possible flavors listed, generate a JSON array of flavor profiles, each including:
-- name: the flavor
-- intensity: realistic 1-5 integer (1=Hint, 5=Dominant)
-- emoji: fitting modern emoji
-- color: a vivid hex color
-Use flavor type and strain type for references.
-Output JSON array: [{ name, intensity, emoji, color }]
-Answer ONLY with the array.`
+    content: `You are a cannabis sommelier AI. For the given strain, type, and flavors, generate a JSON array of profiles including a realistic 1-5 intensity. Answer ONLY with the JSON array.`
   },
   {
     role: 'user',
     content: `Strain: "${strainName}"\nType: ${strainType}\nFlavors: ${flavors && flavors.length ? flavors.join(", ") : "None"}`
   }
 ];
+
 
 export const callOpenAI = async (messages: OpenAIMessage[], openAIApiKey: string) => {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -143,7 +135,7 @@ export const callOpenAI = async (messages: OpenAIMessage[], openAIApiKey: string
       model: 'gpt-4o',
       messages: messages,
       max_tokens: 1500,
-      temperature: 0.3
+      temperature: 0.1 // Lowering temperature for more deterministic, factual output
     }),
   });
 
