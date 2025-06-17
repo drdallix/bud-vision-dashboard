@@ -28,16 +28,18 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
     errors,
     updateField,
     handleSave: originalHandleSave,
-    handleReset,
-    triggerDataSync
+    handleReset
   } = useStrainEditor(strain, onSave);
 
-  // Enhanced save handler with complete data refresh and page reload
+  // Enhanced save handler with refresh feedback
   const handleSave = async () => {
     setIsRefreshing(true);
     try {
       await originalHandleSave();
-      // The page will refresh automatically from the hook, so we don't need additional logic here
+      // Brief delay to show refresh state
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 500);
     } catch (error) {
       setIsRefreshing(false);
       throw error;
@@ -67,12 +69,7 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
 
         <div className="px-2 sm:px-6">
           {isRefreshing ? (
-            <div className="space-y-4">
-              <StrainEditSkeleton />
-              <div className="text-center text-sm text-green-600 font-medium">
-                Saving strain and refreshing page to ensure UI accuracy...
-              </div>
-            </div>
+            <StrainEditSkeleton />
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
@@ -127,7 +124,7 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t gap-3 sm:gap-0">
             <div className="text-xs sm:text-sm text-muted-foreground">
               {isDirty && "• Unsaved changes"}
-              {isRefreshing && "• Saving and refreshing page..."}
+              {isRefreshing && "• Refreshing data..."}
             </div>
             
             <div className="flex gap-2 w-full sm:w-auto">
@@ -143,7 +140,7 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
                 disabled={!isDirty || isLoading || isRefreshing}
                 className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
               >
-                {isLoading || isRefreshing ? 'Saving & Refreshing...' : 'Save Changes'}
+                {isLoading || isRefreshing ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

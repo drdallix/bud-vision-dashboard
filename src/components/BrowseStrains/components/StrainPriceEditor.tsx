@@ -1,68 +1,48 @@
-
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Plus, Check } from 'lucide-react';
 import { usePriceEditor } from '../hooks/usePriceEditor';
-import { usePriceStore } from '@/stores/usePriceStore';
-import { useStrainPrices } from '@/hooks/useStrainPrices';
-
+import { PricePoint } from '@/types/price';
 const PRESET_PRICES = [30, 40, 50, 60, 80, 100, 120, 200, 300];
-
 interface StrainPriceEditorProps {
   strainId: string;
-  prices?: any[]; // Legacy prop, now ignored
+  prices: PricePoint[];
   disabled?: boolean;
 }
-
 const StrainPriceEditor = ({
   strainId,
+  prices,
   disabled
 }: StrainPriceEditorProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nowPrice, setNowPrice] = useState<number | null>(null);
   const [wasPrice, setWasPrice] = useState<number | null>(null);
-
-  // Use both the centralized price store and hook for maximum reliability
-  const { getOptimisticPrices } = usePriceStore();
-  const {
-    prices: fetchedPrices,
-    isLoading: pricesLoading
-  } = useStrainPrices(strainId);
-  
-  // Use optimistic prices if available, otherwise use fetched prices
-  const optimisticPrices = getOptimisticPrices(strainId);
-  const prices = optimisticPrices || fetchedPrices;
-
   const {
     addPrice,
     updatePrice,
     deletePrice,
     loading
   } = usePriceEditor(strainId);
-
   const startAdd = () => {
     setNowPrice(null);
     setWasPrice(null);
     setIsAdding(true);
     setEditingId(null);
   };
-
-  const startEdit = (price: any) => {
+  const startEdit = (price: PricePoint) => {
     setEditingId(price.id);
     setNowPrice(price.nowPrice);
     setWasPrice(price.wasPrice ?? null);
     setIsAdding(false);
   };
-
   const cancel = () => {
     setIsAdding(false);
     setEditingId(null);
     setNowPrice(null);
     setWasPrice(null);
   };
-
   const handleSave = async () => {
     if (!nowPrice) return;
     if (editingId) {
@@ -73,7 +53,6 @@ const StrainPriceEditor = ({
       cancel();
     }
   };
-
   return <div>
       <div className="flex gap-2 flex-wrap mb-2">
         {prices.map(p => editingId === p.id ? <div key={p.id} className="flex items-center gap-2 bg-muted rounded-md px-2 py-1">
@@ -123,5 +102,4 @@ const StrainPriceEditor = ({
       </div>
     </div>;
 };
-
 export default StrainPriceEditor;

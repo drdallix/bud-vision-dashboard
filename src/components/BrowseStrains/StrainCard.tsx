@@ -1,154 +1,159 @@
 
-import React, { useState, useCallback } from 'react';
-import { Card } from '@/components/ui/card';
+import React, { useCallback, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Strain } from '@/types/strain';
+import { PricePoint } from '@/types/price';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
+import { StrainEditModal } from '@/components/StrainEditor';
+import QuickPriceModal from './components/QuickPriceModal';
+import StrainCardIcon from './components/StrainCardIcon';
 import StrainCardHeader from './components/StrainCardHeader';
 import StrainCardInfo from './components/StrainCardInfo';
-import StrainPriceEditor from './components/StrainPriceEditor';
-import QuickPriceModal from './components/QuickPriceModal';
 
 interface StrainCardProps {
   strain: Strain;
-  editMode?: boolean;
-  isSelected?: boolean;
-  canEdit?: boolean;
-  onSelect?: (strainId: string, checked: boolean) => void;
-  onEdit?: (strain: Strain) => void;
-  onStockToggle?: (strainId: string, inStock: boolean) => void;
-  localInStock?: boolean;
-  onStrainClick?: (strain: Strain) => void;
-  showFullDescription?: boolean;
-  inventoryLoading?: boolean;
-  prices?: any[];
-  pricesLoading?: boolean;
+  editMode: boolean;
+  isSelected: boolean;
+  canEdit: boolean;
+  onSelect: (strainId: string, checked: boolean) => void;
+  onStockToggle: (strainId: string, currentStock: boolean) => void;
+  onStrainClick: (strain: Strain) => void;
+  inventoryLoading: boolean;
+  prices: PricePoint[];
+  pricesLoading: boolean;
 }
 
 const StrainCard = ({
   strain,
-  editMode = false,
-  isSelected = false,
-  canEdit = true,
+  editMode,
+  isSelected,
+  canEdit,
   onSelect,
-  onEdit,
   onStockToggle,
-  localInStock,
   onStrainClick,
-  showFullDescription = false,
-  inventoryLoading = false
+  inventoryLoading,
+  prices,
+  pricesLoading
 }: StrainCardProps) => {
-  const [showPriceModal, setShowPriceModal] = useState(false);
+  // Local state to ensure immediate UI feedback
+  const [localInStock, setLocalInStock] = useState(strain.inStock);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showQuickPrice, setShowQuickPrice] = useState(false);
+
+  // Use centralized THC calculation
   const { thcDisplay } = useStrainTHC(strain.name);
 
-  const handleCardClick = useCallback((e: React.MouseEvent) => {
-    // Prevent propagation when clicking on interactive elements
-    const target = e.target as HTMLElement;
-    if (
-      target.closest('button') ||
-      target.closest('[role="button"]') ||
-      target.closest('input') ||
-      target.closest('select')
-    ) {
-      return;
+  const getTypeColor = useCallback((type: string) => {
+    switch (type) {
+      case 'Indica':
+        return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-300';
+      case 'Indica-Dominant':
+        return 'bg-purple-50 text-purple-700 border-purple-150 dark:bg-purple-800 dark:text-purple-200';
+      case 'Hybrid':
+        return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-300';
+      case 'Sativa-Dominant':
+        return 'bg-green-50 text-green-700 border-green-150 dark:bg-green-800 dark:text-green-200';
+      case 'Sativa':
+        return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300';
     }
+  }, []);
 
-    onStrainClick?.(strain);
-  }, [strain, onStrainClick]);
+  // Function to handle switch with immediate UI feedback
+  const handleStockSwitch = async () => {
+    const wasInStock = localInStock;
 
-  const handleStockToggle = () => {
-    const newStockStatus = !strain.inStock;
-    onStockToggle?.(strain.id, newStockStatus);
+    // Immediately update local state for instant UI feedback
+    setLocalInStock(!wasInStock);
+
+    // Call parent handler for cache/database update
+    onStockToggle(strain.id, wasInStock);
+
+    // If marking out of stock, fire & forget deleteAllForStrain (no blocking, no popup)
+    if (wasInStock) {
+      // Use import() to avoid SSR problems and keep bundle small
+      import('@/services/priceService').then(mod => {
+        mod.PriceService.deleteAllForStrain(strain.id);
+      });
+    }
   };
 
-  const handleSelection = (checked: boolean) => {
-    onSelect?.(strain.id, checked);
-  };
+  // Use local state for UI, but sync with prop changes
+  React.useEffect(() => {
+    setLocalInStock(strain.inStock);
+  }, [strain.inStock]);
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onEdit?.(strain);
+    setShowEditModal(true);
   };
 
   const handleQuickPriceClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowPriceModal(true);
+    setShowQuickPrice(true);
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'Indica':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Sativa':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Hybrid':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Indica-Dominant':
-        return 'bg-purple-50 text-purple-700 border-purple-150';
-      case 'Sativa-Dominant':
-        return 'bg-green-50 text-green-700 border-green-150';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const handleStrainSave = (updatedStrain: Strain) => {
+    // Update local state immediately
+    setLocalInStock(updatedStrain.inStock);
+    setShowEditModal(false);
+    
+    // Trigger a re-render by calling the parent's strain click handler
+    // This will refresh the data from the store
+    console.log('Strain updated:', updatedStrain.name);
   };
-
-  const finalInStock = localInStock !== undefined ? localInStock : strain.inStock;
 
   return (
     <>
-      <Card
-        className={`relative cursor-pointer transition-all duration-200 ${
-          isSelected
-            ? 'ring-2 ring-blue-500 shadow-lg'
-            : 'hover:shadow-md'
-        } ${
-          finalInStock
-            ? 'bg-white dark:bg-gray-800'
-            : 'bg-gray-50 dark:bg-gray-900 opacity-75'
-        }`}
-        onClick={handleCardClick}
-      >
-        <div className="p-4 space-y-3">
-          <StrainCardHeader
-            strainName={strain.name}
-            strainType={strain.type}
-            editMode={editMode}
-            isSelected={isSelected}
-            canEdit={canEdit}
-            localInStock={finalInStock}
-            inventoryLoading={inventoryLoading}
-            onSelect={handleSelection}
-            onStockToggle={handleStockToggle}
-            onEditClick={handleEditClick}
-            onQuickPriceClick={handleQuickPriceClick}
-            getTypeColor={getTypeColor}
-          />
+      <Card className={`transition-all duration-200 ${!editMode ? 'cursor-pointer hover:shadow-md' : ''} ${!localInStock ? 'opacity-60' : ''}`} onClick={() => !editMode && onStrainClick(strain)}>
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <StrainCardIcon strainType={strain.type} />
+            
+            <div className="flex-1 min-w-0 space-y-2">
+              <StrainCardHeader
+                strainName={strain.name}
+                strainType={strain.type}
+                editMode={editMode}
+                isSelected={isSelected}
+                canEdit={canEdit}
+                localInStock={localInStock}
+                inventoryLoading={inventoryLoading}
+                onSelect={(checked) => onSelect(strain.id, checked)}
+                onStockToggle={handleStockSwitch}
+                onEditClick={handleEditClick}
+                onQuickPriceClick={handleQuickPriceClick}
+                getTypeColor={getTypeColor}
+              />
 
-          <StrainCardInfo
-            strainId={strain.id}
-            thcDisplay={thcDisplay}
-            effects={strain.effectProfiles || []}
-            scannedAt={strain.scannedAt}
-            localInStock={finalInStock}
-            description={strain.description}
-            showFullDescription={showFullDescription}
-          />
-
-          {/* Inline Price Editor for selected strains */}
-          {isSelected && (
-            <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-              <StrainPriceEditor
-                strainId={strain.id}
-                prices={[]} // Will be fetched internally by the component
-                disabled={false}
+              <StrainCardInfo
+                thcDisplay={thcDisplay}
+                effects={strain.effectProfiles || []}
+                scannedAt={strain.scannedAt}
+                localInStock={localInStock}
+                prices={prices}
+                pricesLoading={pricesLoading}
+                description={strain.description}
+                showFullDescription={true}
               />
             </div>
-          )}
-        </div>
+          </div>
+        </CardContent>
       </Card>
 
+      {/* Edit Modal */}
+      <StrainEditModal
+        strain={strain}
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleStrainSave}
+      />
+
+      {/* Quick Price Modal */}
       <QuickPriceModal
-        open={showPriceModal}
-        onClose={() => setShowPriceModal(false)}
+        open={showQuickPrice}
+        onClose={() => setShowQuickPrice(false)}
         strainId={strain.id}
       />
     </>

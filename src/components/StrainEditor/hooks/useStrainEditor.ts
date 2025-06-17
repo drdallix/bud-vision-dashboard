@@ -4,7 +4,6 @@ import { Strain } from '@/types/strain';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface ValidationErrors {
   [key: string]: string;
@@ -20,7 +19,6 @@ export const useStrainEditor = (
   const [errors, setErrors] = useState<ValidationErrors>({});
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
   // Initialize edited strain when initial strain changes
   useEffect(() => {
@@ -72,20 +70,6 @@ export const useStrainEditor = (
     
     return newErrors;
   }, []);
-
-  const triggerDataSync = useCallback(async () => {
-    console.log('Triggering complete data sync after strain edit');
-    
-    // Invalidate all strain-related queries to force complete refresh
-    await queryClient.invalidateQueries({ queryKey: ['strains-user'] });
-    await queryClient.invalidateQueries({ queryKey: ['strains-all'] });
-    
-    // Force refetch all queries to ensure UI updates
-    await queryClient.refetchQueries({ queryKey: ['strains-user'] });
-    await queryClient.refetchQueries({ queryKey: ['strains-all'] });
-    
-    console.log('Data sync completed - UI should now reflect changes');
-  }, [queryClient]);
 
   const handleSave = useCallback(async () => {
     if (!editedStrain || !user) {
@@ -146,10 +130,7 @@ export const useStrainEditor = (
         throw error;
       }
 
-      console.log('Strain saved successfully, triggering data sync and page refresh');
-      
-      // Trigger complete data refresh to ensure UI updates
-      await triggerDataSync();
+      console.log('Strain saved successfully');
       
       // Call the onSave callback with updated strain
       onSave(editedStrain);
@@ -157,15 +138,8 @@ export const useStrainEditor = (
       
       toast({
         title: "Success",
-        description: "Strain updated successfully - refreshing page...",
+        description: "Strain updated successfully",
       });
-
-      // Full page refresh to ensure complete UI update
-      setTimeout(() => {
-        console.log('Performing full page refresh after strain save');
-        window.location.reload();
-      }, 1500); // Give time for the toast to show
-
     } catch (error) {
       console.error('Error saving strain:', error);
       toast({
@@ -176,7 +150,7 @@ export const useStrainEditor = (
     } finally {
       setIsLoading(false);
     }
-  }, [editedStrain, user, validateStrain, onSave, toast, triggerDataSync]);
+  }, [editedStrain, user, validateStrain, onSave, toast]);
 
   const handleReset = useCallback(() => {
     if (initialStrain) {
@@ -193,7 +167,6 @@ export const useStrainEditor = (
     errors,
     updateField,
     handleSave,
-    handleReset,
-    triggerDataSync
+    handleReset
   };
 };
