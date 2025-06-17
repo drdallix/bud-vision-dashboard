@@ -9,6 +9,7 @@ import { Sparkles, Zap, Heart, DollarSign } from 'lucide-react';
 import { useStrainTHC } from '@/hooks/useStrainTHC';
 import { useStrainPrices } from '@/hooks/useStrainPrices';
 import PriceBadges from '@/components/BrowseStrains/components/PriceBadges';
+
 interface ShowcaseSlideProps {
   strain: Strain;
   onStrainClick?: (strain: Strain) => void;
@@ -17,51 +18,44 @@ interface ShowcaseSlideProps {
   isFavorite?: boolean;
   onToggleFavorite?: (strain: Strain) => void;
 }
-const ShowcaseSlide = ({
-  strain,
-  onStrainClick,
-  isActive = true,
+
+const ShowcaseSlide = ({ 
+  strain, 
+  onStrainClick, 
+  isActive = true, 
   index = 0,
   isFavorite = false,
   onToggleFavorite
 }: ShowcaseSlideProps) => {
-  const {
-    thcDisplay
-  } = useStrainTHC(strain.name);
-  const {
-    prices,
-    isLoading: pricesLoading
-  } = useStrainPrices(strain.id);
+  const { thcDisplay } = useStrainTHC(strain.name);
+  const { prices, isLoading: pricesLoading } = useStrainPrices(strain.id);
+
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'Indica':
-        return 'from-purple-500 to-indigo-600';
-      case 'Sativa':
-        return 'from-yellow-400 to-orange-500';
-      case 'Hybrid':
-        return 'from-green-500 to-blue-500';
-      default:
-        return 'from-gray-400 to-gray-600';
+      case 'Indica': return 'from-purple-500 to-indigo-600';
+      case 'Sativa': return 'from-yellow-400 to-orange-500';
+      case 'Hybrid': return 'from-green-500 to-blue-500';
+      default: return 'from-gray-400 to-gray-600';
     }
   };
+
   const getStrainEmoji = (type: string) => {
     switch (type) {
-      case 'Indica':
-        return '🌙';
-      case 'Sativa':
-        return '☀️';
-      case 'Hybrid':
-        return '🌓';
-      default:
-        return '🌿';
+      case 'Indica': return '🌙';
+      case 'Sativa': return '☀️';
+      case 'Hybrid': return '🌓';
+      default: return '🌿';
     }
   };
+
   const handleHeartClick = () => {
     if (onToggleFavorite) {
       onToggleFavorite(strain);
     }
   };
-  return <div className="space-y-3 md:space-y-4">
+
+  return (
+    <div className="space-y-3 md:space-y-4">
       {/* Enhanced Header */}
       <Card className="border-0 bg-theme-card shadow-lg">
         <div className="p-3 md:p-4">
@@ -74,7 +68,9 @@ const ShowcaseSlide = ({
                 <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-foreground">
                   {strain.name}
                 </h1>
-                <Badge className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-md text-xs`}>
+                <Badge 
+                  className={`bg-gradient-to-r ${getTypeColor(strain.type)} text-white border-0 shadow-md text-xs`}
+                >
                   {strain.type}
                 </Badge>
                 <Badge className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-100 dark:border-green-700 text-xs">
@@ -84,17 +80,21 @@ const ShowcaseSlide = ({
               </div>
               
               {/* Always show prices prominently */}
-              {!pricesLoading && !!prices.length && <div className="mb-2">
+              {!pricesLoading && !!prices.length && (
+                <div className="mb-2">
                   <PriceBadges prices={prices} />
-                </div>}
+                </div>
+              )}
               
               {/* Show no pricing message when no prices but in stock */}
-              {strain.inStock && !pricesLoading && !prices.length && <div className="flex items-center gap-1 text-sm text-muted-foreground bg-gray-100 px-2 py-1 rounded">
+              {strain.inStock && !pricesLoading && !prices.length && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground bg-gray-100 px-2 py-1 rounded">
                   <DollarSign className="h-3 w-3" />
                   No pricing set
-                </div>}
+                </div>
+              )}
               
-              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
                 {strain.description}
               </p>
               
@@ -109,11 +109,23 @@ const ShowcaseSlide = ({
                 </div>
                 
                 {/* Large, easy-to-tap heart button */}
-                <Button variant="ghost" size="sm" onClick={e => {
-                e.stopPropagation();
-                handleHeartClick();
-              }} className={`${isFavorite ? 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'} transition-all duration-200 px-3 py-2 rounded-full min-h-[44px] min-w-[44px]`} title={isFavorite ? "Remove from favorites" : "Add to favorites"}>
-                  <Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHeartClick();
+                  }}
+                  className={`${
+                    isFavorite 
+                      ? 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100' 
+                      : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                  } transition-all duration-200 px-3 py-2 rounded-full min-h-[44px] min-w-[44px]`}
+                  title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                >
+                  <Heart 
+                    className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} 
+                  />
                 </Button>
               </div>
             </div>
@@ -145,6 +157,8 @@ const ShowcaseSlide = ({
           {strain.confidence}% confidence
         </Badge>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default ShowcaseSlide;

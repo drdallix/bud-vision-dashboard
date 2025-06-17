@@ -7,7 +7,6 @@ import StrainBasicInfoForm from './StrainBasicInfoForm';
 import StrainPricingForm from './StrainPricingForm';
 import StrainDescriptionForm from './StrainDescriptionForm';
 import StrainProfilesForm from './StrainProfilesForm';
-import StrainEditSkeleton from './StrainEditSkeleton';
 import { useStrainEditor } from './hooks/useStrainEditor';
 
 interface StrainEditModalProps {
@@ -19,7 +18,6 @@ interface StrainEditModalProps {
 
 const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps) => {
   const [activeTab, setActiveTab] = useState('basic');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const {
     editedStrain,
@@ -27,24 +25,9 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
     isLoading,
     errors,
     updateField,
-    handleSave: originalHandleSave,
+    handleSave,
     handleReset
   } = useStrainEditor(strain, onSave);
-
-  // Enhanced save handler with refresh feedback
-  const handleSave = async () => {
-    setIsRefreshing(true);
-    try {
-      await originalHandleSave();
-      // Brief delay to show refresh state
-      setTimeout(() => {
-        setIsRefreshing(false);
-      }, 500);
-    } catch (error) {
-      setIsRefreshing(false);
-      throw error;
-    }
-  };
 
   if (!strain || !editedStrain) return null;
 
@@ -68,79 +51,74 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
         </DialogHeader>
 
         <div className="px-2 sm:px-6">
-          {isRefreshing ? (
-            <StrainEditSkeleton />
-          ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
-                <TabsTrigger value="basic" className="text-xs sm:text-sm px-2 py-2">
-                  Basic Info
-                </TabsTrigger>
-                <TabsTrigger value="profiles" className="text-xs sm:text-sm px-2 py-2">
-                  Effects & Flavors
-                </TabsTrigger>
-                <TabsTrigger value="description" className="text-xs sm:text-sm px-2 py-2">
-                  Description
-                </TabsTrigger>
-                <TabsTrigger value="pricing" className="text-xs sm:text-sm px-2 py-2">
-                  Pricing
-                </TabsTrigger>
-              </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+              <TabsTrigger value="basic" className="text-xs sm:text-sm px-2 py-2">
+                Basic Info
+              </TabsTrigger>
+              <TabsTrigger value="profiles" className="text-xs sm:text-sm px-2 py-2">
+                Effects & Flavors
+              </TabsTrigger>
+              <TabsTrigger value="description" className="text-xs sm:text-sm px-2 py-2">
+                Description
+              </TabsTrigger>
+              <TabsTrigger value="pricing" className="text-xs sm:text-sm px-2 py-2">
+                Pricing
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="basic" className="space-y-4">
-                <StrainBasicInfoForm
-                  strain={editedStrain}
-                  errors={errors}
-                  onUpdate={updateField}
-                  isLoading={isLoading}
-                />
-              </TabsContent>
+            <TabsContent value="basic" className="space-y-4">
+              <StrainBasicInfoForm
+                strain={editedStrain}
+                errors={errors}
+                onUpdate={updateField}
+                isLoading={isLoading}
+              />
+            </TabsContent>
 
-              <TabsContent value="profiles" className="space-y-4">
-                <StrainProfilesForm
-                  strain={editedStrain}
-                  onUpdate={updateField}
-                  isLoading={isLoading}
-                />
-              </TabsContent>
+            <TabsContent value="profiles" className="space-y-4">
+              <StrainProfilesForm
+                strain={editedStrain}
+                onUpdate={updateField}
+                isLoading={isLoading}
+              />
+            </TabsContent>
 
-              <TabsContent value="description" className="space-y-4">
-                <StrainDescriptionForm
-                  strain={editedStrain}
-                  onUpdate={updateField}
-                  isLoading={isLoading}
-                />
-              </TabsContent>
+            <TabsContent value="description" className="space-y-4">
+              <StrainDescriptionForm
+                strain={editedStrain}
+                onUpdate={updateField}
+                isLoading={isLoading}
+              />
+            </TabsContent>
 
-              <TabsContent value="pricing" className="space-y-4">
-                <StrainPricingForm
-                  strainId={strain.id}
-                  isLoading={isLoading}
-                />
-              </TabsContent>
-            </Tabs>
-          )}
+            <TabsContent value="pricing" className="space-y-4">
+              <StrainPricingForm
+                strainId={strain.id}
+                isLoading={isLoading}
+              />
+            </TabsContent>
+          </Tabs>
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t gap-3 sm:gap-0">
             <div className="text-xs sm:text-sm text-muted-foreground">
               {isDirty && "• Unsaved changes"}
-              {isRefreshing && "• Refreshing data..."}
             </div>
             
             <div className="flex gap-2 w-full sm:w-auto">
               <button
                 onClick={handleReset}
-                disabled={!isDirty || isLoading || isRefreshing}
+                disabled={!isDirty || isLoading}
                 className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm border rounded-md hover:bg-gray-50 disabled:opacity-50"
               >
                 Reset
               </button>
               <button
                 onClick={handleSave}
-                disabled={!isDirty || isLoading || isRefreshing}
+                disabled={!isDirty || isLoading}
                 className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
               >
-                {isLoading || isRefreshing ? 'Saving...' : 'Save Changes'}
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

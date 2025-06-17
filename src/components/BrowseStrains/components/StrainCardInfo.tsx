@@ -58,7 +58,7 @@ const StrainCardInfo = ({
       {/* Full description when requested */}
       {showFullDescription && description && (
         <div className="mb-2">
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             {description}
           </p>
         </div>
