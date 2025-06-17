@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Calendar, Filter, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,31 +37,36 @@ interface ScanHistoryProps {
 const generateHslColorFromString = (str: string) => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
-    // A simple hashing function to create a number from the string
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  // Convert the hash to a hue value between 0 and 360
   const hue = hash % 360;
-  // Return a set of HSL colors with fixed saturation and lightness for a consistent, pastel look
   return {
-    backgroundColor: `hsl(${hue}, 80%, 90%)`, // Light pastel background
-    color: `hsl(${hue}, 70%, 35%)`,          // Darker text for contrast
-    borderColor: `hsl(${hue}, 80%, 80%)`,     // A matching border color
+    backgroundColor: `hsl(${hue}, 80%, 90%)`,
+    color: `hsl(${hue}, 70%, 35%)`,
+    borderColor: `hsl(${hue}, 80%, 80%)`,
     borderWidth: '1px',
   };
 };
 
 // --- StrainCard Component ---
-// This self-contained component renders a single strain card.
+// This component now uses useEffect to ensure shuffling happens on the client-side,
+// avoiding issues with Server-Side Rendering (SSR) hydration.
 const StrainCard = ({ strain, onStrainSelect }: { strain: Strain, onStrainSelect: (strain: Strain) => void }) => {
-  const shuffledEffects = useMemo(() => {
+  // Initialize state with the original, unshuffled effects.
+  const [shuffledEffects, setShuffledEffects] = useState(strain.effects);
+
+  // This effect runs once when the component mounts on the client.
+  // This is the key to ensuring a different shuffle on each page load.
+  useEffect(() => {
     const effectsCopy = [...strain.effects];
+    // Fisher-Yates shuffle algorithm
     for (let i = effectsCopy.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [effectsCopy[i], effectsCopy[j]] = [effectsCopy[j], effectsCopy[i]];
     }
-    return effectsCopy;
-  }, [strain.effects]);
+    // Update the state with the newly shuffled array, triggering a re-render.
+    setShuffledEffects(effectsCopy);
+  }, [strain.effects]); // Dependency array ensures this re-runs if the strain prop changes.
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -98,12 +103,11 @@ const StrainCard = ({ strain, onStrainSelect }: { strain: Strain, onStrainSelect
               <span>CBD: {strain.cbd}%</span>
             </div>
             <div className="flex flex-wrap gap-1">
-              {/* Map over shuffled effects and apply dynamic colors */}
               {shuffledEffects.slice(0, 2).map((effect) => (
                 <Badge
                   key={effect}
-                  className="text-xs" // Base classes
-                  style={generateHslColorFromString(effect)} // Apply dynamic, name-based colors
+                  className="text-xs"
+                  style={generateHslColorFromString(effect)}
                 >
                   {effect}
                 </Badge>
