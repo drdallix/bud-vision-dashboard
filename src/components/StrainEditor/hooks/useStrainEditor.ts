@@ -146,7 +146,7 @@ export const useStrainEditor = (
         throw error;
       }
 
-      console.log('Strain saved successfully, triggering data sync');
+      console.log('Strain saved successfully, triggering data sync and page refresh');
       
       // Trigger complete data refresh to ensure UI updates
       await triggerDataSync();
@@ -157,8 +157,15 @@ export const useStrainEditor = (
       
       toast({
         title: "Success",
-        description: "Strain updated successfully - UI refreshed",
+        description: "Strain updated successfully - refreshing page...",
       });
+
+      // Full page refresh to ensure complete UI update
+      setTimeout(() => {
+        console.log('Performing full page refresh after strain save');
+        window.location.reload();
+      }, 1500); // Give time for the toast to show
+
     } catch (error) {
       console.error('Error saving strain:', error);
       toast({
