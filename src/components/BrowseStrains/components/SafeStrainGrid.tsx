@@ -12,6 +12,8 @@ interface SafeStrainGridProps {
   onStockToggle: (strainId: string, currentStock: boolean) => Promise<boolean>;
   onStrainClick: (strain: Strain) => void;
   inventoryLoading: boolean;
+  searchTerm?: string;
+  filterType?: string;
 }
 
 const SafeStrainGrid = ({
@@ -21,7 +23,9 @@ const SafeStrainGrid = ({
   onStrainSelect,
   onStockToggle,
   onStrainClick,
-  inventoryLoading
+  inventoryLoading,
+  searchTerm = '',
+  filterType = 'all'
 }: SafeStrainGridProps) => {
   console.log('SafeStrainGrid render:', {
     strainCount: strains.length,
@@ -31,17 +35,52 @@ const SafeStrainGrid = ({
 
   if (!strains || strains.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No strains found</p>
+      <div className="text-center py-12 animate-fade-in">
+        <div className="text-muted-foreground text-lg">No strains found</div>
+        <p className="text-sm text-muted-foreground mt-2">
+          Try adjusting your filters or search terms
+        </p>
       </div>
     );
   }
 
+  // Determine which strains match current filters
+  const getIsMatchingFilter = (strain: Strain) => {
+    const matchesSearch = !searchTerm || 
+      strain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      strain.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      strain.effectProfiles?.some(e => e.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      strain.flavorProfiles?.some(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesType = filterType === 'all' || strain.type === filterType;
+    
+    return matchesSearch && matchesType;
+  };
+
+  // Sort strains: matching filters first, then non-matching
+  const sortedStrains = [...strains].sort((a, b) => {
+    const aMatches = getIsMatchingFilter(a);
+    const bMatches = getIsMatchingFilter(b);
+    
+    if (aMatches && !bMatches) return -1;
+    if (!aMatches && bMatches) return 1;
+    return 0;
+  });
+
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {strains.map((strain) => {
+    <div className="space-y-4 animate-fade-in">
+      {sortedStrains.map((strain, index) => {
+        const isMatchingFilter = getIsMatchingFilter(strain);
+        
         return (
-          <div key={strain.id}>
+          <div 
+            key={strain.id} 
+            className="animate-slide-in-up"
+            style={{ 
+              animationDelay: `${index * 50}ms`,
+              animationFillMode: 'both'
+            }}
+          >
             <StrainCard
               strain={strain}
               editMode={editMode}
@@ -53,13 +92,16 @@ const SafeStrainGrid = ({
               inventoryLoading={inventoryLoading}
               prices={[]}
               pricesLoading={false}
+              isMatchingFilter={isMatchingFilter}
             />
             {editMode && (
-              <StrainPriceEditor 
-                strainId={strain.id} 
-                prices={[]} 
-                disabled={inventoryLoading || !strain.inStock} 
-              />
+              <div className="mt-2 animate-fade-in">
+                <StrainPriceEditor 
+                  strainId={strain.id} 
+                  prices={[]} 
+                  disabled={inventoryLoading || !strain.inStock} 
+                />
+              </div>
             )}
           </div>
         );

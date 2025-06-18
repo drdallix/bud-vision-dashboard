@@ -121,6 +121,8 @@ const BrowseStrains = ({ onStrainSelect }: BrowseStrainsProps) => {
         onStockToggle={handleStockToggle}
         onStrainClick={handleStrainClick}
         inventoryLoading={inventoryLoading}
+        searchTerm={searchTerm}
+        filterType={filterType}
       />
     </div>
   );

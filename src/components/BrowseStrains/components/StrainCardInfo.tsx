@@ -2,7 +2,6 @@
 import React from 'react';
 import { PricePoint } from '@/types/price';
 import PriceBadges from './PriceBadges';
-import StrainCardEffects from './StrainCardEffects';
 
 interface EffectProfile {
   name: string;
@@ -32,42 +31,42 @@ const StrainCardInfo = ({
   showFullDescription = false
 }: StrainCardInfoProps) => {
   return (
-    <div className="flex-1 min-w-0 space-y-2">
-      {/* Always show price badges when available */}
+    <div className="flex-1 min-w-0 space-y-3">
+      {/* Price information - now more prominent */}
       {!pricesLoading && !!prices.length && (
-        <div className="mb-2">
+        <div className="mb-3">
           <PriceBadges prices={prices} />
         </div>
       )}
 
-      {/* Show placeholder when no prices but in stock */}
+      {/* No pricing placeholder - more prominent */}
       {localInStock && !pricesLoading && !prices.length && (
-        <div className="mb-2">
-          <div className="text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded">
+        <div className="mb-3">
+          <div className="text-sm text-muted-foreground bg-gray-100 px-3 py-2 rounded-md">
             No pricing set
           </div>
         </div>
       )}
 
-      <div className="mb-2">
-        <div className="text-xs text-muted-foreground">
+      {/* THC information - larger and more prominent */}
+      <div className="mb-3">
+        <div className="text-base font-medium text-foreground">
           THC: {thcDisplay}
         </div>
       </div>
 
-      {/* Full description when requested */}
+      {/* Description - expanded to use reclaimed space */}
       {showFullDescription && description && (
-        <div className="mb-2">
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+        <div className="mb-3">
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 md:line-clamp-4">
             {description}
           </p>
         </div>
       )}
 
-      <StrainCardEffects effects={effects} />
-
-      <div className="text-xs text-muted-foreground">
-        {new Date(scannedAt).toLocaleDateString()}
+      {/* Date information - slightly larger */}
+      <div className="text-sm text-muted-foreground font-medium">
+        Scanned {new Date(scannedAt).toLocaleDateString()}
       </div>
     </div>
   );

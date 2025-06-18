@@ -21,6 +21,7 @@ interface StrainCardProps {
   inventoryLoading: boolean;
   prices: PricePoint[];
   pricesLoading: boolean;
+  isMatchingFilter?: boolean; // New prop for filter matching
 }
 
 const StrainCard = ({
@@ -33,7 +34,8 @@ const StrainCard = ({
   onStrainClick,
   inventoryLoading,
   prices,
-  pricesLoading
+  pricesLoading,
+  isMatchingFilter = true
 }: StrainCardProps) => {
   // Local state to ensure immediate UI feedback
   const [localInStock, setLocalInStock] = useState(strain.inStock);
@@ -104,14 +106,23 @@ const StrainCard = ({
     console.log('Strain updated:', updatedStrain.name);
   };
 
+  // Enhanced styling for filter matching and stock status
+  const cardClasses = `
+    transition-all duration-300 ease-in-out transform
+    ${!editMode ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''} 
+    ${!localInStock ? 'opacity-70' : ''} 
+    ${!isMatchingFilter ? 'opacity-50 grayscale-[0.3] order-last' : 'order-first'}
+    ${isMatchingFilter ? 'animate-fade-in' : ''}
+  `.trim();
+
   return (
     <>
-      <Card className={`transition-all duration-200 ${!editMode ? 'cursor-pointer hover:shadow-md' : ''} ${!localInStock ? 'opacity-60' : ''}`} onClick={() => !editMode && onStrainClick(strain)}>
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
+      <Card className={cardClasses} onClick={() => !editMode && onStrainClick(strain)}>
+        <CardContent className="p-4 md:p-6">
+          <div className="flex items-start gap-4">
             <StrainCardIcon strainType={strain.type} />
             
-            <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex-1 min-w-0 space-y-3">
               <StrainCardHeader
                 strainName={strain.name}
                 strainType={strain.type}
