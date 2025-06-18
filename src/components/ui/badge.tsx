@@ -53,7 +53,9 @@ function Badge({ className, variant, children, ...props }: BadgeProps) {
     
     // For objects (including plain objects), convert to string safely
     if (typeof children === 'object') {
-      console.warn('Badge received object as children:', children);
+      console.error('Badge received object as children - this will cause React errors:', children);
+      console.trace('Badge object children trace');
+      
       // Handle objects that might have circular references
       try {
         // Try to extract meaningful properties for display
