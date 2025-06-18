@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -27,9 +28,20 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, children, ...props }: BadgeProps) {
+  // Ensure children is properly rendered - convert objects to strings if needed
+  const renderChildren = () => {
+    if (typeof children === 'object' && children !== null && !React.isValidElement(children)) {
+      console.warn('Badge received object as children:', children);
+      return JSON.stringify(children);
+    }
+    return children;
+  };
+
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <div className={cn(badgeVariants({ variant }), className)} {...props}>
+      {renderChildren()}
+    </div>
   )
 }
 

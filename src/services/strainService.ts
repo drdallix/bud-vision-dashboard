@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseScan } from '@/types/strain';
-import { Tables } from '@/integrations/supabase/types';
 
 export class StrainService {
   static async getAllStrains(): Promise<DatabaseScan[]> {
@@ -27,7 +26,7 @@ export class StrainService {
 
   static async createStrain(strainData: Omit<DatabaseScan, 'id' | 'created_at'>): Promise<DatabaseScan> {
     // Convert the data to match Supabase's expected format
-    const supabaseData: Tables<'scans'>['Insert'] = {
+    const supabaseData = {
       user_id: strainData.user_id,
       strain_name: strainData.strain_name,
       strain_type: strainData.strain_type,
