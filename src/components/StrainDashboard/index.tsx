@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { Strain } from '@/types/strain';
 import StrainHeader from './StrainHeader';
-import StrainEffects from './StrainEffects';
-import StrainFlavors from './StrainFlavors';
+import StrainEffectsVisual from './StrainEffectsVisual';
+import StrainFlavorsVisual from './StrainFlavorsVisual';
 import StrainMedicalUses from './StrainMedicalUses';
 import StrainCannabinoids from './StrainCannabinoids';
 import StrainTerpenes from './StrainTerpenes';
@@ -49,8 +49,8 @@ const StrainDashboard: React.FC<StrainDashboardProps> = ({ strain }) => {
       <StrainCannabinoids strain={strain} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StrainEffects effects={strain.effectProfiles?.map(p => p.name) || []} />
-        <StrainFlavors flavors={strain.flavorProfiles?.map(p => p.name) || []} />
+        <StrainEffectsVisual effectProfiles={strain.effectProfiles || []} />
+        <StrainFlavorsVisual flavorProfiles={strain.flavorProfiles || []} />
       </div>
 
       <StrainMedicalUses medicalUses={[]} />
