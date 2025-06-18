@@ -25,7 +25,16 @@ const StrainEffectsVisual = ({ effectProfiles = [] }: StrainEffectsVisualProps) 
     return labels[intensity] || 'Unknown';
   };
 
-  if (!effectProfiles || effectProfiles.length === 0) {
+  // Ensure we have valid effects data
+  const validEffects = effectProfiles.filter(effect => 
+    effect && 
+    typeof effect === 'object' && 
+    effect.name && 
+    effect.emoji && 
+    typeof effect.intensity === 'number'
+  );
+
+  if (!validEffects || validEffects.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -53,34 +62,40 @@ const StrainEffectsVisual = ({ effectProfiles = [] }: StrainEffectsVisualProps) 
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {effectProfiles.map((effect, index) => (
-            <div key={index} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{effect.emoji}</span>
-                  <span className="text-sm font-medium">{effect.name}</span>
+          {validEffects.map((effect, index) => {
+            const intensity = Math.max(1, Math.min(5, effect.intensity || 1));
+            const intensityLabel = getIntensityLabel(intensity);
+            const scaleColor = getScaleColor(intensity);
+            
+            return (
+              <div key={`${effect.name}-${index}`} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{String(effect.emoji)}</span>
+                    <span className="text-sm font-medium">{String(effect.name)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {intensityLabel}
+                    </span>
+                    <Badge variant="outline" className={`text-xs px-2 py-0.5 ${scaleColor} border-current`}>
+                      {intensity}/5
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {getIntensityLabel(effect.intensity)}
-                  </span>
-                  <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getScaleColor(effect.intensity)} border-current`}>
-                    {`${effect.intensity}/5`}
-                  </Badge>
+                <div className="flex gap-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div
+                      key={i}
+                      className={`h-2 w-full rounded-sm ${
+                        i < intensity ? scaleColor.split(' ')[0] : 'bg-gray-100'
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
-              <div className="flex gap-1">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`h-2 w-full rounded-sm ${
-                      i < effect.intensity ? getScaleColor(effect.intensity).split(' ')[0] : 'bg-gray-100'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="mt-3 pt-2 border-t text-xs text-muted-foreground">
             <p><strong>Scale:</strong> 1=Subtle • 2=Mild • 3=Moderate • 4=Strong • 5=Intense</p>
           </div>
