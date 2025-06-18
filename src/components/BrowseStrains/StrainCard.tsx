@@ -104,13 +104,6 @@ const StrainCard = ({
     console.log('Strain updated:', updatedStrain.name);
   };
 
-  // Debug logging for strain data
-  console.log('StrainCard rendering strain:', {
-    name: strain.name,
-    effectProfiles: strain.effectProfiles,
-    flavorProfiles: strain.flavorProfiles
-  });
-
   return (
     <>
       <Card className={`transition-all duration-200 ${!editMode ? 'cursor-pointer hover:shadow-md' : ''} ${!localInStock ? 'opacity-60' : ''}`} onClick={() => !editMode && onStrainClick(strain)}>

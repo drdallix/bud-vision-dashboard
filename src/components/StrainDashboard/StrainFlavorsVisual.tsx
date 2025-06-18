@@ -25,16 +25,7 @@ const StrainFlavorsVisual = ({ flavorProfiles = [] }: StrainFlavorsVisualProps) 
     return labels[intensity] || 'Unknown';
   };
 
-  // Ensure we have valid flavor data
-  const validFlavors = flavorProfiles.filter(flavor => 
-    flavor && 
-    typeof flavor === 'object' && 
-    flavor.name && 
-    flavor.emoji && 
-    typeof flavor.intensity === 'number'
-  );
-
-  if (!validFlavors || validFlavors.length === 0) {
+  if (!flavorProfiles || flavorProfiles.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -62,40 +53,34 @@ const StrainFlavorsVisual = ({ flavorProfiles = [] }: StrainFlavorsVisualProps) 
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {validFlavors.map((flavor, index) => {
-            const intensity = Math.max(1, Math.min(5, flavor.intensity || 1));
-            const intensityLabel = getIntensityLabel(intensity);
-            const scaleColor = getScaleColor(intensity);
-            
-            return (
-              <div key={`${flavor.name}-${index}`} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{String(flavor.emoji)}</span>
-                    <span className="text-sm font-medium">{String(flavor.name)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {intensityLabel}
-                    </span>
-                    <Badge variant="outline" className={`text-xs px-2 py-0.5 ${scaleColor} border-current`}>
-                      {intensity}/5
-                    </Badge>
-                  </div>
+          {flavorProfiles.map((flavor, index) => (
+            <div key={index} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{flavor.emoji}</span>
+                  <span className="text-sm font-medium">{flavor.name}</span>
                 </div>
-                <div className="flex gap-1">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <div
-                      key={i}
-                      className={`h-2 w-full rounded-sm ${
-                        i < intensity ? scaleColor.split(' ')[0] : 'bg-gray-100'
-                      }`}
-                    />
-                  ))}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {getIntensityLabel(flavor.intensity)}
+                  </span>
+                  <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getScaleColor(flavor.intensity)} border-current`}>
+                    {flavor.intensity}/5
+                  </Badge>
                 </div>
               </div>
-            );
-          })}
+              <div className="flex gap-1">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`h-2 w-full rounded-sm ${
+                      i < flavor.intensity ? getScaleColor(flavor.intensity).split(' ')[0] : 'bg-gray-100'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
           <div className="mt-3 pt-2 border-t text-xs text-muted-foreground">
             <p><strong>Scale:</strong> 1=Hint • 2=Light • 3=Noticeable • 4=Bold • 5=Dominant</p>
           </div>

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { EffectProfile, FlavorProfile } from '@/types/strain';
 
 interface FeaturedStrain {
   id: string;
@@ -13,8 +12,8 @@ interface FeaturedStrain {
   type: 'Indica' | 'Sativa' | 'Hybrid';
   thc: number;
   cbd: number;
-  effectProfiles: EffectProfile[];
-  flavorProfiles: FlavorProfile[];
+  effects: string[];
+  flavors: string[];
   price: string;
   rating: number;
   description: string;
@@ -26,7 +25,7 @@ const ShopMenu = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
 
-  // Featured strains for display - now with proper profile structure
+  // Featured strains for display - now with stock status
   const featuredStrains: FeaturedStrain[] = [
     {
       id: '1',
@@ -34,17 +33,8 @@ const ShopMenu = () => {
       type: 'Hybrid',
       thc: 21,
       cbd: 2,
-      effectProfiles: [
-        { name: 'Relaxed', intensity: 4, emoji: '😌', color: '#8B5CF6' },
-        { name: 'Happy', intensity: 4, emoji: '😊', color: '#F59E0B' },
-        { name: 'Euphoric', intensity: 3, emoji: '🤩', color: '#EF4444' },
-        { name: 'Creative', intensity: 3, emoji: '🎨', color: '#8B5CF6' }
-      ],
-      flavorProfiles: [
-        { name: 'Berry', intensity: 4, emoji: '🫐', color: '#7C3AED' },
-        { name: 'Sweet', intensity: 4, emoji: '🍯', color: '#F59E0B' },
-        { name: 'Earthy', intensity: 2, emoji: '🌍', color: '#78716C' }
-      ],
+      effects: ['Relaxed', 'Happy', 'Euphoric', 'Creative'],
+      flavors: ['Berry', 'Sweet', 'Earthy'],
       price: '$45/8th',
       rating: 4.8,
       description: 'A balanced hybrid providing full-body relaxation with gentle cerebral invigoration.',
@@ -57,17 +47,8 @@ const ShopMenu = () => {
       type: 'Hybrid',
       thc: 24,
       cbd: 1,
-      effectProfiles: [
-        { name: 'Euphoric', intensity: 5, emoji: '🤩', color: '#EF4444' },
-        { name: 'Happy', intensity: 4, emoji: '😊', color: '#F59E0B' },
-        { name: 'Relaxed', intensity: 4, emoji: '😌', color: '#8B5CF6' },
-        { name: 'Uplifted', intensity: 3, emoji: '⬆️', color: '#10B981' }
-      ],
-      flavorProfiles: [
-        { name: 'Earthy', intensity: 5, emoji: '🌍', color: '#78716C' },
-        { name: 'Pine', intensity: 4, emoji: '🌲', color: '#059669' },
-        { name: 'Diesel', intensity: 3, emoji: '⛽', color: '#374151' }
-      ],
+      effects: ['Euphoric', 'Happy', 'Relaxed', 'Uplifted'],
+      flavors: ['Earthy', 'Pine', 'Woody'],
       price: '$50/8th',
       rating: 4.9,
       description: 'Classic strain with complex aroma and balanced head and body effects.',
@@ -80,16 +61,8 @@ const ShopMenu = () => {
       type: 'Indica',
       thc: 20,
       cbd: 1,
-      effectProfiles: [
-        { name: 'Relaxed', intensity: 5, emoji: '😌', color: '#8B5CF6' },
-        { name: 'Sleepy', intensity: 4, emoji: '😴', color: '#6B7280' },
-        { name: 'Happy', intensity: 3, emoji: '😊', color: '#F59E0B' },
-        { name: 'Euphoric', intensity: 3, emoji: '🤩', color: '#EF4444' }
-      ],
-      flavorProfiles: [
-        { name: 'Berry', intensity: 5, emoji: '🫐', color: '#7C3AED' },
-        { name: 'Sweet', intensity: 4, emoji: '🍯', color: '#F59E0B' }
-      ],
+      effects: ['Relaxed', 'Sleepy', 'Happy', 'Euphoric'],
+      flavors: ['Grape', 'Berry', 'Sweet'],
       price: '$48/8th',
       rating: 4.7,
       description: 'Potent indica delivering deep relaxation and stress relief.',
@@ -102,16 +75,8 @@ const ShopMenu = () => {
       type: 'Sativa',
       thc: 22,
       cbd: 1,
-      effectProfiles: [
-        { name: 'Focused', intensity: 5, emoji: '🎯', color: '#3B82F6' },
-        { name: 'Happy', intensity: 4, emoji: '😊', color: '#F59E0B' },
-        { name: 'Uplifted', intensity: 4, emoji: '⬆️', color: '#10B981' },
-        { name: 'Creative', intensity: 3, emoji: '🎨', color: '#8B5CF6' }
-      ],
-      flavorProfiles: [
-        { name: 'Citrus', intensity: 4, emoji: '🍋', color: '#EAB308' },
-        { name: 'Sweet', intensity: 3, emoji: '🍯', color: '#F59E0B' }
-      ],
+      effects: ['Energetic', 'Focused', 'Happy', 'Uplifted'],
+      flavors: ['Citrus', 'Sweet', 'Tropical'],
       price: '$46/8th',
       rating: 4.6,
       description: 'Energizing sativa perfect for daytime use and creative activities.',
@@ -124,16 +89,8 @@ const ShopMenu = () => {
       type: 'Hybrid',
       thc: 25,
       cbd: 1,
-      effectProfiles: [
-        { name: 'Relaxed', intensity: 5, emoji: '😌', color: '#8B5CF6' },
-        { name: 'Happy', intensity: 4, emoji: '😊', color: '#F59E0B' },
-        { name: 'Euphoric', intensity: 4, emoji: '🤩', color: '#EF4444' },
-        { name: 'Sleepy', intensity: 3, emoji: '😴', color: '#6B7280' }
-      ],
-      flavorProfiles: [
-        { name: 'Sweet', intensity: 5, emoji: '🍯', color: '#F59E0B' },
-        { name: 'Earthy', intensity: 3, emoji: '🌍', color: '#78716C' }
-      ],
+      effects: ['Relaxed', 'Happy', 'Euphoric', 'Sleepy'],
+      flavors: ['Sweet', 'Vanilla', 'Earthy'],
       price: '$55/8th',
       rating: 4.9,
       description: 'Premium hybrid with exceptional flavor and potent relaxing effects.',
@@ -146,16 +103,8 @@ const ShopMenu = () => {
       type: 'Sativa',
       thc: 23,
       cbd: 2,
-      effectProfiles: [
-        { name: 'Focused', intensity: 4, emoji: '🎯', color: '#3B82F6' },
-        { name: 'Happy', intensity: 4, emoji: '😊', color: '#F59E0B' },
-        { name: 'Uplifted', intensity: 4, emoji: '⬆️', color: '#10B981' },
-        { name: 'Creative', intensity: 3, emoji: '🎨', color: '#8B5CF6' }
-      ],
-      flavorProfiles: [
-        { name: 'Diesel', intensity: 5, emoji: '⛽', color: '#374151' },
-        { name: 'Citrus', intensity: 3, emoji: '🍋', color: '#EAB308' }
-      ],
+      effects: ['Energetic', 'Happy', 'Uplifted', 'Creative'],
+      flavors: ['Diesel', 'Citrus', 'Pungent'],
       price: '$47/8th',
       rating: 4.5,
       description: 'Iconic sativa with distinctive aroma and long-lasting energetic effects.',
@@ -163,8 +112,6 @@ const ShopMenu = () => {
       lastUpdated: '3 hours ago'
     }
   ];
-
-  // ... keep existing code (getTypeColor, getStrainEmoji, getGradientColor functions)
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -195,8 +142,8 @@ const ShopMenu = () => {
 
   const filteredStrains = featuredStrains.filter(strain => {
     const matchesSearch = strain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         strain.effectProfiles.some(effect => effect.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         strain.flavorProfiles.some(flavor => flavor.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                         strain.effects.some(effect => effect.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         strain.flavors.some(flavor => flavor.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = selectedType === 'all' || strain.type.toLowerCase() === selectedType.toLowerCase();
     return matchesSearch && matchesType;
   });
@@ -340,14 +287,14 @@ const ShopMenu = () => {
                     <span className="text-sm font-medium">Effects</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {strain.effectProfiles.slice(0, 3).map((effect, index) => (
+                    {strain.effects.slice(0, 3).map((effect, index) => (
                       <Badge key={index} variant="secondary" className="text-xs">
-                        <span>{effect.name}</span>
+                        {effect}
                       </Badge>
                     ))}
-                    {strain.effectProfiles.length > 3 && (
+                    {strain.effects.length > 3 && (
                       <Badge variant="secondary" className="text-xs">
-                        +{strain.effectProfiles.length - 3}
+                        +{strain.effects.length - 3}
                       </Badge>
                     )}
                   </div>
@@ -359,9 +306,9 @@ const ShopMenu = () => {
                     <span className="text-sm font-medium">Flavors</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {strain.flavorProfiles.map((flavor, index) => (
+                    {strain.flavors.map((flavor, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
-                        <span>{flavor.name}</span>
+                        {flavor}
                       </Badge>
                     ))}
                   </div>

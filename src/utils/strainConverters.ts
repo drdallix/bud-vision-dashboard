@@ -5,45 +5,21 @@ import { DatabaseScan, Strain, EffectProfile, FlavorProfile } from '@/types/stra
  * Convert database scan to frontend Strain object
  */
 export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
-  let effectProfiles: EffectProfile[] = [];
-  let flavorProfiles: FlavorProfile[] = [];
+  // Generate basic effect profiles from legacy effects array
+  const effectProfiles: EffectProfile[] = (scan.effects || []).map((effect, index) => ({
+    name: effect,
+    intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
+    emoji: ['😌', '😊', '🤩', '💭', '✨', '🚀'][index] || '✨',
+    color: ['#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#6366F1', '#EC4899'][index] || '#6B7280'
+  }));
 
-  // Handle new structured profiles (jsonb) or legacy effects/flavors (string arrays)
-  if (scan.effects) {
-    if (Array.isArray(scan.effects) && scan.effects.length > 0) {
-      // Check if first element is an object (new structure) or string (legacy)
-      if (typeof scan.effects[0] === 'object' && scan.effects[0] !== null && 'name' in scan.effects[0]) {
-        // New structured format
-        effectProfiles = scan.effects as EffectProfile[];
-      } else {
-        // Legacy string array format - convert to structured format
-        effectProfiles = (scan.effects as string[]).map((effect, index) => ({
-          name: effect,
-          intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
-          emoji: ['😌', '😊', '🤩', '💭', '✨', '🚀'][index] || '✨',
-          color: ['#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#6366F1', '#EC4899'][index] || '#6B7280'
-        }));
-      }
-    }
-  }
-
-  if (scan.flavors) {
-    if (Array.isArray(scan.flavors) && scan.flavors.length > 0) {
-      // Check if first element is an object (new structure) or string (legacy)
-      if (typeof scan.flavors[0] === 'object' && scan.flavors[0] !== null && 'name' in scan.flavors[0]) {
-        // New structured format
-        flavorProfiles = scan.flavors as FlavorProfile[];
-      } else {
-        // Legacy string array format - convert to structured format
-        flavorProfiles = (scan.flavors as string[]).map((flavor, index) => ({
-          name: flavor,
-          intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
-          emoji: ['🌍', '🍯', '🌲', '🍋', '🌶️', '🍓'][index] || '🌿',
-          color: ['#78716C', '#F59E0B', '#10B981', '#EAB308', '#F97316', '#EC4899'][index] || '#6B7280'
-        }));
-      }
-    }
-  }
+  // Generate basic flavor profiles from legacy flavors array
+  const flavorProfiles: FlavorProfile[] = (scan.flavors || []).map((flavor, index) => ({
+    name: flavor,
+    intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
+    emoji: ['🌍', '🍯', '🌲', '🍋', '🌶️', '🍓'][index] || '🌿',
+    color: ['#78716C', '#F59E0B', '#10B981', '#EAB308', '#F97316', '#EC4899'][index] || '#6B7280'
+  }));
 
   return {
     id: scan.id,
@@ -54,11 +30,12 @@ export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
     effectProfiles,
     flavorProfiles,
     terpenes: scan.terpenes || [],
-    description: scan.description || `A ${scan.strain_type.toLowerCase()} strain with ${effectProfiles.map(e => e.name).join(', ') || 'various'} effects.`,
+    description: scan.description || `A ${scan.strain_type.toLowerCase()} strain with ${scan.effects?.join(', ') || 'various'} effects.`,
     scannedAt: scan.scanned_at,
     confidence: scan.confidence || 85,
     inStock: scan.in_stock,
     userId: scan.user_id
+    // Note: Removed emoji field handling - now using static emojis based on type
   };
 };
 
@@ -72,13 +49,14 @@ export const convertStrainToDatabaseScan = (strain: Strain): Omit<DatabaseScan, 
     strain_type: strain.type,
     thc: strain.thc,
     cbd: strain.cbd || null,
-    effects: strain.effectProfiles, // Store structured profiles as jsonb
-    flavors: strain.flavorProfiles, // Store structured profiles as jsonb
+    effects: strain.effectProfiles.map(effect => effect.name),
+    flavors: strain.flavorProfiles.map(flavor => flavor.name),
     terpenes: strain.terpenes || null,
     medical_uses: [], // Legacy field, kept for compatibility
     description: strain.description,
     confidence: strain.confidence,
     scanned_at: strain.scannedAt,
-    in_stock: strain.inStock
+    in_stock: strain.inStock,
+    emoji: null // No longer using AI-generated emojis
   };
 };

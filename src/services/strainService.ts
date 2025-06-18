@@ -10,7 +10,7 @@ export class StrainService {
       .order('scanned_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []) as DatabaseScan[];
+    return data || [];
   }
 
   static async getUserStrains(userId: string): Promise<DatabaseScan[]> {
@@ -21,35 +21,18 @@ export class StrainService {
       .order('scanned_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []) as DatabaseScan[];
+    return data || [];
   }
 
   static async createStrain(strainData: Omit<DatabaseScan, 'id' | 'created_at'>): Promise<DatabaseScan> {
-    // Convert the data to match Supabase's expected format
-    const supabaseData = {
-      user_id: strainData.user_id,
-      strain_name: strainData.strain_name,
-      strain_type: strainData.strain_type,
-      thc: strainData.thc,
-      cbd: strainData.cbd,
-      effects: strainData.effects as any, // Cast to Json type expected by Supabase
-      flavors: strainData.flavors as any, // Cast to Json type expected by Supabase
-      terpenes: strainData.terpenes,
-      medical_uses: strainData.medical_uses,
-      description: strainData.description,
-      confidence: strainData.confidence,
-      scanned_at: strainData.scanned_at,
-      in_stock: strainData.in_stock
-    };
-
     const { data, error } = await supabase
       .from('scans')
-      .insert(supabaseData)
+      .insert(strainData)
       .select()
       .single();
 
     if (error) throw error;
-    return data as DatabaseScan;
+    return data;
   }
 
   static async updateStockStatus(strainId: string, userId: string, inStock: boolean): Promise<void> {

@@ -20,7 +20,7 @@ const CurrentStrainInfo = ({ strain, current, total }: CurrentStrainInfoProps) =
         </div>
       </div>
       <Badge className="bg-green-600 text-white">
-        <span>{current + 1} of {total}</span>
+        {current + 1} of {total}
       </Badge>
     </div>
   );

@@ -133,7 +133,7 @@ const StrainProfilesForm = ({ strain, onUpdate, isLoading }: StrainProfilesFormP
                     style={{ borderColor: effect.color, color: effect.color }}
                   >
                     <span>{effect.emoji}</span>
-                    <span>{effect.name}</span>
+                    {effect.name}
                   </Badge>
                   
                   <div className="flex-1">
@@ -184,7 +184,7 @@ const StrainProfilesForm = ({ strain, onUpdate, isLoading }: StrainProfilesFormP
                   className="justify-start"
                 >
                   <span className="mr-1">{effect.emoji}</span>
-                  <span>{effect.name}</span>
+                  {effect.name}
                 </Button>
               ))}
             </div>
@@ -214,7 +214,7 @@ const StrainProfilesForm = ({ strain, onUpdate, isLoading }: StrainProfilesFormP
                     style={{ borderColor: flavor.color, color: flavor.color }}
                   >
                     <span>{flavor.emoji}</span>
-                    <span>{flavor.name}</span>
+                    {flavor.name}
                   </Badge>
                   
                   <div className="flex-1">
@@ -265,7 +265,7 @@ const StrainProfilesForm = ({ strain, onUpdate, isLoading }: StrainProfilesFormP
                   className="justify-start"
                 >
                   <span className="mr-1">{flavor.emoji}</span>
-                  <span>{flavor.name}</span>
+                  {flavor.name}
                 </Button>
               ))}
             </div>

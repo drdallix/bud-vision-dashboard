@@ -8,7 +8,6 @@ interface EffectProfile {
   name: string;
   emoji: string;
   color: string;
-  intensity?: number;
 }
 
 interface StrainCardInfoProps {
@@ -32,11 +31,6 @@ const StrainCardInfo = ({
   description,
   showFullDescription = false
 }: StrainCardInfoProps) => {
-  // Ensure we're passing the right data structure to StrainCardEffects
-  const safeEffects = Array.isArray(effects) ? effects.filter(effect => 
-    effect && typeof effect === 'object' && effect.name && effect.emoji
-  ) : [];
-
   return (
     <div className="flex-1 min-w-0 space-y-2">
       {/* Always show price badges when available */}
@@ -70,7 +64,7 @@ const StrainCardInfo = ({
         </div>
       )}
 
-      <StrainCardEffects effects={safeEffects} />
+      <StrainCardEffects effects={effects} />
 
       <div className="text-xs text-muted-foreground">
         {new Date(scannedAt).toLocaleDateString()}

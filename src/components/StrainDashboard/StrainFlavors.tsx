@@ -21,7 +21,7 @@ const StrainFlavors = ({ flavors }: StrainFlavorsProps) => {
         <div className="flex flex-wrap gap-2">
           {flavors.map((flavor, index) => (
             <Badge key={index} variant="outline">
-              <span>{flavor}</span>
+              {flavor}
             </Badge>
           ))}
         </div>
