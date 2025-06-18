@@ -43,7 +43,7 @@ export interface LegacyStrain extends Omit<Strain, 'effectProfiles' | 'flavorPro
   medicalUses: string[];
 }
 
-// Database return type from Supabase (matching the generated types)
+// Updated database return type to match new jsonb schema
 export type DatabaseScan = {
   id: string;
   user_id: string;
@@ -51,8 +51,8 @@ export type DatabaseScan = {
   strain_type: string;
   thc: number | null;
   cbd?: number | null;
-  effects: string[] | null;
-  flavors: string[] | null;
+  effects: EffectProfile[] | string[] | null; // Support both new and legacy formats
+  flavors: FlavorProfile[] | string[] | null; // Support both new and legacy formats
   terpenes: any | null;
   medical_uses: string[] | null;
   description: string | null;

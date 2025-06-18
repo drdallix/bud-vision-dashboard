@@ -10,7 +10,7 @@ export class StrainService {
       .order('scanned_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as DatabaseScan[];
   }
 
   static async getUserStrains(userId: string): Promise<DatabaseScan[]> {
@@ -21,7 +21,7 @@ export class StrainService {
       .order('scanned_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as DatabaseScan[];
   }
 
   static async createStrain(strainData: Omit<DatabaseScan, 'id' | 'created_at'>): Promise<DatabaseScan> {
@@ -32,7 +32,7 @@ export class StrainService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as DatabaseScan;
   }
 
   static async updateStockStatus(strainId: string, userId: string, inStock: boolean): Promise<void> {

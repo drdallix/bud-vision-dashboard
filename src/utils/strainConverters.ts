@@ -12,7 +12,7 @@ export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
   if (scan.effects) {
     if (Array.isArray(scan.effects) && scan.effects.length > 0) {
       // Check if first element is an object (new structure) or string (legacy)
-      if (typeof scan.effects[0] === 'object' && scan.effects[0].name) {
+      if (typeof scan.effects[0] === 'object' && scan.effects[0] !== null && 'name' in scan.effects[0]) {
         // New structured format
         effectProfiles = scan.effects as EffectProfile[];
       } else {
@@ -30,7 +30,7 @@ export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
   if (scan.flavors) {
     if (Array.isArray(scan.flavors) && scan.flavors.length > 0) {
       // Check if first element is an object (new structure) or string (legacy)
-      if (typeof scan.flavors[0] === 'object' && scan.flavors[0].name) {
+      if (typeof scan.flavors[0] === 'object' && scan.flavors[0] !== null && 'name' in scan.flavors[0]) {
         // New structured format
         flavorProfiles = scan.flavors as FlavorProfile[];
       } else {
