@@ -1,160 +1,154 @@
-// openai.ts
+import OpenAI from "openai";
 
-interface OpenAIMessage {
-  role: string;
-  content: any;
+// The message interface can be simplified for this use case.
+export interface OpenAIMessage {
+  role: "system" | "user";
+  content: string;
 }
 
-// Helper lists of your supported effects and flavors.
-const supportedEffectsList = "Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry";
-const supportedFlavorsList = "Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral";
+// These constants are well-defined and can remain as they are.
+export const supportedEffectsList =
+  "Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry";
+export const supportedFlavorsList =
+  "Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral";
 
-export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
-  {
-    role: 'system',
-    content: `You are "Strain Genius," an AI researcher. Your primary directive is to produce a single, factually perfect, and fully-structured JSON profile. Your most important rules are that every description **must** mention the strain's parentage and **must** conclude with a source attribution.
-
-You are "Strain Genius," an expert cannabis writer and historian. Your role is to craft authentic, vivid, and factually trustworthy JSON strain profiles. Write as a friendly, knowledgeable guide making recommendations—engaging, natural, and never robotic.
-
-## Guiding Principles & Best Practices
-
-1. **Natural, Engaging Descriptions:**  
-   - Write fluid, personable prose.  
-   - Vividly illustrate the strain’s signature effects and flavors (drawn only from the provided lists).
-   - Naturally incorporate origin or parentage (if known) into the narrative—do not use a ‘parents’ field.
-
-2. **Trustworthy Facts:**  
-   - Include at least one verifiable, notable fact (e.g. historic background, awards, popularity, or geographic origin).
-
-3. **Source Attribution:**  
-   - At the end of each description, give source credit (e.g.: “Profile information synthesized from trusted resources like Leafly.”).
-
-4. **Strict JSON Structure:**  
-   - Return only a single JSON object, with **no extra text**.
-   - **Omit** any 'parents', 'lineage', or unrelated metadata fields.
-   - Use only the 5-level type system: 'Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', or 'Sativa'.
-   - For the 'thc' key, use the provided value: `${thcRangeHint ? `${thcRangeHint[0]}` : '21'}`.
-   - Always include a `confidence` score (%), estimating the reliability of facts.
-
-## 5 Examples of Authentic Profiles (Note the Tone, Structure, and Attribution)
-
-**1. Sativa Example Query:** "durban poison"
-{
-  "name": "Durban Poison",
-  "type": "Sativa",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 0.2,
-  "effects": ["Uplifted", "Focused", "Creative", "Happy"],
-  "flavors": ["Earthy", "Pine", "Sweet"],
-  "description": "Hailing from the South African port city of Durban, this pure sativa is a true classic. It's famous for a clean, focused energy that sparks creativity without the jitteriness. The aroma is a delightful mix of sweet and earthy pine, making for a smooth and productive experience. Profile information for this landrace strain synthesized from sources including Leafly.",
-  "confidence": 99
-}
-
-**2. Sativa-Dominant Example Query:** "blue dream"
-{
-  "name": "Blue Dream",
-  "type": "Sativa-Dominant",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 1.1,
-  "effects": ["Creative", "Uplifted", "Happy", "Relaxed"],
-  "flavors": ["Berry", "Sweet", "Earthy"],
-  "description": "A West Coast legend, Blue Dream is a delightful cross between Blueberry and Haze. It gently eases you into a calm euphoria, sparking creativity while keeping you relaxed. Many love it for its sugary berry flavor that tastes just like its name suggests. Key facts for this profile were drawn from authoritative databases like Weedmaps.",
-  "confidence": 99
-}
-
-**3. Hybrid Example Query:** "gg4"
-{
-  "name": "GG4 (Original Glue)",
-  "type": "Hybrid",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 0.1,
-  "effects": ["Relaxed", "Euphoric", "Happy", "Uplifted"],
-  "flavors": ["Diesel", "Earthy", "Skunk"],
-  "description": "Born from Chem's Sister, Sour Dubb, and Chocolate Diesel, GG4 is famous for its powerful, couch-locking relaxation. This multiple award-winner delivers a heavy-handed euphoria with a pungent, skunky diesel aroma that announces its potency before you even light up. Profile information synthesized from leading cannabis resources, including AllBud.",
-  "confidence": 98
-}
-
-**4. Indica-Dominant Example Query:** "wedding cake"
-{
-  "name": "Wedding Cake",
-  "type": "Indica-Dominant",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 0.5,
-  "effects": ["Relaxed", "Euphoric", "Happy", "Hungry"],
-  "flavors": ["Sweet", "Earthy", "Citrus"],
-  "description": "A rich and tangy hybrid of Cherry Pie and Girl Scout Cookies, Wedding Cake offers a profoundly relaxing and euphoric experience. It was named Leafly's Strain of the Year in 2019 for a reason—its sweet, earthy flavor profile calms the body and stimulates the appetite. Information for this profile sourced from cannabis knowledge bases like Leafly.",
-  "confidence": 98
-}
-
-**5. Indica Example Query:** "northern lights"
-{
-  "name": "Northern Lights",
-  "type": "Indica",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 0.3,
-  "effects": ["Sleepy", "Relaxed", "Euphoric", "Happy"],
-  "flavors": ["Pine", "Sweet", "Earthy"],
-  "description": "One of the most famous indicas of all time, Northern Lights descends from original Afghani and Thai landrace strains. It provides a dreamy, tranquilizing body high that erases pain and ushers in a peaceful night's sleep, all wrapped in a classic sweet pine flavor. Key facts for this profile drawn from sources including Weedmaps and High Times.",
-  "confidence": 99
-}
-
-## Your Task
-Now, for the query below, craft an authentic and engaging profile that follows these principles. Return only the final JSON object.
-`
-  },
-  {
-    role: 'user',
-    content: `Please analyze and generate a factually accurate profile for: "${textQuery}", ensuring you mention the parent strains in the description only and cite your primary sources.`
-  }
-];
-
-// NOTE: The helper functions below are still used by your index.ts file for the
-// secondary calls that generate the enhanced UI profiles (with intensity, color, etc.)
-// This is a good separation of concerns. The main data is generated in the single call above.
-
-export const createEffectProfilesMessages = (strainName: string, strainType: string, effects: string[]) => [
-  {
-    role: 'system',
-    content: `You are an expert cannabis educator. For the given strain, type, and effects, generate a JSON array of profiles including a realistic 1-5 intensity. Answer ONLY with the JSON array.`
-  },
-  {
-    role: 'user',
-    content: `Strain: "${strainName}"\nType: ${strainType}\nEffects: ${effects && effects.length ? effects.join(", ") : "None"}`
-  }
-];
-
-export const createFlavorProfilesMessages = (strainName: string, strainType: string, flavors: string[]) => [
-  {
-    role: 'system',
-    content: `You are a cannabis sommelier AI. For the given strain, type, and flavors, generate a JSON array of profiles including a realistic 1-5 intensity. Answer ONLY with the JSON array.`
-  },
-  {
-    role: 'user',
-    content: `Strain: "${strainName}"\nType: ${strainType}\nFlavors: ${flavors && flavors.length ? flavors.join(", ") : "None"}`
-  }
-];
-
-
-export const callOpenAI = async (messages: OpenAIMessage[], openAIApiKey: string) => {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openAIApiKey}`,
-      'Content-Type': 'application/json',
+// The function definition for the AI. Adding descriptions to parameters helps the model understand the intent better.
+const return_strain_profile = {
+  name: "return_strain_profile",
+  description: "Generate a cannabis strain profile based on the input query.",
+  parameters: {
+    type: "object",
+    properties: {
+      name: { 
+        type: "string",
+        description: "The corrected, official name of the cannabis strain." 
+      },
+      type: {
+        type: "string",
+        enum: [
+          "Indica",
+          "Indica-Dominant",
+          "Hybrid",
+          "Sativa-Dominant",
+          "Sativa",
+        ],
+      },
+      thc: { 
+        type: "number",
+        description: "The THC percentage of the strain, as a number (e.g., 22.5)."
+      },
+      cbd: { 
+        type: "number",
+        description: "The CBD percentage of the strain, as a number (e.g., 1.2)."
+      },
+      effects: {
+        type: "array",
+        items: {
+          type: "string",
+          enum: supportedEffectsList.split(", ").map((x) => x.trim()),
+        },
+      },
+      flavors: {
+        type: "array",
+        items: {
+          type: "string",
+          enum: supportedFlavorsList.split(", ").map((x) => x.trim()),
+        },
+      },
+      description: { 
+        type: "string",
+        description: "A detailed description including parentage, history, and any awards. It must end with a source attribution and must NOT mention THC/CBD percentages."
+      },
+      confidence: { 
+        type: "number",
+        description: "A number from 0 to 100 representing the confidence in the accuracy of the generated profile based on available data."
+      },
     },
-    body: JSON.stringify({
-      model: 'gpt-4.1-nano',
-      messages: messages,
-      max_tokens: 1500,
-      temperature: 0.1
-    }),
+    required: [
+      "name",
+      "type",
+      "thc",
+      "cbd",
+      "effects",
+      "flavors",
+      "description",
+      "confidence",
+    ],
+  },
+} as const;
+
+// This type definition correctly matches our desired output structure.
+export type StrainProfile = {
+  name: string;
+  type:
+    | "Indica"
+    | "Indica-Dominant"
+    | "Hybrid"
+    | "Sativa-Dominant"
+    | "Sativa";
+  thc: number;
+  cbd: number;
+  effects: string[];
+  flavors: string[];
+  description: string;
+  confidence: number;
+};
+
+// The prompt is updated to be clearer and avoid conflicting instructions.
+export function createTextAnalysisMessages(
+  textQuery: string
+): OpenAIMessage[] {
+  const prompt = [
+    "You are a function-calling AI that builds cannabis strain profiles using the 'return_strain_profile' function.",
+    "Your primary goal is to populate the function's arguments with accurate data from your knowledge base.",
+    "Use your knowledge to find the strain's parents, history, and any awards or pop culture references.",
+    `The 'effects' array must only contain values from this list: ${supportedEffectsList}.`,
+    `The 'flavors' array must only contain values from this list: ${supportedFlavorsList}.`,
+    "The 'description' field is for prose. It should include the strain's lineage (parents) and any notable facts (like awards). It MUST end with a source attribution (e.g., 'Profile information synthesized from sources like Leafly and Weedmaps.').",
+    "Crucially, DO NOT mention THC or CBD percentages in the 'description' string, as they have their own dedicated fields in the function call.",
+    "Only include information you are confident about. Do not guess or hallucinate data."
+  ].join("\n");
+
+  return [
+    { role: "system", content: prompt },
+    {
+      role: "user",
+      content: `Please generate a comprehensive and accurate profile for: "${textQuery}".`,
+    },
+  ];
+}
+
+
+// The main analysis function is updated to use the modern OpenAI SDK structure.
+export async function analyzeStrain(
+  query: string,
+  apiKey: string
+): Promise<StrainProfile> {
+  const client = new OpenAI({ apiKey });
+
+  const messages = createTextAnalysisMessages(query);
+
+  // FIX: Use `client.chat.completions.create` with the modern `tools` and `tool_choice` parameters.
+  const response = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: messages,
+    tools: [{ type: "function", function: return_strain_profile }],
+    tool_choice: { type: "function", function: { name: "return_strain_profile" } }, // Force the model to call our function
   });
 
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error('OpenAI API error:', errorData);
-    throw new Error(`OpenAI API error: ${response.status}`);
+  // FIX: The arguments are now found in the 'tool_calls' array of the first choice.
+  const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+  const args = toolCall?.function?.arguments;
+
+  if (!args) {
+    throw new Error("Missing function call arguments in the AI's response.");
   }
 
-  return response.json();
-};
+  try {
+    const parsed = JSON.parse(args) as StrainProfile;
+    return parsed;
+  } catch (error) {
+    console.error("Failed to parse function call arguments:", args);
+    throw new Error("The AI returned invalid JSON for the function call.");
+  }
+}
