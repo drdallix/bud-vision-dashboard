@@ -29,13 +29,55 @@ export interface BadgeProps
     VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, children, ...props }: BadgeProps) {
-  // Ensure children is properly rendered - convert objects to strings if needed
+  // Ensure children is properly rendered - handle different types safely
   const renderChildren = () => {
-    if (typeof children === 'object' && children !== null && !React.isValidElement(children)) {
-      console.warn('Badge received object as children:', children);
-      return JSON.stringify(children);
+    // If it's already a valid React element, return as-is
+    if (React.isValidElement(children)) {
+      return children;
     }
-    return children;
+    
+    // If it's null, undefined, string, or number, return as-is
+    if (children == null || typeof children === 'string' || typeof children === 'number' || typeof children === 'boolean') {
+      return children;
+    }
+    
+    // If it's an array, handle each item
+    if (Array.isArray(children)) {
+      return children.map((child, index) => {
+        if (React.isValidElement(child) || typeof child === 'string' || typeof child === 'number') {
+          return child;
+        }
+        return String(child);
+      }).join('');
+    }
+    
+    // For objects (including plain objects), convert to string safely
+    if (typeof children === 'object') {
+      console.warn('Badge received object as children:', children);
+      // Handle objects that might have circular references
+      try {
+        // Try to extract meaningful properties for display
+        if (children && typeof children === 'object') {
+          // Check if it has common properties we can display
+          if ('name' in children) {
+            return String(children.name);
+          }
+          if ('toString' in children && typeof children.toString === 'function') {
+            const result = children.toString();
+            if (result !== '[object Object]') {
+              return result;
+            }
+          }
+        }
+        return '[Object]';
+      } catch (error) {
+        console.warn('Error converting object to string for Badge:', error);
+        return '[Object]';
+      }
+    }
+    
+    // Fallback for any other type
+    return String(children);
   };
 
   return (
