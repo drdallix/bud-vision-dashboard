@@ -103,7 +103,7 @@ export const createTextAnalysisMessages = (textQuery: string, thcValue: number):
        - Strain name, type (Indica, Sativa, Hybrid, Dominant varieties)
        - Typical THC and CBD percentages (obtain THC from the provided fixed value, CBD from knowledge/search)
        - Common effects, flavors, terpenes (with percentages and effects), and medical uses.
-       - A detailed description covering parentage, history, unique characteristics, and general experience.
+       - A detailed description covering parentage, history, typical growth patterns, unique characteristics, and any notable awards or cultural references. This description MUST NOT contain any specific THC or CBD percentages. It should explain the overall experience, aroma, and appearance. End the description with a source attribution like 'Profile information synthesized from sources like Leafly and AllBud.'
     3. CRITICAL REQUIREMENT - THC VALUE:
        - You MUST use the exact value ${thcValue} for the 'thc' field in your 'return_strain_profile' function call. This is a predetermined system value that overrides any other information.
        - NEVER mention, reference, or include ANY THC percentage information in the 'description' field of the 'return_strain_profile' function call. The description should focus only on effects, flavors, background, and usage.
@@ -265,3 +265,145 @@ export const callOpenAIWithResponsesAPI = async (
     }
   }
 };
+
+// Enhanced analyzeStrain function with proper logging
+export const analyzeStrain = async (
+  textQuery?: string,
+  imageData?: string,
+  openAIApiKey?: string
+): Promise<StrainProfile> => {
+  console.log('🤖 OpenAI analyzeStrain called with:', {
+    hasText: !!textQuery,
+    hasImage: !!imageData,
+    hasApiKey: !!openAIApiKey
+  });
+
+  if (!openAIApiKey) {
+    throw new Error('OpenAI API key is required');
+  }
+
+  if (!textQuery && !imageData) {
+    throw new Error('Either textQuery or imageData is required');
+  }
+
+  try {
+    // Generate deterministic THC value
+    const strainNameForTHC = textQuery || "Mystery Strain";
+    const thcValue = getDeterministicTHCValue(strainNameForTHC);
+    
+    console.log('📊 Generated THC value:', {
+      strainName: strainNameForTHC,
+      thcValue: thcValue
+    });
+
+    // Prepare messages based on input type
+    let messages;
+    if (imageData) {
+      messages = createImageAnalysisMessages(imageData, textQuery || "", thcValue);
+      console.log('📸 Using image analysis messages');
+    } else {
+      messages = createTextAnalysisMessages(textQuery!, thcValue);
+      console.log('📝 Using text analysis messages');
+    }
+
+    // Call OpenAI for main strain profile
+    console.log('🚀 Calling OpenAI for strain profile generation...');
+    const response = await callOpenAIWithResponsesAPI(messages, openAIApiKey, [strainProfileTool]);
+    
+    if (!response?.choices?.[0]?.message?.content) {
+      throw new Error('No valid response from OpenAI');
+    }
+
+    const strainData = JSON.parse(response.choices[0].message.content);
+    console.log('✅ OpenAI main response received:', {
+      name: strainData.name,
+      type: strainData.type,
+      thc: strainData.thc,
+      effectsCount: strainData.effects?.length || 0,
+      flavorsCount: strainData.flavors?.length || 0,
+      descriptionLength: strainData.description?.length || 0
+    });
+
+    // Generate effect profiles
+    console.log('🎨 Generating effect profiles...');
+    const effectMessages = createEffectProfilesMessages(strainData.name, strainData.type, strainData.effects || []);
+    const effectResponse = await callOpenAIWithResponsesAPI(effectMessages, openAIApiKey, []);
+    
+    let effectProfiles = [];
+    try {
+      effectProfiles = JSON.parse(effectResponse.choices[0].message.content);
+      console.log('✅ Effect profiles generated:', effectProfiles.length);
+    } catch (error) {
+      console.warn('⚠️ Failed to parse effect profiles, using defaults');
+      effectProfiles = (strainData.effects || []).map((effect: string) => ({
+        name: effect,
+        intensity: 3,
+        emoji: "🌿",
+        color: "#10B981"
+      }));
+    }
+
+    // Generate flavor profiles
+    console.log('🍃 Generating flavor profiles...');
+    const flavorMessages = createFlavorProfilesMessages(strainData.name, strainData.type, strainData.flavors || []);
+    const flavorResponse = await callOpenAIWithResponsesAPI(flavorMessages, openAIApiKey, []);
+    
+    let flavorProfiles = [];
+    try {
+      flavorProfiles = JSON.parse(flavorResponse.choices[0].message.content);
+      console.log('✅ Flavor profiles generated:', flavorProfiles.length);
+    } catch (error) {
+      console.warn('⚠️ Failed to parse flavor profiles, using defaults');
+      flavorProfiles = (strainData.flavors || []).map((flavor: string) => ({
+        name: flavor,
+        intensity: 3,
+        emoji: "🌿",
+        color: "#10B981"
+      }));
+    }
+
+    // Build final strain profile
+    const finalStrain: StrainProfile = {
+      name: strainData.name,
+      type: strainData.type,
+      thc: strainData.thc, // Use the THC from AI (which should match our deterministic value)
+      cbd: strainData.cbd || 0.5,
+      effects: strainData.effects || [],
+      flavors: strainData.flavors || [],
+      terpenes: strainData.terpenes || [],
+      medicalUses: strainData.medicalUses || [],
+      description: strainData.description, // CRITICAL: Use AI description directly
+      confidence: strainData.confidence || 85,
+      effectProfiles: effectProfiles,
+      flavorProfiles: flavorProfiles
+    };
+
+    console.log('🎯 Final strain profile created:', {
+      name: finalStrain.name,
+      thc: finalStrain.thc,
+      descriptionLength: finalStrain.description?.length || 0,
+      effectProfilesCount: finalStrain.effectProfiles?.length || 0,
+      flavorProfilesCount: finalStrain.flavorProfiles?.length || 0,
+      source: 'OpenAI Generated'
+    });
+
+    return finalStrain;
+
+  } catch (error) {
+    console.error('💥 Error in analyzeStrain:', error);
+    throw error;
+  }
+};
+
+// Helper function for deterministic THC calculation
+function getDeterministicTHCValue(strainName: string): number {
+  const cleanName = strainName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  let hash = 0;
+  for (let i = 0; i < cleanName.length; i++) {
+    const char = cleanName.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  const normalized = Math.abs(hash) / 2147483647; // Normalize to 0-1
+  return Math.round((21 + (normalized * 9)) * 100) / 100; // 21-30% range
+}

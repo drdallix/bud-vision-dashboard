@@ -1,12 +1,9 @@
-// index.ts
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { corsHeaders } from './cors.ts';
-// Import the new, self-contained analyzeStrain function
 import { analyzeStrain, StrainProfile } from './openai.ts'; 
-// We still need a fallback for critical errors
 import { createFallbackStrain } from './validation.ts'; 
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -19,82 +16,120 @@ serve(async (req) => {
   }
 
   try {
-    // This function now primarily handles text queries as the new openai.ts is optimized for it.
-    const { textQuery, userId } = await req.json();
+    const { textQuery, imageData, userId } = await req.json();
     
-    // Check for API key and the required textQuery.
+    console.log('🔥 EDGE FUNCTION: Starting strain analysis', {
+      hasText: !!textQuery,
+      hasImage: !!imageData,
+      userId: userId || 'anonymous',
+      timestamp: new Date().toISOString()
+    });
+    
+    // Check for API key and required input
     if (!openAIApiKey) {
+      console.error('❌ OpenAI API key not configured');
       return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-    if (!textQuery) {
-        return new Response(JSON.stringify({ error: 'Missing textQuery parameter' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+    
+    if (!textQuery && !imageData) {
+      console.error('❌ Missing required input parameters');
+      return new Response(JSON.stringify({ error: 'Missing textQuery or imageData parameter' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    console.log(`Processing request for query: "${textQuery}", UserID: ${userId || 'anonymous'}`);
+    console.log('🤖 Calling OpenAI analysis with:', {
+      inputType: textQuery ? 'text' : 'image',
+      query: textQuery || 'image analysis'
+    });
 
-    // The entire multi-step process is now replaced with a single, robust call.
-    // The new `analyzeStrain` function handles name correction, data validation,
-    // and description generation all in one step via the function-calling API.
-    const finalStrain: StrainProfile = await analyzeStrain(textQuery, openAIApiKey);
+    // Call the AI analysis function
+    const finalStrain: StrainProfile = await analyzeStrain(textQuery, imageData, openAIApiKey);
 
-    console.log('Successfully generated strain profile:', { name: finalStrain.name, thc: finalStrain.thc });
+    console.log('✅ AI analysis completed successfully:', {
+      name: finalStrain.name,
+      type: finalStrain.type,
+      thc: finalStrain.thc,
+      cbd: finalStrain.cbd,
+      descriptionLength: finalStrain.description?.length || 0,
+      effectsCount: finalStrain.effects?.length || 0,
+      flavorsCount: finalStrain.flavors?.length || 0,
+      confidence: finalStrain.confidence
+    });
 
-    // Save the complete profile to the database if a userId is provided.
+    // Save to database if userId provided
     if (userId) {
       try {
+        console.log('💾 Saving strain to database for user:', userId);
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
         
-        // The data to insert now directly matches the StrainProfile type.
         const scanData = {
           user_id: userId,
           strain_name: finalStrain.name,
           strain_type: finalStrain.type,
           thc: finalStrain.thc,
           cbd: finalStrain.cbd,
-          effects: finalStrain.effects,
-          flavors: finalStrain.flavors,
-          terpenes: [], // The new profile doesn't generate terpenes, can be added back if needed.
-          medical_uses: [], // The new profile doesn't generate medical uses, can be added back if needed.
-          description: finalStrain.description,
+          effects: finalStrain.effects || [],
+          flavors: finalStrain.flavors || [],
+          terpenes: finalStrain.terpenes || [],
+          medical_uses: finalStrain.medicalUses || [],
+          description: finalStrain.description, // CRITICAL: Use AI description directly
           confidence: finalStrain.confidence,
           scanned_at: new Date().toISOString(),
-          in_stock: true // Default value
+          in_stock: true
         };
 
-        const { error } = await supabase
+        console.log('📝 Database save data:', {
+          strain_name: scanData.strain_name,
+          description_length: scanData.description?.length || 0,
+          description_preview: scanData.description?.substring(0, 100) + '...'
+        });
+
+        const { data: savedData, error } = await supabase
           .from('scans')
-          .insert(scanData);
+          .insert(scanData)
+          .select()
+          .single();
 
         if (error) {
-          console.error('Database save error:', error);
+          console.error('❌ Database save error:', error);
         } else {
-          console.log('Strain saved to database for user:', userId);
+          console.log('✅ Strain saved to database with ID:', savedData.id);
         }
       } catch (dbError) {
-        console.error('Database operation failed:', dbError);
+        console.error('💥 Database operation failed:', dbError);
       }
     }
 
-    // Return the generated profile. Note: It does not contain the enhanced
-    // `effectProfiles` or `flavorProfiles` as the new `openai.ts` doesn't create them.
+    console.log('🎯 Returning final strain profile to client');
+    
+    // Return the AI-generated profile directly
     return new Response(JSON.stringify(finalStrain), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Edge function error:', error.message);
-    // Use a fallback strain in case of a critical failure during the process.
+    console.error('💥 Edge function error:', error.message);
+    
+    // Create fallback strain for critical failures
     const requestBody = await req.text();
-    const query = requestBody ? JSON.parse(requestBody).textQuery : undefined;
+    let query;
+    try {
+      query = JSON.parse(requestBody)?.textQuery;
+    } catch {
+      query = undefined;
+    }
+    
+    const fallbackStrain = createFallbackStrain(query);
+    console.log('🔄 Using fallback strain:', fallbackStrain.name);
+    
     return new Response(JSON.stringify({ 
       error: 'An unexpected error occurred during strain analysis.',
-      fallbackStrain: createFallbackStrain(query) 
+      fallbackStrain 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
