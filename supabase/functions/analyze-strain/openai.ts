@@ -28,7 +28,7 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
     - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
     - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
     
-    IMPORTANT: Generate effects and flavors that specifically match and complement the strain type and description. Be creative and varied - don't always use the same combinations.
+    IMPORTANT: Generate diverse and creative effects and flavors that specifically match the strain type and description. Vary the combinations to avoid repetition.
     
     Return a JSON object with this exact structure:
     {
@@ -36,8 +36,14 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
       "type": "Indica" | "Sativa" | "Hybrid",
       "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
       "cbd": number (realistic for strain type, typically 0.1-5), 
-      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type and description - be creative and varied),
-      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors that match the strain's character - be diverse),
+      "effectProfiles": [
+        {"name": "effect_name", "intensity": number (1-5), "emoji": "appropriate_emoji", "color": "hex_color"},
+        {"name": "effect_name", "intensity": number (1-5), "emoji": "appropriate_emoji", "color": "hex_color"}
+      ] (3-6 diverse effects with realistic intensities, creative emojis, and vibrant colors),
+      "flavorProfiles": [
+        {"name": "flavor_name", "intensity": number (1-5), "emoji": "appropriate_emoji", "color": "hex_color"},
+        {"name": "flavor_name", "intensity": number (1-5), "emoji": "appropriate_emoji", "color": "hex_color"}
+      ] (2-4 diverse flavors with realistic intensities, creative emojis, and vibrant colors),
       "terpenes": [
         {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
         ...
@@ -49,7 +55,7 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
   },
   {
     role: 'user',
-    content: `Please analyze and correct this strain name/description, then generate complete strain information with unique effects and flavors that match the strain's character: "${textQuery}"`
+    content: `Please analyze and correct this strain name/description, then generate complete strain information with diverse effects and flavors that match the strain's character: "${textQuery}"`
   }
 ];
 
@@ -81,7 +87,7 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
     - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
     
-    IMPORTANT: Generate effects and flavors that specifically match the identified strain and its characteristics. Be creative and varied.
+    IMPORTANT: Generate diverse and creative effects and flavors that specifically match the identified strain. Vary combinations to avoid repetition.
     
     Return a JSON object with this exact structure:
     {
@@ -89,8 +95,14 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
       "type": "Indica" | "Sativa" | "Hybrid",
       "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
       "cbd": number (realistic, typically 0.1-5), 
-      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type and strain - be creative),
-      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors that match the strain's profile - be diverse),
+      "effectProfiles": [
+        {"name": "effect_name", "intensity": number (1-5), "emoji": "appropriate_emoji", "color": "hex_color"},
+        {"name": "effect_name", "intensity": number (1-5), "emoji": "appropriate_emoji", "color": "hex_color"}
+      ] (3-6 diverse effects with realistic intensities, creative emojis, and vibrant colors),
+      "flavorProfiles": [
+        {"name": "flavor_name", "intensity": number (1-5), "emoji": "appropriate_emoji", "color": "hex_color"},
+        {"name": "flavor_name", "intensity": number (1-5), "emoji": "appropriate_emoji", "color": "hex_color"}
+      ] (2-4 diverse flavors with realistic intensities, creative emojis, and vibrant colors),
       "terpenes": [
         {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
         ...
@@ -105,7 +117,7 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     content: [
       {
         type: 'text',
-        text: 'Please analyze this cannabis package image and identify the strain. Generate unique effects and flavors that match the strain characteristics.'
+        text: 'Please analyze this cannabis package image and identify the strain. Generate diverse effects and flavors that match the strain characteristics.'
       },
       {
         type: 'image_url',
@@ -114,43 +126,6 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
         }
       }
     ]
-  }
-];
-
-export const createEffectProfilesMessages = (strainName: string, strainType: string, effects: string[]) => [
-  {
-    role: 'system',
-    content: `You are an expert cannabis educator. For the given strain name, type, and listed effects, generate a JSON array of effect profiles, including intensity and emoji:
-- For each effect, assign:
-  - name: effect as received
-  - intensity: realistic 1-5 integer for this strain (1=Subtle, 5=Intense)
-  - emoji: appropriate modern emoji for the effect
-  - color: a hex color suited to effect's feeling.  
-Format: [{ name, intensity, emoji, color }]
-Examples: Relaxed=😌,#8B5CF6; Happy=😊,#F59E0B; Euphoric=🤩,#EF4444
-Be creative, but reflect typical effect strength for a ${strainType} strain. Answer ONLY with the array.`
-  },
-  {
-    role: 'user',
-    content: `Strain: "${strainName}"\nType: ${strainType}\nEffects: ${effects && effects.length ? effects.join(", ") : "None"}`
-  }
-];
-
-export const createFlavorProfilesMessages = (strainName: string, strainType: string, flavors: string[]) => [
-  {
-    role: 'system',
-    content: `You are a cannabis sommelier AI. For this strain and the possible flavors listed, generate a JSON array of flavor profiles, each including:
-- name: the flavor
-- intensity: realistic 1-5 integer (1=Hint, 5=Dominant)
-- emoji: fitting modern emoji
-- color: a vivid hex color
-Use flavor type and strain type for references. Example: Sweet=🍯,#F59E0B; Earthy=🌍,#78716C
-Output JSON array: [{ name, intensity, emoji, color }]
-Answer ONLY with the array.`
-  },
-  {
-    role: 'user',
-    content: `Strain: "${strainName}"\nType: ${strainType}\nFlavors: ${flavors && flavors.length ? flavors.join(", ") : "None"}`
   }
 ];
 
@@ -164,8 +139,8 @@ export const callOpenAI = async (messages: OpenAIMessage[], openAIApiKey: string
     body: JSON.stringify({
       model: 'gpt-4o',
       messages: messages,
-      max_tokens: 1500,
-      temperature: 0.3
+      max_tokens: 2000,
+      temperature: 0.4
     }),
   });
 

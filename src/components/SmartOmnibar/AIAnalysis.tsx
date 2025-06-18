@@ -5,13 +5,11 @@ import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 
 export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string, userId?: string) => {
   try {
-    console.log('Calling AI strain analysis...', textQuery ? 'with text query' : 'with image');
-    
-    // Calculate the deterministic THC range before making the API call
-    const strainName = textQuery ? textQuery.replace(/[^\w\s]/g, '').trim() || "Mystery Strain" : "Mystery Strain";
-    const [thcMin, thcMax] = getDeterministicTHCRange(strainName);
-    
-    console.log('Pre-calculated THC range for', strainName, ':', [thcMin, thcMax]);
+    console.log('=== AI STRAIN ANALYSIS START ===');
+    console.log('Input type:', textQuery ? 'text query' : 'image');
+    console.log('Text query:', textQuery);
+    console.log('Has image data:', !!imageData);
+    console.log('User ID:', userId);
     
     const requestBody: any = { 
       imageData: imageData || null,
@@ -20,9 +18,10 @@ export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string
     
     if (userId) {
       requestBody.userId = userId;
-      console.log('Including userId in AI request for database save:', userId);
+      console.log('Including userId for database save:', userId);
     }
     
+    console.log('Calling Supabase edge function...');
     const { data, error } = await supabase.functions.invoke('analyze-strain', {
       body: requestBody
     });
@@ -32,45 +31,58 @@ export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string
       throw error;
     }
 
-    console.log('AI analysis result:', data);
+    console.log('Edge function response:', data);
 
     if (data.error) {
       console.error('Edge function returned error:', data.error);
       if (data.fallbackStrain) {
-        // Ensure fallback strain also uses correct THC
-        const fallback = {
-          ...data.fallbackStrain,
-          thc: thcMin // Use our deterministic calculation
-        };
-        return fallback;
+        console.log('Using fallback strain from edge function');
+        return data.fallbackStrain;
       }
       throw new Error(data.error);
     }
 
-    // Ensure the returned data uses our deterministic THC calculation
-    const finalStrain = {
-      ...data,
-      thc: thcMin // Always override with our calculated value
+    // The edge function now returns complete strain data with structured profiles
+    const finalStrain: Strain = {
+      id: data.id || crypto.randomUUID(),
+      name: data.name,
+      type: data.type,
+      thc: data.thc, // THC is set by edge function with deterministic logic
+      cbd: data.cbd,
+      effectProfiles: data.effectProfiles || [],
+      flavorProfiles: data.flavorProfiles || [],
+      terpenes: data.terpenes || [],
+      description: data.description,
+      confidence: data.confidence,
+      scannedAt: new Date().toISOString(),
+      inStock: true,
+      userId: userId || 'anonymous'
     };
 
-    console.log('Final strain with consistent THC:', {
+    console.log('Final strain object:', {
       name: finalStrain.name,
       thc: finalStrain.thc,
-      expectedRange: [thcMin, thcMax]
+      effectProfilesCount: finalStrain.effectProfiles.length,
+      flavorProfilesCount: finalStrain.flavorProfiles.length,
+      description: finalStrain.description?.substring(0, 100) + '...'
     });
+    console.log('=== AI STRAIN ANALYSIS SUCCESS ===');
 
     return finalStrain;
   } catch (error) {
-    console.error('Error calling strain analysis:', error);
+    console.error('=== AI STRAIN ANALYSIS ERROR ===');
+    console.error('Error details:', error);
     
-    // Fallback strain with correct THC calculation
+    // Fallback strain with structured profiles
     const fallbackName = textQuery ? textQuery.replace(/[^\w\s]/g, '').trim() || "Unknown Strain" : "Unknown Strain";
     const [fallbackThcMin] = getDeterministicTHCRange(fallbackName);
     
-    return {
+    const fallbackStrain: Strain = {
+      id: crypto.randomUUID(),
       name: fallbackName,
       type: "Hybrid" as const,
-      thc: fallbackThcMin, // Use deterministic calculation
+      thc: fallbackThcMin,
+      cbd: 1,
       effectProfiles: [
         { name: "Relaxed", intensity: 3, emoji: "😌", color: "#8B5CF6" },
         { name: "Happy", intensity: 4, emoji: "😊", color: "#F59E0B" }
@@ -81,9 +93,16 @@ export const analyzeStrainWithAI = async (imageData?: string, textQuery?: string
       ],
       terpenes: [{"name": "Myrcene", "percentage": 1.0, "effects": "Relaxing"}],
       description: textQuery ? 
-        "Text analysis incomplete. Please check spelling and try again." :
-        "Package scan incomplete. Please try again with clearer lighting and ensure all text is visible.",
-      confidence: 0
+        "Analysis incomplete. Please check spelling and try again." :
+        "Image scan incomplete. Please try again with clearer lighting and ensure all text is visible.",
+      confidence: 0,
+      scannedAt: new Date().toISOString(),
+      inStock: true,
+      userId: userId || 'anonymous'
     };
+
+    console.log('Returning fallback strain:', fallbackStrain.name);
+    console.log('=== AI STRAIN ANALYSIS FALLBACK ===');
+    return fallbackStrain;
   }
 };

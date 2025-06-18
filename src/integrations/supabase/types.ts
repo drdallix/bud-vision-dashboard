@@ -80,8 +80,8 @@ export type Database = {
           confidence: number | null
           created_at: string
           description: string | null
-          effects: string[] | null
-          flavors: string[] | null
+          effects: Json | null
+          flavors: Json | null
           id: string
           in_stock: boolean
           medical_uses: string[] | null
@@ -97,8 +97,8 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           description?: string | null
-          effects?: string[] | null
-          flavors?: string[] | null
+          effects?: Json | null
+          flavors?: Json | null
           id?: string
           in_stock?: boolean
           medical_uses?: string[] | null
@@ -114,8 +114,8 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           description?: string | null
-          effects?: string[] | null
-          flavors?: string[] | null
+          effects?: Json | null
+          flavors?: Json | null
           id?: string
           in_stock?: boolean
           medical_uses?: string[] | null
