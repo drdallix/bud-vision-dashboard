@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseScan } from '@/types/strain';
+import { Tables } from '@/integrations/supabase/types';
 
 export class StrainService {
   static async getAllStrains(): Promise<DatabaseScan[]> {
@@ -25,9 +26,26 @@ export class StrainService {
   }
 
   static async createStrain(strainData: Omit<DatabaseScan, 'id' | 'created_at'>): Promise<DatabaseScan> {
+    // Convert the data to match Supabase's expected format
+    const supabaseData: Tables<'scans'>['Insert'] = {
+      user_id: strainData.user_id,
+      strain_name: strainData.strain_name,
+      strain_type: strainData.strain_type,
+      thc: strainData.thc,
+      cbd: strainData.cbd,
+      effects: strainData.effects as any, // Cast to Json type expected by Supabase
+      flavors: strainData.flavors as any, // Cast to Json type expected by Supabase
+      terpenes: strainData.terpenes,
+      medical_uses: strainData.medical_uses,
+      description: strainData.description,
+      confidence: strainData.confidence,
+      scanned_at: strainData.scanned_at,
+      in_stock: strainData.in_stock
+    };
+
     const { data, error } = await supabase
       .from('scans')
-      .insert(strainData)
+      .insert(supabaseData)
       .select()
       .single();
 
