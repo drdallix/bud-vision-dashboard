@@ -1,121 +1,134 @@
-// openai.ts
 
 interface OpenAIMessage {
   role: string;
   content: any;
 }
 
-// Helper lists of your supported effects and flavors.
-const supportedEffectsList = "Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry";
-const supportedFlavorsList = "Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral";
-
 export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
   {
     role: 'system',
-    content: `You are "Strain Genius," an AI researcher. Your primary directive is to produce a single, factually perfect, and fully-structured JSON profile. Your most important rules are that every description **must** mention the strain's parentage and **must** conclude with a source attribution.
+    content: `You are an expert cannabis strain identifier and cannabis knowledge expert. The user has provided a strain name or description that may contain spelling errors or poor punctuation. 
 
-You are "Strain Genius," an expert cannabis writer and historian. Your role is to craft authentic, vivid, and factually trustworthy JSON strain profiles. Write as a friendly, knowledgeable guide making recommendations—engaging, natural, and never robotic.
+    IMPORTANT TASKS:
+    1. CORRECT SPELLING & GRAMMAR: Fix any spelling mistakes, punctuation errors, and grammatical issues in the provided text
+    2. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
 
-## Guiding Principles & Best Practices
+    CRITICAL REQUIREMENT - THC VALUE:
+    - You MUST use the exact value ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC field in your response
+    - This is a predetermined system value that cannot be changed
+    - NEVER mention, reference, or include any THC percentage information in the description field
+    - The description should focus only on effects, flavors, background, and usage
 
-1. **Natural, Engaging Descriptions:**  
-   - Write fluid, personable prose.  
-   - Vividly illustrate the strain’s signature effects and flavors (drawn only from the provided lists).
-   - Naturally incorporate origin or parentage (if known) into the narrative—do not use a ‘parents’ field.
-
-2. **Trustworthy Facts:**  
-   - Include at least one verifiable, notable fact (e.g. historic background, awards, popularity, or geographic origin).
-
-3. **Source Attribution:**  
-   - At the end of each description, give source credit (e.g.: “Profile information synthesized from trusted resources like Leafly.”).
-
-4. **Strict JSON Structure:**  
-   - Return only a single JSON object, with **no extra text**.
-   - **Omit** any 'parents', 'lineage', or unrelated metadata fields.
-   - Use only the 5-level type system: 'Indica', 'Indica-Dominant', 'Hybrid', 'Sativa-Dominant', or 'Sativa'.
-   - For the 'thc' key, use the provided value: `${thcRangeHint ? `${thcRangeHint[0]}` : '21'}`.
-   - Always include a `confidence` score (%), estimating the reliability of facts.
-
-## 5 Examples of Authentic Profiles (Note the Tone, Structure, and Attribution)
-
-**1. Sativa Example Query:** "durban poison"
-{
-  "name": "Durban Poison",
-  "type": "Sativa",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 0.2,
-  "effects": ["Uplifted", "Focused", "Creative", "Happy"],
-  "flavors": ["Earthy", "Pine", "Sweet"],
-  "description": "Hailing from the South African port city of Durban, this pure sativa is a true classic. It's famous for a clean, focused energy that sparks creativity without the jitteriness. The aroma is a delightful mix of sweet and earthy pine, making for a smooth and productive experience. Profile information for this landrace strain synthesized from sources including Leafly.",
-  "confidence": 99
-}
-
-**2. Sativa-Dominant Example Query:** "blue dream"
-{
-  "name": "Blue Dream",
-  "type": "Sativa-Dominant",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 1.1,
-  "effects": ["Creative", "Uplifted", "Happy", "Relaxed"],
-  "flavors": ["Berry", "Sweet", "Earthy"],
-  "description": "A West Coast legend, Blue Dream is a delightful cross between Blueberry and Haze. It gently eases you into a calm euphoria, sparking creativity while keeping you relaxed. Many love it for its sugary berry flavor that tastes just like its name suggests. Key facts for this profile were drawn from authoritative databases like Weedmaps.",
-  "confidence": 99
-}
-
-**3. Hybrid Example Query:** "gg4"
-{
-  "name": "GG4 (Original Glue)",
-  "type": "Hybrid",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 0.1,
-  "effects": ["Relaxed", "Euphoric", "Happy", "Uplifted"],
-  "flavors": ["Diesel", "Earthy", "Skunk"],
-  "description": "Born from Chem's Sister, Sour Dubb, and Chocolate Diesel, GG4 is famous for its powerful, couch-locking relaxation. This multiple award-winner delivers a heavy-handed euphoria with a pungent, skunky diesel aroma that announces its potency before you even light up. Profile information synthesized from leading cannabis resources, including AllBud.",
-  "confidence": 98
-}
-
-**4. Indica-Dominant Example Query:** "wedding cake"
-{
-  "name": "Wedding Cake",
-  "type": "Indica-Dominant",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 0.5,
-  "effects": ["Relaxed", "Euphoric", "Happy", "Hungry"],
-  "flavors": ["Sweet", "Earthy", "Citrus"],
-  "description": "A rich and tangy hybrid of Cherry Pie and Girl Scout Cookies, Wedding Cake offers a profoundly relaxing and euphoric experience. It was named Leafly's Strain of the Year in 2019 for a reason—its sweet, earthy flavor profile calms the body and stimulates the appetite. Information for this profile sourced from cannabis knowledge bases like Leafly.",
-  "confidence": 98
-}
-
-**5. Indica Example Query:** "northern lights"
-{
-  "name": "Northern Lights",
-  "type": "Indica",
-  "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
-  "cbd": 0.3,
-  "effects": ["Sleepy", "Relaxed", "Euphoric", "Happy"],
-  "flavors": ["Pine", "Sweet", "Earthy"],
-  "description": "One of the most famous indicas of all time, Northern Lights descends from original Afghani and Thai landrace strains. It provides a dreamy, tranquilizing body high that erases pain and ushers in a peaceful night's sleep, all wrapped in a classic sweet pine flavor. Key facts for this profile drawn from sources including Weedmaps and High Times.",
-  "confidence": 99
-}
-
-## Your Task
-Now, for the query below, craft an authentic and engaging profile that follows these principles. Return only the final JSON object.
-`
+    Cannabis Knowledge Guidelines:
+    - Indica strains: typically relaxing/sedating effects, earthy/sweet flavors
+    - Sativa strains: typically energizing/uplifting effects, citrus/pine flavors  
+    - Hybrid strains: balanced effects combining both
+    - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
+    - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
+    - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
+    - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
+    
+    IMPORTANT: Generate effects and flavors that specifically match and complement the strain type and description. Be creative and varied - don't always use the same combinations.
+    
+    Return a JSON object with this exact structure:
+    {
+      "name": "corrected and properly formatted strain name",
+      "type": "Indica" | "Sativa" | "Hybrid",
+      "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
+      "cbd": number (realistic for strain type, typically 0.1-5), 
+      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type and description - be creative and varied),
+      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors that match the strain's character - be diverse),
+      "terpenes": [
+        {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
+        ...
+      ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
+      "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
+      "description": "detailed description focusing on strain background, effects, flavors, and usage notes. Do NOT include any potency or percentage information.",
+      "confidence": 85
+    }`
   },
   {
     role: 'user',
-    content: `Please analyze and generate a factually accurate profile for: "${textQuery}", ensuring you mention the parent strains in the description only and cite your primary sources.`
+    content: `Please analyze and correct this strain name/description, then generate complete strain information with unique effects and flavors that match the strain's character: "${textQuery}"`
   }
 ];
 
-// NOTE: The helper functions below are still used by your index.ts file for the
-// secondary calls that generate the enhanced UI profiles (with intensity, color, etc.)
-// This is a good separation of concerns. The main data is generated in the single call above.
+export const createImageAnalysisMessages = (imageData: string, strainNameHint?: string, thcRangeHint?: [number, number]): OpenAIMessage[] => [
+  {
+    role: 'system',
+    content: `You are an expert cannabis strain identifier and cannabis knowledge expert. Analyze the cannabis package image and extract information to identify the strain. 
+
+    CRITICAL REQUIREMENT - THC VALUE:
+    - Ignore any visible THC percentages on the package completely
+    - You MUST use the exact value ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC field
+    - This is a predetermined system value that overrides any package information
+    - NEVER mention, reference, or include any THC percentage information in the description field
+
+    Look for visible information:
+    - Strain name on the package (most important)
+    - Package text and labels
+    - Visual characteristics of the product
+    - Brand information
+    
+    For missing information, use your cannabis knowledge to provide appropriate details.
+    
+    Cannabis Knowledge Guidelines:
+    - Indica strains: typically relaxing/sedating effects, earthy/sweet flavors
+    - Sativa strains: typically energizing/uplifting effects, citrus/pine flavors  
+    - Hybrid strains: balanced effects combining both
+    - Popular effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry
+    - Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy
+    - Major terpenes: Myrcene (sedating), Limonene (uplifting), Pinene (alertness), Linalool (calming), Caryophyllene (anti-inflammatory)
+    - Medical uses: Pain Relief, Stress Relief, Anxiety, Insomnia, Depression, Appetite Loss, Nausea
+    
+    IMPORTANT: Generate effects and flavors that specifically match the identified strain and its characteristics. Be creative and varied.
+    
+    Return a JSON object with this exact structure:
+    {
+      "name": "strain name from package (if visible) or educated guess",
+      "type": "Indica" | "Sativa" | "Hybrid",
+      "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
+      "cbd": number (realistic, typically 0.1-5), 
+      "effects": ["effect1", "effect2", ...] (3-6 effects appropriate for type and strain - be creative),
+      "flavors": ["flavor1", "flavor2", ...] (2-4 flavors that match the strain's profile - be diverse),
+      "terpenes": [
+        {"name": "terpene_name", "percentage": number, "effects": "description of effects"},
+        ...
+      ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
+      "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
+      "description": "detailed description focusing on strain background, effects, flavors, and usage notes. Do NOT include any potency or percentage information.",
+      "confidence": number (0-100, based on package clarity)
+    }`
+  },
+  {
+    role: 'user',
+    content: [
+      {
+        type: 'text',
+        text: 'Please analyze this cannabis package image and identify the strain. Generate unique effects and flavors that match the strain characteristics.'
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: imageData
+        }
+      }
+    ]
+  }
+];
 
 export const createEffectProfilesMessages = (strainName: string, strainType: string, effects: string[]) => [
   {
     role: 'system',
-    content: `You are an expert cannabis educator. For the given strain, type, and effects, generate a JSON array of profiles including a realistic 1-5 intensity. Answer ONLY with the JSON array.`
+    content: `You are an expert cannabis educator. For the given strain name, type, and listed effects, generate a JSON array of effect profiles, including intensity and emoji:
+- For each effect, assign:
+  - name: effect as received
+  - intensity: realistic 1-5 integer for this strain (1=Subtle, 5=Intense)
+  - emoji: appropriate modern emoji for the effect
+  - color: a hex color suited to effect's feeling.  
+Format: [{ name, intensity, emoji, color }]
+Examples: Relaxed=😌,#8B5CF6; Happy=😊,#F59E0B; Euphoric=🤩,#EF4444
+Be creative, but reflect typical effect strength for a ${strainType} strain. Answer ONLY with the array.`
   },
   {
     role: 'user',
@@ -126,14 +139,20 @@ export const createEffectProfilesMessages = (strainName: string, strainType: str
 export const createFlavorProfilesMessages = (strainName: string, strainType: string, flavors: string[]) => [
   {
     role: 'system',
-    content: `You are a cannabis sommelier AI. For the given strain, type, and flavors, generate a JSON array of profiles including a realistic 1-5 intensity. Answer ONLY with the JSON array.`
+    content: `You are a cannabis sommelier AI. For this strain and the possible flavors listed, generate a JSON array of flavor profiles, each including:
+- name: the flavor
+- intensity: realistic 1-5 integer (1=Hint, 5=Dominant)
+- emoji: fitting modern emoji
+- color: a vivid hex color
+Use flavor type and strain type for references. Example: Sweet=🍯,#F59E0B; Earthy=🌍,#78716C
+Output JSON array: [{ name, intensity, emoji, color }]
+Answer ONLY with the array.`
   },
   {
     role: 'user',
     content: `Strain: "${strainName}"\nType: ${strainType}\nFlavors: ${flavors && flavors.length ? flavors.join(", ") : "None"}`
   }
 ];
-
 
 export const callOpenAI = async (messages: OpenAIMessage[], openAIApiKey: string) => {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -143,10 +162,10 @@ export const callOpenAI = async (messages: OpenAIMessage[], openAIApiKey: string
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4.1-nano',
+      model: 'gpt-4o',
       messages: messages,
       max_tokens: 1500,
-      temperature: 0.1
+      temperature: 0.3
     }),
   });
 
