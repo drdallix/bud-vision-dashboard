@@ -65,7 +65,7 @@ const StrainFlavorsVisual = ({ flavorProfiles = [] }: StrainFlavorsVisualProps) 
                     {getIntensityLabel(flavor.intensity)}
                   </span>
                   <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getScaleColor(flavor.intensity)} border-current`}>
-                    {flavor.intensity}/5
+                    {`${flavor.intensity}/5`}
                   </Badge>
                 </div>
               </div>

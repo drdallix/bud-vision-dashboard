@@ -29,12 +29,6 @@ export interface BadgeProps
     VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, children, ...props }: BadgeProps) {
-  // Debug logging to catch object children
-  if (typeof children === 'object' && children !== null && !React.isValidElement(children)) {
-    console.error('Badge received object as children:', children);
-    console.error('Stack trace:', new Error().stack);
-  }
-
   return (
     <div className={cn(badgeVariants({ variant }), className)} {...props}>
       {children}

@@ -65,7 +65,7 @@ const StrainEffectsVisual = ({ effectProfiles = [] }: StrainEffectsVisualProps) 
                     {getIntensityLabel(effect.intensity)}
                   </span>
                   <Badge variant="outline" className={`text-xs px-2 py-0.5 ${getScaleColor(effect.intensity)} border-current`}>
-                    {effect.intensity}/5
+                    {`${effect.intensity}/5`}
                   </Badge>
                 </div>
               </div>
