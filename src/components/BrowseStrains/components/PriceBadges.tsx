@@ -15,7 +15,8 @@ const PriceBadges = ({ prices }: PriceBadgesProps) => {
           {p.wasPrice && (
             <span className="line-through mr-1 text-gray-400">${p.wasPrice}</span>
           )}
-          ${p.nowPrice} <span className="text-muted-foreground ml-0.5">/oz</span>
+          <span>${p.nowPrice}</span>
+          <span className="text-muted-foreground ml-0.5">/oz</span>
         </Badge>
       ))}
     </div>

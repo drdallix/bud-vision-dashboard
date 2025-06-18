@@ -21,7 +21,7 @@ const StrainEffects = ({ effects }: StrainEffectsProps) => {
         <div className="flex flex-wrap gap-2">
           {effects.map((effect, index) => (
             <Badge key={index} variant="secondary">
-              {effect}
+              <span>{effect}</span>
             </Badge>
           ))}
         </div>

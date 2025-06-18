@@ -107,7 +107,7 @@ const StrainComparisonRow = ({
         <div className="flex flex-wrap gap-1">
           {topEffects.map((effect, index) => (
             <Badge key={index} variant="secondary" className="text-xs">
-              {effect.name}
+              <span>{effect.name}</span>
             </Badge>
           ))}
         </div>
@@ -116,7 +116,7 @@ const StrainComparisonRow = ({
         <div className="flex flex-wrap gap-1">
           {topFlavors.map((flavor, index) => (
             <Badge key={index} variant="outline" className="text-xs">
-              {flavor.name}
+              <span>{flavor.name}</span>
             </Badge>
           ))}
         </div>

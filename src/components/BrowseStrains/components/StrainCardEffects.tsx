@@ -29,7 +29,7 @@ const StrainCardEffects = ({ effects }: StrainCardEffectsProps) => {
           }}
         >
           <span>{effect.emoji}</span>
-          {effect.name}
+          <span>{effect.name}</span>
         </Badge>
       ))}
     </div>
