@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -55,9 +54,9 @@ const GeneralSettings = ({ config, onConfigChange }: GeneralSettingsProps) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="narrow">Narrow (60 chars)</SelectItem>
-                  <SelectItem value="standard">Standard (80 chars)</SelectItem>
-                  <SelectItem value="wide">Wide (120 chars)</SelectItem>
+                  <SelectItem value="narrow">Narrow (34 chars)</SelectItem>
+                  <SelectItem value="standard">Standard (60 chars)</SelectItem>
+                  <SelectItem value="wide">Wide (80 chars)</SelectItem>
                   <SelectItem value="custom">Custom</SelectItem>
                 </SelectContent>
               </Select>
@@ -71,7 +70,7 @@ const GeneralSettings = ({ config, onConfigChange }: GeneralSettingsProps) => {
                 type="number"
                 value={config.customWidth}
                 onChange={(e) => onConfigChange({ customWidth: parseInt(e.target.value) || 80 })}
-                min={40}
+                min={20}
                 max={200}
               />
             </div>

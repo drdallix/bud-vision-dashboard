@@ -3,6 +3,13 @@ import { Strain } from '@/types/strain';
 import { PrintConfig } from '@/types/printConfig';
 import { getDeterministicTHCRange } from '@/utils/thcGenerator';
 
+// Menu width presets - easy to edit
+const MENU_WIDTHS = {
+  narrow: 34,    // Mobile-friendly, very compact
+  standard: 60,  // Balanced for most uses
+  wide: 80,      // Wider for desktop
+} as const;
+
 export const generateFullMenu = (strains: Strain[], config: PrintConfig): string => {
   const inStockStrains = strains.filter(s => s.inStock);
   
@@ -100,11 +107,11 @@ export const generateFullMenu = (strains: Strain[], config: PrintConfig): string
 
 const getMenuWidth = (config: PrintConfig): number => {
   switch (config.menuWidth) {
-    case 'narrow': return 60;
-    case 'standard': return 80;
-    case 'wide': return 120;
+    case 'narrow': return MENU_WIDTHS.narrow;
+    case 'standard': return MENU_WIDTHS.standard;
+    case 'wide': return MENU_WIDTHS.wide;
     case 'custom': return config.customWidth;
-    default: return 80;
+    default: return MENU_WIDTHS.standard;
   }
 };
 
