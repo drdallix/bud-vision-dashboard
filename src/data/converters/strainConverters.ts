@@ -17,26 +17,75 @@ export const convertDatabaseScanToStrain = (scan: DatabaseScan): Strain => {
     }
   }
 
+  // Parse effects from Json type (could be array or other format)
+  let effectsArray: string[] = [];
+  if (scan.effects) {
+    try {
+      if (Array.isArray(scan.effects)) {
+        effectsArray = scan.effects as string[];
+      } else if (typeof scan.effects === 'string') {
+        effectsArray = JSON.parse(scan.effects);
+      } else {
+        effectsArray = [];
+      }
+    } catch (error) {
+      console.warn('Failed to parse effects:', error);
+      effectsArray = [];
+    }
+  }
+
+  // Parse flavors from Json type (could be array or other format)
+  let flavorsArray: string[] = [];
+  if (scan.flavors) {
+    try {
+      if (Array.isArray(scan.flavors)) {
+        flavorsArray = scan.flavors as string[];
+      } else if (typeof scan.flavors === 'string') {
+        flavorsArray = JSON.parse(scan.flavors);
+      } else {
+        flavorsArray = [];
+      }
+    } catch (error) {
+      console.warn('Failed to parse flavors:', error);
+      flavorsArray = [];
+    }
+  }
+
   // Generate effect profiles with required emoji and color properties
-  const effectProfiles = scan.effects?.map((effect, index) => ({
+  const effectProfiles = effectsArray.map((effect, index) => ({
     name: effect,
     intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
     emoji: ['😌', '😊', '🤩', '💭', '✨', '🚀'][index] || '✨',
     color: ['#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#6366F1', '#EC4899'][index] || '#6B7280'
-  })) || [];
+  }));
 
   // Generate flavor profiles with required emoji and color properties
-  const flavorProfiles = scan.flavors?.map((flavor, index) => ({
+  const flavorProfiles = flavorsArray.map((flavor, index) => ({
     name: flavor,
     intensity: Math.min(Math.max(Math.floor(Math.random() * 3) + 2, 1), 5),
     emoji: ['🌍', '🍯', '🌲', '🍋', '🌶️', '🍓'][index] || '🌿',
     color: ['#78716C', '#F59E0B', '#10B981', '#EAB308', '#F97316', '#EC4899'][index] || '#6B7280'
-  })) || [];
+  }));
+
+  // Map legacy types to new 5-level system
+  const mapStrainType = (type: string): 'Indica' | 'Indica-Dominant' | 'Hybrid' | 'Sativa-Dominant' | 'Sativa' => {
+    switch (type) {
+      case 'Indica':
+      case 'Indica-Dominant':
+      case 'Sativa-Dominant': 
+      case 'Sativa':
+        return type as 'Indica' | 'Indica-Dominant' | 'Sativa-Dominant' | 'Sativa';
+      case 'Hybrid':
+        return 'Hybrid';
+      default:
+        return 'Hybrid';
+    }
+  };
 
   return {
     id: scan.id,
     name: scan.strain_name,
-    type: scan.strain_type as 'Indica' | 'Sativa' | 'Hybrid',
+    type: mapStrainType(scan.strain_type),
     thc: scan.thc || 0,
     effectProfiles,
     flavorProfiles,
