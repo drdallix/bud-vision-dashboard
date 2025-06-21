@@ -17,7 +17,6 @@ export const generateFullMenu = (strains: Strain[], config: PrintConfig): string
       sortedStrains.sort((a, b) => a.name.localeCompare(b.name));
       break;
     case 'price-low':
-      // For now, using THC as proxy for pricing until price data is available
       sortedStrains.sort((a, b) => {
         const [aMin] = getDeterministicTHCRange(a.name);
         const [bMin] = getDeterministicTHCRange(b.name);
@@ -31,25 +30,38 @@ export const generateFullMenu = (strains: Strain[], config: PrintConfig): string
         return bMin - aMin;
       });
       break;
+    case 'thc':
+      sortedStrains.sort((a, b) => b.thc - a.thc);
+      break;
+    case 'recent':
+      sortedStrains.sort((a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime());
+      break;
   }
   
   const lines: string[] = [];
-  const pageWidth = 80;
+  const pageWidth = getMenuWidth(config);
   const colWidth = Math.floor(pageWidth / config.menuColumns) - 2;
   
   // Header
-  lines.push('='.repeat(pageWidth));
-  lines.push(centerText(config.menuTitle, pageWidth));
-  lines.push('='.repeat(pageWidth));
-  lines.push('');
+  if (config.showHeader) {
+    lines.push('='.repeat(pageWidth));
+    lines.push(centerText(config.menuTitle, pageWidth));
+    if (config.includeTimestamp) {
+      lines.push(centerText(`Generated: ${new Date().toLocaleString()}`, pageWidth));
+    }
+    lines.push('='.repeat(pageWidth));
+    lines.push('');
+  }
   
   // Group strains
-  const groups = groupStrains(sortedStrains, config.groupBy);
+  const groups = config.groupBy === 'none' ? { 'All Strains': sortedStrains } : groupStrains(sortedStrains, config.groupBy);
   
   Object.entries(groups).forEach(([groupName, groupStrains]) => {
     // Group header
-    lines.push(centerText(`--- ${groupName} ---`, pageWidth));
-    lines.push('');
+    if (config.groupBy !== 'none') {
+      lines.push(centerText(`--- ${groupName} ---`, pageWidth));
+      lines.push('');
+    }
     
     // Format strains in columns
     for (let i = 0; i < groupStrains.length; i += config.menuColumns) {
@@ -66,18 +78,34 @@ export const generateFullMenu = (strains: Strain[], config: PrintConfig): string
         lines.push(lineParts.join('  '));
       }
       
-      lines.push(''); // Space between rows
+      if (!config.compactMode) {
+        lines.push(''); // Space between rows
+      }
     }
     
-    lines.push('-'.repeat(pageWidth));
-    lines.push('');
+    if (config.groupBy !== 'none') {
+      lines.push('-'.repeat(pageWidth));
+      lines.push('');
+    }
   });
   
   // Footer
-  lines.push(centerText(config.menuFooter, pageWidth));
-  lines.push('='.repeat(pageWidth));
+  if (config.showFooter) {
+    lines.push(centerText(config.menuFooter, pageWidth));
+    lines.push('='.repeat(pageWidth));
+  }
   
   return lines.join('\n');
+};
+
+const getMenuWidth = (config: PrintConfig): number => {
+  switch (config.menuWidth) {
+    case 'narrow': return 60;
+    case 'standard': return 80;
+    case 'wide': return 120;
+    case 'custom': return config.customWidth;
+    default: return 80;
+  }
 };
 
 const centerText = (text: string, width: number): string => {
@@ -118,14 +146,44 @@ const formatStrainForMenu = (strain: Strain, config: PrintConfig, width: number)
   lines.push(strain.name.substring(0, width));
   
   // Type and THC
-  const typeInfo = `${strain.type} | ${minThc}-${maxThc}%`;
-  lines.push(typeInfo.substring(0, width));
+  if (config.includeThc) {
+    const typeInfo = `${strain.type} | ${minThc}-${maxThc}%`;
+    lines.push(typeInfo.substring(0, width));
+  } else {
+    lines.push(strain.type.substring(0, width));
+  }
   
-  // Top flavor (if requested)
+  // Stock status
+  if (config.includeStockStatus) {
+    lines.push(`Stock: ${strain.inStock ? 'Available' : 'Out of Stock'}`.substring(0, width));
+  }
+  
+  // Top effect
+  if (config.includeEffects && strain.effectProfiles?.length) {
+    const topEffect = strain.effectProfiles
+      .sort((a, b) => b.intensity - a.intensity)[0];
+    lines.push(`${topEffect.emoji} ${topEffect.name}`.substring(0, width));
+  }
+  
+  // Top flavor
   if (config.includeFlavors && strain.flavorProfiles?.length) {
     const topFlavor = strain.flavorProfiles
       .sort((a, b) => b.intensity - a.intensity)[0];
     lines.push(`${topFlavor.emoji} ${topFlavor.name}`.substring(0, width));
+  }
+  
+  // Description snippet
+  if (config.includeDescription && strain.description && !config.compactMode) {
+    const snippet = strain.description.length > width - 10 
+      ? strain.description.substring(0, width - 13) + '...'
+      : strain.description;
+    lines.push(snippet.substring(0, width));
+  }
+  
+  // Scanned date
+  if (config.includeScannedDate) {
+    const date = new Date(strain.scannedAt).toLocaleDateString();
+    lines.push(`Scanned: ${date}`.substring(0, width));
   }
   
   return lines;
