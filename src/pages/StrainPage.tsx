@@ -1,28 +1,31 @@
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
-import { useScans } from '@/hooks/useScans';
-import { analyzeStrainWithAI } from '@/components/SmartOmnibar/AIAnalysis';
+import { useStrainAPI } from '@/hooks/useStrainAPI';
 import StrainDashboard from '@/components/StrainDashboard';
+import StrainAPIControls from '@/components/StrainAPI/StrainAPIControls';
+import URLParameterHelper from '@/components/StrainAPI/URLParameterHelper';
 import Header from '@/components/Layout/Header';
 import { Strain } from '@/types/strain';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const StrainPage = () => {
   const { strainName } = useParams<{ strainName: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { strains, isLoading } = useRealtimeStrainStore(true);
-  const { addScan } = useScans();
+  const { generateStrain, isGenerating, rateLimitInfo, isAuthenticated } = useStrainAPI();
   const { toast } = useToast();
   
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
+  const [activeTab, setActiveTab] = useState('strain');
 
   // Convert URL-friendly name back to searchable format
   const urlToSearchTerm = (urlName: string): string => {
@@ -34,6 +37,21 @@ const StrainPage = () => {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  };
+
+  // Parse URL parameters for strain generation
+  const parseURLParameters = () => {
+    const params: any = {};
+    
+    if (searchParams.get('type')) params.type = searchParams.get('type');
+    if (searchParams.get('thc')) params.thc = parseInt(searchParams.get('thc') || '0');
+    if (searchParams.get('cbd')) params.cbd = parseInt(searchParams.get('cbd') || '0');
+    if (searchParams.get('effects')) params.effects = searchParams.get('effects')?.split(',').map(e => e.trim());
+    if (searchParams.get('flavors')) params.flavors = searchParams.get('flavors')?.split(',').map(f => f.trim());
+    if (searchParams.get('description')) params.description = searchParams.get('description');
+    if (searchParams.get('force')) params.force = searchParams.get('force') === 'true';
+    
+    return Object.keys(params).length > 0 ? params : null;
   };
 
   // Fuzzy search for strain name
@@ -71,64 +89,45 @@ const StrainPage = () => {
     return found || null;
   };
 
-  // Generate strain if not found
-  const generateStrain = async (searchTerm: string) => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to generate new strains.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      console.log('Generating strain for:', searchTerm);
-      const result = await analyzeStrainWithAI(undefined, searchTerm, user.id);
-      
-      const strain: Strain = {
-        ...result,
-        id: Date.now().toString(),
-        scannedAt: new Date().toISOString(),
-        inStock: true,
-        userId: user.id
-      };
-
-      await addScan(strain);
+  // Generate strain with API parameters
+  const handleGenerateStrain = async (params: any = {}) => {
+    if (!strainName) return;
+    
+    const searchTerm = urlToSearchTerm(strainName);
+    const urlParams = parseURLParameters();
+    const finalParams = { ...urlParams, ...params };
+    
+    const strain = await generateStrain(searchTerm, finalParams);
+    if (strain) {
       setCurrentStrain(strain);
-      
-      toast({
-        title: "Strain Generated",
-        description: `${strain.name} has been generated and added to your collection.`,
-      });
-    } catch (error) {
-      console.error('Failed to generate strain:', error);
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate strain. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
+      setActiveTab('strain');
     }
   };
 
-  // Search for strain when component mounts or strains change
+  // Search for strain or auto-generate based on URL parameters
   useEffect(() => {
     if (!strainName || isLoading || searchAttempted) return;
     
     const searchTerm = urlToSearchTerm(strainName);
+    const urlParams = parseURLParameters();
+    
     console.log('Searching for strain:', searchTerm, 'from URL:', strainName);
+    console.log('URL Parameters:', urlParams);
     
     const foundStrain = findStrainByName(searchTerm);
     
-    if (foundStrain) {
+    if (foundStrain && !urlParams?.force) {
       console.log('Found existing strain:', foundStrain.name);
       setCurrentStrain(foundStrain);
+      setActiveTab('strain');
+    } else if (urlParams) {
+      // Auto-generate with URL parameters
+      console.log('Auto-generating strain with URL parameters');
+      handleGenerateStrain(urlParams);
     } else {
-      console.log('Strain not found, will generate:', searchTerm);
-      generateStrain(searchTerm);
+      // Show API controls for manual generation
+      console.log('Strain not found, showing API controls');
+      setActiveTab('api');
     }
     
     setSearchAttempted(true);
@@ -148,14 +147,12 @@ const StrainPage = () => {
     );
   }
 
-  if (isLoading || isGenerating) {
+  if (isLoading && !searchAttempted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">
-            {isGenerating ? 'Generating strain profile...' : 'Loading strain data...'}
-          </p>
+          <p className="text-muted-foreground">Loading strain data...</p>
         </div>
       </div>
     );
@@ -178,7 +175,51 @@ const StrainPage = () => {
           </Button>
         </div>
 
-        <StrainDashboard strain={currentStrain} />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="strain" disabled={!currentStrain}>
+              Strain Details
+            </TabsTrigger>
+            <TabsTrigger value="api">
+              API Generator
+            </TabsTrigger>
+            <TabsTrigger value="docs">
+              API Documentation
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="strain" className="space-y-6">
+            {currentStrain ? (
+              <StrainDashboard strain={currentStrain} />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  No strain data available. Use the API Generator to create this strain.
+                </p>
+                <Button onClick={() => setActiveTab('api')}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Open API Generator
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="api" className="space-y-6">
+            <div className="flex justify-center">
+              <StrainAPIControls
+                strainName={urlToSearchTerm(strainName)}
+                onGenerate={handleGenerateStrain}
+                isGenerating={isGenerating}
+                isAuthenticated={isAuthenticated}
+                rateLimitInfo={rateLimitInfo}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="docs" className="space-y-6">
+            <URLParameterHelper strainName={strainName} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
