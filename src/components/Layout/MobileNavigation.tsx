@@ -1,6 +1,6 @@
 
-import { Menu, Database } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, Plus, FileText, Eye } from 'lucide-react';
 
 interface MobileNavigationProps {
   activeTab: string;
@@ -8,47 +8,28 @@ interface MobileNavigationProps {
 }
 
 const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => {
-  const { user } = useAuth();
-
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border">
-      <div className="grid grid-cols-3 h-16">
-        <button
-          onClick={() => onTabChange('browse')}
-          className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
-            activeTab === 'browse' 
-              ? 'text-green-600 bg-green-50' 
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Menu className="h-5 w-5" />
-          <span>{user ? 'Smart Scanner' : 'Menu'}</span>
-        </button>
-
-        <button
-          onClick={() => onTabChange('details')}
-          className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
-            activeTab === 'details' 
-              ? 'text-green-600 bg-green-50' 
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Database className="h-5 w-5" />
-          <span>Info</span>
-        </button>
-
-        <button
-          onClick={() => onTabChange('showcase')}
-          className={`flex flex-col items-center justify-center gap-1 text-xs transition-colors ${
-            activeTab === 'showcase' 
-              ? 'text-green-600 bg-green-50' 
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <span className="text-2xl">🎬</span>
-          <span>Showcase</span>
-        </button>
-      </div>
+    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 md:hidden">
+      <Tabs value={activeTab} onValueChange={onTabChange}>
+        <TabsList className="grid w-full grid-cols-4 h-12">
+          <TabsTrigger value="browse" className="flex flex-col items-center gap-1 h-full">
+            <Search className="h-4 w-4" />
+            <span className="text-xs">Browse</span>
+          </TabsTrigger>
+          <TabsTrigger value="bulk" className="flex flex-col items-center gap-1 h-full">
+            <Plus className="h-4 w-4" />
+            <span className="text-xs">Bulk Add</span>
+          </TabsTrigger>
+          <TabsTrigger value="details" className="flex flex-col items-center gap-1 h-full">
+            <FileText className="h-4 w-4" />
+            <span className="text-xs">Details</span>
+          </TabsTrigger>
+          <TabsTrigger value="showcase" className="flex flex-col items-center gap-1 h-full">
+            <Eye className="h-4 w-4" />
+            <span className="text-xs">Showcase</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     </div>
   );
 };

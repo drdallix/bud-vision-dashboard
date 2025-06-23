@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from 'react';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScans } from '@/hooks/useScans';
 import StrainDashboard from '@/components/StrainDashboard';
 import BrowseStrains from '@/components/BrowseStrains';
+import BulkStrainAdd from '@/components/BulkStrainAdd';
 import SettingsDialog from '@/components/SettingsDialog';
 import InstallBanner from '@/components/InstallBanner';
 import Header from '@/components/Layout/Header';
@@ -56,6 +57,24 @@ const Index = () => {
     setActiveTab('details');
   };
 
+  const handleBulkStrainsGenerated = async (strains: Strain[]) => {
+    console.log('Bulk strains generated:', strains.length);
+    for (const strain of strains) {
+      const completeStrain: Strain = {
+        ...strain,
+        inStock: true,
+        userId: user?.id || ''
+      };
+      
+      if (user) {
+        await addScan(completeStrain);
+      }
+    }
+    
+    // Switch to browse tab to see all generated strains
+    setActiveTab('browse');
+  };
+
   const handleDataRestore = (data: Strain[]) => {
     console.log('Data restore requested:', data);
   };
@@ -88,10 +107,29 @@ const Index = () => {
         <Header onSettingsClick={handleSettingsClick} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {user && <Navigation />}
+          {user && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <TabsList className="h-auto p-1">
+                <TabsTrigger value="browse" className="w-full">Browse</TabsTrigger>
+              </TabsList>
+              <TabsList className="h-auto p-1">
+                <TabsTrigger value="bulk" className="w-full">Bulk Add</TabsTrigger>
+              </TabsList>
+              <TabsList className="h-auto p-1">
+                <TabsTrigger value="details" disabled={!currentStrain} className="w-full">Details</TabsTrigger>
+              </TabsList>
+              <TabsList className="h-auto p-1">
+                <TabsTrigger value="showcase" className="w-full">Showcase</TabsTrigger>
+              </TabsList>
+            </div>
+          )}
 
           <TabsContent value="browse" className="space-y-6">
             <BrowseStrains onStrainSelect={handleStrainSelect} />
+          </TabsContent>
+
+          <TabsContent value="bulk" className="space-y-6">
+            <BulkStrainAdd onStrainsGenerated={handleBulkStrainsGenerated} />
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">

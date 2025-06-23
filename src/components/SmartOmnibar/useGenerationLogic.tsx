@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { analyzeStrainWithAI } from './AIAnalysis';
 import { useStrainData } from '@/data/hooks/useStrainData';
+import { useUserActivity } from '@/hooks/useUserActivity';
 import { Strain } from '@/types/strain';
 
 const generationSteps = [
@@ -34,14 +35,18 @@ export const useGenerationLogic = ({
   const [currentStepText, setCurrentStepText] = useState('');
   const { user } = useAuth();
   const { addStrainToCache } = useStrainData(false);
+  const { recordActivity, getOptimalDelay } = useUserActivity();
 
-  // Fast typing animation
+  // Optimized typing animation with dynamic delay
   useEffect(() => {
     if (!isGenerating) return;
 
     const stepText = generationSteps[generationStep];
     let charIndex = 0;
     setCurrentStepText('');
+
+    const optimalDelay = getOptimalDelay();
+    const typeDelay = Math.max(optimalDelay, 25); // Minimum 25ms for readability
 
     const typeWriter = setInterval(() => {
       if (charIndex <= stepText.length) {
@@ -50,22 +55,25 @@ export const useGenerationLogic = ({
       } else {
         clearInterval(typeWriter);
         
-        // Quick step advancement (200ms instead of 800ms)
+        // Reduced step advancement delay
         setTimeout(() => {
           if (generationStep < generationSteps.length - 1) {
             setGenerationStep(prev => prev + 1);
             setProgress(prev => Math.min(prev + (100 / generationSteps.length), 95));
           }
-        }, 200);
+        }, 150); // Reduced from 200ms
       }
-    }, 25); // Faster typing (25ms instead of 50ms)
+    }, typeDelay);
 
     return () => clearInterval(typeWriter);
-  }, [generationStep, isGenerating]);
+  }, [generationStep, isGenerating, getOptimalDelay]);
 
   const handleGenerate = useCallback(async () => {
     if (!user) return;
     if (!searchTerm.trim() && !uploadedImage) return;
+
+    // Record the scan activity
+    recordActivity('scan');
 
     setIsGenerating(true);
     setGenerationStep(0);
@@ -76,8 +84,8 @@ export const useGenerationLogic = ({
       // Start AI request immediately, don't wait for animations
       const aiPromise = analyzeStrainWithAI(uploadedImage, searchTerm.trim(), user.id);
       
-      // Let animations play while AI processes
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Reduced initial wait time
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       const result = await aiPromise;
       
@@ -94,7 +102,7 @@ export const useGenerationLogic = ({
       setCurrentStepText('Database search complete!');
       
       // Brief pause before finishing
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       addStrainToCache(strain);
       onStrainGenerated(strain);
@@ -110,7 +118,7 @@ export const useGenerationLogic = ({
       setProgress(0);
       setCurrentStepText('');
     }
-  }, [user, searchTerm, uploadedImage, addStrainToCache, onStrainGenerated, onSearchChange, setUploadedImage]);
+  }, [user, searchTerm, uploadedImage, addStrainToCache, onStrainGenerated, onSearchChange, setUploadedImage, recordActivity]);
 
   const canGenerate = user && (searchTerm.trim() || uploadedImage) && !isGenerating;
 
