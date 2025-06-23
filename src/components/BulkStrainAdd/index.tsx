@@ -1,15 +1,11 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Mic, Camera, Table2, Plus } from 'lucide-react';
-import SmartOmnibar from '@/components/SmartOmnibar';
-import VoiceStrainInput from './VoiceStrainInput';
-import ImageStrainInput from './ImageStrainInput';
-import TableStrainInput from './TableStrainInput';
+import { Plus } from 'lucide-react';
+import BulkOmnibar from '@/components/SmartOmnibar/BulkOmnibar';
 import BulkGenerationProgress from './BulkGenerationProgress';
 import BulkStrainTable from './BulkStrainTable';
 import { Strain } from '@/types/strain';
@@ -28,20 +24,8 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [updateInventory, setUpdateInventory] = useState(false);
 
-  const handleStrainNamesUpdate = (strains: ExtractedStrain[]) => {
-    setExtractedStrains(strains);
-  };
-
-  const handleOmnibarStrain = (strain: Strain) => {
-    // Convert generated strain to extracted strain format
-    const extractedStrain: ExtractedStrain = {
-      name: strain.name,
-      type: strain.type.toLowerCase() as 'indica' | 'sativa' | 'hybrid',
-      // Note: Strain interface doesn't have pricePoints, this will need to be handled differently
-      // For now, we'll leave price undefined as it's optional
-      price: undefined
-    };
-    setExtractedStrains(prev => [...prev, extractedStrain]);
+  const handleStrainsExtracted = (strains: ExtractedStrain[]) => {
+    setExtractedStrains(prev => [...prev, ...strains]);
   };
 
   const handleStartBulkGeneration = async () => {
@@ -69,27 +53,7 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Familiar Omnibar Interface */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5 text-green-600" />
-            Quick Add Individual Strain
-          </CardTitle>
-          <CardDescription>
-            Use the familiar interface to add individual strains to your bulk list
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SmartOmnibar
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onStrainGenerated={handleOmnibarStrain}
-            hasResults={false}
-          />
-        </CardContent>
-      </Card>
-
+      {/* Main Bulk Interface */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -97,10 +61,10 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
             Bulk Strain Addition
           </CardTitle>
           <CardDescription>
-            Add multiple strains at once using voice, image recognition, or manual entry. AI will extract names, prices, and types automatically.
+            Use text, voice, or image to add multiple strains at once. AI will extract strain names, prices, and types automatically.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <Badge variant="outline" className="flex items-center gap-1">
@@ -133,60 +97,30 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
             </div>
           </div>
 
-          <Tabs defaultValue="table" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="table" className="flex items-center gap-2">
-                <Table2 className="h-4 w-4" />
-                Table
-              </TabsTrigger>
-              <TabsTrigger value="voice" className="flex items-center gap-2">
-                <Mic className="h-4 w-4" />
-                Voice
-              </TabsTrigger>
-              <TabsTrigger value="image" className="flex items-center gap-2">
-                <Camera className="h-4 w-4" />
-                Image
-              </TabsTrigger>
-              <TabsTrigger value="edit" className="flex items-center gap-2">
-                <Table2 className="h-4 w-4" />
-                Edit List
-              </TabsTrigger>
-            </TabsList>
+          <BulkOmnibar
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onStrainsExtracted={handleStrainsExtracted}
+          />
 
-            <TabsContent value="table" className="space-y-4">
-              <TableStrainInput 
-                onStrainNamesUpdate={handleStrainNamesUpdate}
-                isGenerating={isGenerating}
-                onStartGeneration={handleStartBulkGeneration}
-              />
-            </TabsContent>
-
-            <TabsContent value="voice" className="space-y-4">
-              <VoiceStrainInput 
-                onStrainNamesUpdate={handleStrainNamesUpdate}
-                isGenerating={isGenerating}
-              />
-            </TabsContent>
-
-            <TabsContent value="image" className="space-y-4">
-              <ImageStrainInput 
-                onStrainNamesUpdate={handleStrainNamesUpdate}
-                isGenerating={isGenerating}
-              />
-            </TabsContent>
-
-            <TabsContent value="edit" className="space-y-4">
-              <BulkStrainTable
-                strains={extractedStrains}
-                onStrainsUpdate={setExtractedStrains}
-                onStartGeneration={handleStartBulkGeneration}
-                isGenerating={isGenerating}
-                updateInventory={updateInventory}
-              />
-            </TabsContent>
-          </Tabs>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p><strong>💬 Text:</strong> Type or paste strain lists with prices</p>
+            <p><strong>🎤 Voice:</strong> Say strain names with prices (e.g., "Blue Dream twenty five dollars, OG Kush indica thirty")</p>
+            <p><strong>📷 Camera:</strong> Take photos of menus, inventories, or strain lists</p>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Strain List Management */}
+      {extractedStrains.length > 0 && (
+        <BulkStrainTable
+          strains={extractedStrains}
+          onStrainsUpdate={setExtractedStrains}
+          onStartGeneration={handleStartBulkGeneration}
+          isGenerating={isGenerating}
+          updateInventory={updateInventory}
+        />
+      )}
 
       {isGenerating && (
         <BulkGenerationProgress 
