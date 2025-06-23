@@ -16,7 +16,7 @@ serve(async (req) => {
   try {
     const { strainName, strainType, currentDescription, humanGuidance, effects, flavors } = await req.json()
 
-    console.log('Regenerate description request:', { strainName, strainType, currentDescription, humanGuidance, effects, flavors })
+    console.log('Regenerate description request:', { strainName, strainType, humanGuidance })
 
     // Validate required inputs
     if (!strainName || !humanGuidance) {
@@ -35,7 +35,8 @@ serve(async (req) => {
       )
     }
 
-    const descriptionPrompt = `You are a cannabis expert writing product descriptions for a dispensary. 
+    // IMPROVED: More specific prompt for better descriptions
+    const descriptionPrompt = `You are a professional cannabis copywriter creating product descriptions for a dispensary.
 
 Strain: ${strainName}
 Type: ${strainType}
@@ -43,19 +44,20 @@ Current Description: ${currentDescription || 'None'}
 Current Effects: ${effects?.join(', ') || 'None specified'}
 Current Flavors: ${flavors?.join(', ') || 'None specified'}
 
-Human Guidance/Corrections: ${humanGuidance}
+Human Feedback: ${humanGuidance}
 
-Based on the human guidance provided, please regenerate an improved product description that:
-1. Incorporates the specific feedback and corrections mentioned
-2. Is professional and appealing to customers
-3. Is 2-3 sentences long
-4. Mentions key effects and flavors when relevant
-5. Addresses any specific concerns or additions mentioned in the guidance
+Create a compelling, professional product description that:
+1. Incorporates the specific feedback provided
+2. Highlights the strain's unique characteristics
+3. Appeals to cannabis consumers
+4. Is 2-3 engaging sentences
+5. Mentions key effects and flavors naturally
+6. Avoids generic cannabis clichés
+7. Addresses the specific concerns mentioned in the feedback
 
-Write only the new description, nothing else.`
+Write ONLY the new description, nothing else.`
 
-    // Generate new description
-    console.log('Generating new description...')
+    console.log('Generating improved description with OpenAI...')
     const descriptionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -67,7 +69,7 @@ Write only the new description, nothing else.`
         messages: [
           {
             role: 'system',
-            content: 'You are a professional cannabis copywriter. Write concise, accurate product descriptions.'
+            content: 'You are a professional cannabis copywriter. Write compelling, specific product descriptions that avoid generic language and clichés. Focus on unique characteristics and authentic appeal.'
           },
           {
             role: 'user',
@@ -99,24 +101,24 @@ Write only the new description, nothing else.`
     }
 
     const description = descriptionData.choices[0].message.content.trim()
+    console.log('Generated description:', description.substring(0, 100) + '...')
 
-    // Generate new effects that match the description
-    console.log('Generating matching effects...')
-    const effectsPrompt = `Based on this cannabis strain description and guidance, generate 4-6 realistic effects that match the description:
+    // Generate matching effects
+    const effectsPrompt = `Based on this cannabis strain description, generate 4-6 realistic effects:
 
 Strain: ${strainName} (${strainType})
-New Description: ${description}
-Human Guidance: ${humanGuidance}
+Description: ${description}
+Feedback: ${humanGuidance}
 
-Generate effects that are:
-1. Appropriate for ${strainType} strains
-2. Match the tone and content of the new description
-3. Realistic and commonly used cannabis effects
-4. Varied and interesting (not the same generic effects)
+Generate effects that:
+1. Match the strain type (${strainType})
+2. Align with the description content
+3. Are realistic and commonly used
+4. Avoid generic repetition
 
-Common effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry, Energetic, Giggly, Talkative, Aroused, Tingley, Calm
+Common effects: Relaxed, Happy, Euphoric, Uplifted, Creative, Focused, Sleepy, Hungry, Energetic, Giggly, Talkative, Aroused, Tingly, Calm
 
-Return only a JSON array of effect names: ["effect1", "effect2", ...]`
+Return only a JSON array: ["effect1", "effect2", ...]`
 
     const effectsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -129,7 +131,7 @@ Return only a JSON array of effect names: ["effect1", "effect2", ...]`
         messages: [
           {
             role: 'system',
-            content: 'You are a cannabis expert. Generate realistic effect arrays that match strain descriptions.'
+            content: 'Generate realistic cannabis effect arrays. Return valid JSON only.'
           },
           {
             role: 'user',
@@ -141,23 +143,22 @@ Return only a JSON array of effect names: ["effect1", "effect2", ...]`
       }),
     })
 
-    // Generate new flavors that match the description
-    console.log('Generating matching flavors...')
-    const flavorsPrompt = `Based on this cannabis strain description and guidance, generate 3-5 realistic flavors that match the description:
+    // Generate matching flavors
+    const flavorsPrompt = `Based on this cannabis strain description, generate 3-5 realistic flavors:
 
 Strain: ${strainName} (${strainType})
-New Description: ${description}
-Human Guidance: ${humanGuidance}
+Description: ${description}
+Feedback: ${humanGuidance}
 
-Generate flavors that are:
-1. Appropriate for ${strainType} strains
-2. Match the tone and content of the new description
-3. Realistic and commonly used cannabis flavors
-4. Varied and interesting (not the same generic flavors)
+Generate flavors that:
+1. Match the strain type
+2. Align with the description
+3. Are realistic and varied
+4. Avoid generic combinations
 
 Common flavors: Earthy, Sweet, Citrus, Pine, Berry, Diesel, Skunk, Floral, Spicy, Woody, Herbal, Fruity, Vanilla, Coffee, Chocolate
 
-Return only a JSON array of flavor names: ["flavor1", "flavor2", ...]`
+Return only a JSON array: ["flavor1", "flavor2", ...]`
 
     const flavorsResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -170,7 +171,7 @@ Return only a JSON array of flavor names: ["flavor1", "flavor2", ...]`
         messages: [
           {
             role: 'system',
-            content: 'You are a cannabis sommelier. Generate realistic flavor arrays that match strain descriptions.'
+            content: 'Generate realistic cannabis flavor arrays. Return valid JSON only.'
           },
           {
             role: 'user',
@@ -219,7 +220,11 @@ Return only a JSON array of flavor names: ["flavor1", "flavor2", ...]`
       }
     }
 
-    console.log('Final regeneration result:', { description, effects: newEffects, flavors: newFlavors })
+    console.log('Final regeneration result:', { 
+      descriptionLength: description.length,
+      effectsCount: newEffects.length,
+      flavorsCount: newFlavors.length
+    })
 
     return new Response(
       JSON.stringify({ 
