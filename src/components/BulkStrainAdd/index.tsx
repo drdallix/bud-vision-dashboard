@@ -36,9 +36,10 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
     // Convert generated strain to extracted strain format
     const extractedStrain: ExtractedStrain = {
       name: strain.name,
-      type: strain.type,
-      // Extract price from strain if available
-      price: strain.pricePoints?.[0]?.nowPrice
+      type: strain.type.toLowerCase() as 'indica' | 'sativa' | 'hybrid',
+      // Note: Strain interface doesn't have pricePoints, this will need to be handled differently
+      // For now, we'll leave price undefined as it's optional
+      price: undefined
     };
     setExtractedStrains(prev => [...prev, extractedStrain]);
   };

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,27 +118,17 @@ const BulkStrainTable = ({
     const mockStrains = strains.map(strain => ({
       id: `bulk-${strain.name}`,
       name: strain.name,
-      type: strain.type || 'hybrid',
+      type: strain.type ? (strain.type.charAt(0).toUpperCase() + strain.type.slice(1)) as 'Indica' | 'Sativa' | 'Hybrid' : 'Hybrid',
       thc: 20, // Default for receipt
       cbd: 1,
-      effects: [],
-      flavors: [],
-      terpenes: {},
-      medicalUses: [],
+      effectProfiles: [],
+      flavorProfiles: [],
+      terpenes: [],
       description: '',
-      imageUrl: '',
+      scannedAt: new Date().toISOString(),
       confidence: 100,
       inStock: true,
-      scannedAt: new Date().toISOString(),
-      pricePoints: strain.price ? [{ 
-        id: 'temp',
-        strainId: 'temp',
-        amount: '1oz',
-        nowPrice: strain.price,
-        wasPrice: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }] : []
+      userId: 'temp'
     }));
 
     // Generate and download the receipt
@@ -162,7 +151,7 @@ const BulkStrainTable = ({
       <Card>
         <CardContent className="pt-6">
           <div className="text-center py-8 text-muted-foreground">
-            <Table2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <Table className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No strains in the list yet.</p>
             <p className="text-sm">Use the other tabs to add strains to your bulk list.</p>
           </div>
