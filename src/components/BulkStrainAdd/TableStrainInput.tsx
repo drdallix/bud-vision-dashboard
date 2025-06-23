@@ -127,7 +127,7 @@ const TableStrainInput = ({ onStrainNamesUpdate, isGenerating, onStartGeneration
                   <TableRow>
                     <TableHead>#</TableHead>
                     <TableHead>Strain Name</TableHead>
-                    <TableHead width="80">Action</TableHead>
+                    <TableHead className="w-20">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
