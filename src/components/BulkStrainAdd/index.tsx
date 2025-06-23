@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Mic, Camera, Table2, Plus } from 'lucide-react';
 import VoiceStrainInput from './VoiceStrainInput';
@@ -10,24 +9,25 @@ import ImageStrainInput from './ImageStrainInput';
 import TableStrainInput from './TableStrainInput';
 import BulkGenerationProgress from './BulkGenerationProgress';
 import { Strain } from '@/types/strain';
+import { ExtractedStrain } from '@/services/bulkStrainService';
 
 interface BulkStrainAddProps {
   onStrainsGenerated: (strains: Strain[]) => void;
 }
 
 const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
-  const [strainNames, setStrainNames] = useState<string[]>([]);
+  const [extractedStrains, setExtractedStrains] = useState<ExtractedStrain[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentGenerating, setCurrentGenerating] = useState<string>('');
   const [generatedStrains, setGeneratedStrains] = useState<Strain[]>([]);
   const [generationProgress, setGenerationProgress] = useState(0);
 
-  const handleStrainNamesUpdate = (names: string[]) => {
-    setStrainNames(names);
+  const handleStrainNamesUpdate = (strains: ExtractedStrain[]) => {
+    setExtractedStrains(strains);
   };
 
   const handleStartBulkGeneration = async () => {
-    if (strainNames.length === 0) return;
+    if (extractedStrains.length === 0) return;
     
     setIsGenerating(true);
     setGeneratedStrains([]);
@@ -35,9 +35,9 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
 
     // This will be implemented to use the existing strain generation logic
     // For now, just simulate the process
-    for (let i = 0; i < strainNames.length; i++) {
-      setCurrentGenerating(strainNames[i]);
-      setGenerationProgress(((i + 1) / strainNames.length) * 100);
+    for (let i = 0; i < extractedStrains.length; i++) {
+      setCurrentGenerating(extractedStrains[i].name);
+      setGenerationProgress(((i + 1) / extractedStrains.length) * 100);
       
       // Simulate generation delay
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -46,6 +46,8 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
     setIsGenerating(false);
     setCurrentGenerating('');
   };
+
+  const strainNames = extractedStrains.map(s => s.name);
 
   return (
     <div className="space-y-6">
@@ -56,14 +58,14 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
             Bulk Strain Addition
           </CardTitle>
           <CardDescription>
-            Add multiple strains at once using voice, image recognition, or manual entry
+            Add multiple strains at once using voice, image recognition, or manual entry. AI will extract names, prices, and types automatically.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4 mb-4">
             <Badge variant="outline" className="flex items-center gap-1">
               <span>Queued:</span>
-              <span className="font-bold">{strainNames.length}</span>
+              <span className="font-bold">{extractedStrains.length}</span>
             </Badge>
             {generatedStrains.length > 0 && (
               <Badge variant="default" className="flex items-center gap-1">
@@ -71,24 +73,13 @@ const BulkStrainAdd = ({ onStrainsGenerated }: BulkStrainAddProps) => {
                 <span className="font-bold">{generatedStrains.length}</span>
               </Badge>
             )}
+            {extractedStrains.some(s => s.price) && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <span>With Prices:</span>
+                <span className="font-bold">{extractedStrains.filter(s => s.price).length}</span>
+              </Badge>
+            )}
           </div>
-
-          {isGenerating && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Generating strains...</span>
-                <span className="text-sm text-muted-foreground">
-                  {Math.round(generationProgress)}%
-                </span>
-              </div>
-              <Progress value={generationProgress} className="mb-2" />
-              {currentGenerating && (
-                <p className="text-sm text-muted-foreground">
-                  Currently generating: <span className="font-medium">{currentGenerating}</span>
-                </p>
-              )}
-            </div>
-          )}
 
           <Tabs defaultValue="voice" className="w-full">
             <TabsList className="grid w-full grid-cols-3">

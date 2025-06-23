@@ -3,18 +3,20 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Mic, MicOff, Trash2 } from 'lucide-react';
+import { Mic, MicOff, Trash2, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { extractStrainsFromText, ExtractedStrain } from '@/services/bulkStrainService';
 
 interface VoiceStrainInputProps {
-  onStrainNamesUpdate: (names: string[]) => void;
+  onStrainNamesUpdate: (strains: ExtractedStrain[]) => void;
   isGenerating: boolean;
 }
 
 const VoiceStrainInput = ({ onStrainNamesUpdate, isGenerating }: VoiceStrainInputProps) => {
   const [isListening, setIsListening] = useState(false);
-  const [strainNames, setStrainNames] = useState<string[]>([]);
+  const [extractedStrains, setExtractedStrains] = useState<ExtractedStrain[]>([]);
   const [transcript, setTranscript] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
 
@@ -75,32 +77,41 @@ const VoiceStrainInput = ({ onStrainNamesUpdate, isGenerating }: VoiceStrainInpu
     setIsListening(false);
   };
 
-  const processTranscript = () => {
+  const processTranscript = async () => {
     if (!transcript.trim()) return;
 
-    // Extract strain names from transcript
-    // Look for patterns like "strain1, strain2 and strain3" or "strain1 strain2 strain3"
-    const names = transcript
-      .split(/[,\sand\s]+/)
-      .map(name => name.trim())
-      .filter(name => name.length > 0)
-      .map(name => name.replace(/[^\w\s-]/g, '').trim())
-      .filter(name => name.length > 1);
+    setIsProcessing(true);
+    try {
+      const result = await extractStrainsFromText(transcript);
+      
+      const newStrains = [...extractedStrains, ...result.strains];
+      setExtractedStrains(newStrains);
+      onStrainNamesUpdate(newStrains);
+      setTranscript('');
 
-    const newStrainNames = [...strainNames, ...names];
-    setStrainNames(newStrainNames);
-    onStrainNamesUpdate(newStrainNames);
-    setTranscript('');
+      toast({
+        title: "Strains Extracted",
+        description: `Found ${result.strains.length} strains with ${result.confidence}% confidence.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Processing Failed",
+        description: "Failed to extract strain information. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const removeStrain = (index: number) => {
-    const updated = strainNames.filter((_, i) => i !== index);
-    setStrainNames(updated);
+    const updated = extractedStrains.filter((_, i) => i !== index);
+    setExtractedStrains(updated);
     onStrainNamesUpdate(updated);
   };
 
   const clearAll = () => {
-    setStrainNames([]);
+    setExtractedStrains([]);
     setTranscript('');
     onStrainNamesUpdate([]);
   };
@@ -111,14 +122,13 @@ const VoiceStrainInput = ({ onStrainNamesUpdate, isGenerating }: VoiceStrainInpu
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
             <p className="text-sm text-muted-foreground">
-              Say strain names clearly. You can say "Blue Dream, Girl Scout Cookies and OG Kush" 
-              or list them one by one.
+              Say strain names with prices if available. For example: "Blue Dream twenty five dollars, Girl Scout Cookies thirty, OG Kush indica type"
             </p>
             
             <div className="flex items-center justify-center gap-4">
               <Button
                 onClick={isListening ? stopListening : startListening}
-                disabled={isGenerating}
+                disabled={isGenerating || isProcessing}
                 variant={isListening ? "destructive" : "default"}
                 size="lg"
                 className="flex items-center gap-2"
@@ -137,8 +147,23 @@ const VoiceStrainInput = ({ onStrainNamesUpdate, isGenerating }: VoiceStrainInpu
               </Button>
 
               {transcript && (
-                <Button onClick={processTranscript} variant="outline">
-                  Add Strains
+                <Button 
+                  onClick={processTranscript} 
+                  variant="outline" 
+                  disabled={isProcessing}
+                  className="flex items-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4" />
+                      Extract Strains
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -152,28 +177,42 @@ const VoiceStrainInput = ({ onStrainNamesUpdate, isGenerating }: VoiceStrainInpu
         </CardContent>
       </Card>
 
-      {strainNames.length > 0 && (
+      {extractedStrains.length > 0 && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium">Detected Strains ({strainNames.length})</h4>
+              <h4 className="font-medium">Extracted Strains ({extractedStrains.length})</h4>
               <Button onClick={clearAll} variant="outline" size="sm">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Clear All
               </Button>
             </div>
             
-            <div className="flex flex-wrap gap-2">
-              {strainNames.map((name, index) => (
-                <Badge key={index} variant="outline" className="flex items-center gap-2">
-                  {name}
-                  <button
+            <div className="space-y-2">
+              {extractedStrains.map((strain, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">{strain.name}</span>
+                    {strain.price && (
+                      <Badge variant="outline" className="text-green-600">
+                        ${strain.price}
+                      </Badge>
+                    )}
+                    {strain.type && (
+                      <Badge variant="secondary">
+                        {strain.type}
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
                     onClick={() => removeStrain(index)}
-                    className="text-muted-foreground hover:text-destructive"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
                   >
-                    ×
-                  </button>
-                </Badge>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               ))}
             </div>
           </CardContent>

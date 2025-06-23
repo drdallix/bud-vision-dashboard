@@ -3,18 +3,18 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, Trash2 } from 'lucide-react';
+import { Camera, Upload, Trash2, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { extractStrainsFromImage, ExtractedStrain } from '@/services/bulkStrainService';
 
 interface ImageStrainInputProps {
-  onStrainNamesUpdate: (names: string[]) => void;
+  onStrainNamesUpdate: (strains: ExtractedStrain[]) => void;
   isGenerating: boolean;
 }
 
 const ImageStrainInput = ({ onStrainNamesUpdate, isGenerating }: ImageStrainInputProps) => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [extractedText, setExtractedText] = useState('');
-  const [strainNames, setStrainNames] = useState<string[]>([]);
+  const [extractedStrains, setExtractedStrains] = useState<ExtractedStrain[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -26,42 +26,30 @@ const ImageStrainInput = ({ onStrainNamesUpdate, isGenerating }: ImageStrainInpu
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string;
         setUploadedImage(imageUrl);
-        processImage(imageUrl);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const processImage = async (imageUrl: string) => {
+  const processImage = async () => {
+    if (!uploadedImage) return;
+
     setIsProcessing(true);
     try {
-      // This would integrate with OCR service or AI vision
-      // For now, simulate text extraction
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const result = await extractStrainsFromImage(uploadedImage);
       
-      // Simulated extracted text - in real implementation this would use OCR
-      const simulatedText = "Blue Dream\nGirl Scout Cookies\nOG Kush\nWhite Widow\nSour Diesel";
-      setExtractedText(simulatedText);
-      
-      // Process the extracted text into strain names
-      const names = simulatedText
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map(line => line.replace(/[^\w\s-]/g, '').trim())
-        .filter(line => line.length > 1);
-      
-      setStrainNames(names);
-      onStrainNamesUpdate(names);
+      const newStrains = [...extractedStrains, ...result.strains];
+      setExtractedStrains(newStrains);
+      onStrainNamesUpdate(newStrains);
       
       toast({
         title: "Image Processed",
-        description: `Found ${names.length} strain names in the image.`,
+        description: `Found ${result.strains.length} strains with ${result.confidence}% confidence.`,
       });
     } catch (error) {
       toast({
         title: "Processing Failed",
-        description: "Failed to extract text from image. Please try again.",
+        description: "Failed to extract strain information from image. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -70,15 +58,14 @@ const ImageStrainInput = ({ onStrainNamesUpdate, isGenerating }: ImageStrainInpu
   };
 
   const removeStrain = (index: number) => {
-    const updated = strainNames.filter((_, i) => i !== index);
-    setStrainNames(updated);
+    const updated = extractedStrains.filter((_, i) => i !== index);
+    setExtractedStrains(updated);
     onStrainNamesUpdate(updated);
   };
 
   const clearAll = () => {
     setUploadedImage(null);
-    setExtractedText('');
-    setStrainNames([]);
+    setExtractedStrains([]);
     onStrainNamesUpdate([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -91,7 +78,7 @@ const ImageStrainInput = ({ onStrainNamesUpdate, isGenerating }: ImageStrainInpu
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
             <p className="text-sm text-muted-foreground">
-              Upload an image of a strain list or menu. We'll extract the strain names automatically.
+              Upload an image of a strain menu, list, or inventory. AI will extract strain names, prices, and types automatically.
             </p>
             
             <div className="flex items-center justify-center gap-4">
@@ -102,24 +89,12 @@ const ImageStrainInput = ({ onStrainNamesUpdate, isGenerating }: ImageStrainInpu
                 size="lg"
                 className="flex items-center gap-2"
               >
-                {isProcessing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4" />
-                    Upload Image
-                  </>
-                )}
+                <Upload className="h-4 w-4" />
+                Upload Image
               </Button>
 
               <Button
-                onClick={() => {
-                  // This would trigger camera capture
-                  fileInputRef.current?.click();
-                }}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={isGenerating || isProcessing}
                 variant="outline"
                 size="lg"
@@ -129,6 +104,26 @@ const ImageStrainInput = ({ onStrainNamesUpdate, isGenerating }: ImageStrainInpu
                 Take Photo
               </Button>
             </div>
+
+            {uploadedImage && (
+              <Button
+                onClick={processImage}
+                disabled={isProcessing}
+                className="flex items-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-4 w-4" />
+                    Extract Strains
+                  </>
+                )}
+              </Button>
+            )}
 
             <input
               ref={fileInputRef}
@@ -144,48 +139,52 @@ const ImageStrainInput = ({ onStrainNamesUpdate, isGenerating }: ImageStrainInpu
       {uploadedImage && (
         <Card>
           <CardContent className="pt-6">
-            <div className="space-y-4">
-              <img 
-                src={uploadedImage} 
-                alt="Uploaded strain list" 
-                className="max-w-full h-auto rounded-lg border"
-              />
-              
-              {extractedText && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2">Extracted Text:</h4>
-                  <pre className="text-sm whitespace-pre-wrap font-mono">
-                    {extractedText}
-                  </pre>
-                </div>
-              )}
-            </div>
+            <img 
+              src={uploadedImage} 
+              alt="Uploaded strain list" 
+              className="max-w-full h-auto rounded-lg border mx-auto"
+              style={{ maxHeight: '300px' }}
+            />
           </CardContent>
         </Card>
       )}
 
-      {strainNames.length > 0 && (
+      {extractedStrains.length > 0 && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium">Extracted Strains ({strainNames.length})</h4>
+              <h4 className="font-medium">Extracted Strains ({extractedStrains.length})</h4>
               <Button onClick={clearAll} variant="outline" size="sm">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Clear All
               </Button>
             </div>
             
-            <div className="flex flex-wrap gap-2">
-              {strainNames.map((name, index) => (
-                <Badge key={index} variant="outline" className="flex items-center gap-2">
-                  {name}
-                  <button
+            <div className="space-y-2">
+              {extractedStrains.map((strain, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">{strain.name}</span>
+                    {strain.price && (
+                      <Badge variant="outline" className="text-green-600">
+                        ${strain.price}
+                      </Badge>
+                    )}
+                    {strain.type && (
+                      <Badge variant="secondary">
+                        {strain.type}
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
                     onClick={() => removeStrain(index)}
-                    className="text-muted-foreground hover:text-destructive"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
                   >
-                    ×
-                  </button>
-                </Badge>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               ))}
             </div>
           </CardContent>
