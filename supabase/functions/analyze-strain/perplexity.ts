@@ -4,18 +4,23 @@ interface PerplexityMessage {
   content: string;
 }
 
+interface PerplexityResponse {
+  description: string;
+  sources: string[];
+}
+
 export const getStrainInfoWithPerplexity = async (
   strainName: string,
   perplexityApiKey: string
-): Promise<string> => {
+): Promise<PerplexityResponse> => {
   const messages: PerplexityMessage[] = [
     {
       role: 'system',
-      content: 'You are a cannabis expert. Provide detailed, accurate information about cannabis strains based on current web sources.'
+      content: 'You are a cannabis expert. Provide detailed, accurate information about cannabis strains based on current web sources. Always cite your sources at the end.'
     },
     {
       role: 'user',
-      content: `Search for detailed information about the cannabis strain "${strainName}". Include effects, flavors, genetics, background, and typical characteristics. Focus on factual information from reliable sources.`
+      content: `Search for detailed information about the cannabis strain "${strainName}". Include effects, flavors, genetics, background, and typical characteristics. Focus on factual information from reliable sources. Please provide source citations for the information you gather.`
     }
   ];
 
@@ -35,23 +40,33 @@ export const getStrainInfoWithPerplexity = async (
       return_related_questions: false,
       search_recency_filter: 'month',
       frequency_penalty: 1,
-      presence_penalty: 0
+      presence_penalty: 0,
+      citations: true
     }),
   });
 
   if (!response.ok) {
     console.error('Perplexity API error:', response.status);
-    return '';
+    return { description: '', sources: [] };
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  const content = data.choices?.[0]?.message?.content || '';
+  
+  // Extract citations from Perplexity response
+  const sources = data.citations || [];
+  
+  return {
+    description: content,
+    sources: sources.map((citation: any) => citation.url || citation.title || citation).filter(Boolean)
+  };
 };
 
 export const createWebInformedTextAnalysisMessages = (
   textQuery: string,
   thcRangeHint?: [number, number],
-  webInfo?: string
+  webInfo?: string,
+  sources?: string[]
 ) => [
   {
     role: 'system',
@@ -75,6 +90,14 @@ CRITICAL REQUIREMENT - THC VALUE:
 - This is a predetermined system value that cannot be changed
 - NEVER mention, reference, or include any THC percentage information in the description field
 - The description should focus only on effects, flavors, background, and usage
+
+${sources && sources.length ? `
+IMPORTANT - SOURCE CITATIONS:
+- At the end of your description, add a "Sources:" section
+- List the provided source URLs as a simple bulleted list
+- Format: "Sources: • [URL1] • [URL2] • [URL3]"
+- Keep the source list concise and readable
+` : ''}
 
 Cannabis Knowledge Guidelines:
 - Indica strains: typically relaxing/sedating effects, earthy/sweet flavors
@@ -100,7 +123,7 @@ Return a JSON object with this exact structure:
     ...
   ] (3-6 major terpenes with realistic percentages 0.1-3.0%),
   "medicalUses": ["use1", "use2", ...] (3-5 medical applications),
-  "description": "detailed description focusing on strain background, effects, flavors, and usage notes based on web information. Do NOT include any potency or percentage information.",
+  "description": "detailed description focusing on strain background, effects, flavors, and usage notes based on web information. Do NOT include any potency or percentage information.${sources && sources.length ? ' Include source citations at the end.' : ''}",
   "confidence": ${webInfo ? '95' : '85'}
 }`
   },

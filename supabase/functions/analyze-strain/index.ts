@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
@@ -43,6 +42,7 @@ serve(async (req) => {
     let initialMessages;
     let thcRange: [number, number];
     let webInfo = '';
+    let sources: string[] = [];
 
     if (textQuery) {
       // For text queries, we need to clean the name first to get consistent THC
@@ -54,17 +54,21 @@ serve(async (req) => {
       if (perplexityApiKey) {
         try {
           console.log('Fetching web information for strain:', strainName);
-          webInfo = await getStrainInfoWithPerplexity(strainName, perplexityApiKey);
+          const webData = await getStrainInfoWithPerplexity(strainName, perplexityApiKey);
+          webInfo = webData.description;
+          sources = webData.sources;
           console.log('Web info retrieved:', webInfo ? 'Yes' : 'No');
+          console.log('Sources found:', sources.length);
         } catch (error) {
           console.error('Perplexity search failed:', error);
           webInfo = '';
+          sources = [];
         }
       }
 
       // Use web-informed messages if we have web info
       if (webInfo) {
-        initialMessages = createWebInformedTextAnalysisMessages(textQuery, thcRange, webInfo);
+        initialMessages = createWebInformedTextAnalysisMessages(textQuery, thcRange, webInfo, sources);
       } else {
         initialMessages = createTextAnalysisMessages(textQuery, thcRange);
       }
@@ -106,7 +110,8 @@ serve(async (req) => {
       name: validatedData.name,
       thc: validatedData.thc,
       thcRange: thcRange,
-      hasWebInfo: !!webInfo
+      hasWebInfo: !!webInfo,
+      sourcesIncluded: sources.length
     });
 
     // Generate enhanced effect profiles
@@ -175,7 +180,8 @@ serve(async (req) => {
       thcRange: thcRange,
       effectsCount: finalStrain.effectProfiles.length,
       flavorsCount: finalStrain.flavorProfiles.length,
-      webEnhanced: !!webInfo
+      webEnhanced: !!webInfo,
+      sourcesIncluded: sources.length
     });
 
     // Save to database if userId is provided
