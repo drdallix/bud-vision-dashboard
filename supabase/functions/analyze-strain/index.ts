@@ -4,10 +4,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
 import { corsHeaders } from './cors.ts';
 import { createTextAnalysisMessages, createImageAnalysisMessages, createEffectProfilesMessages, createFlavorProfilesMessages, callOpenAI } from './openai.ts';
+import { createWebInformedTextAnalysisMessages, getStrainInfoWithPerplexity } from './perplexity.ts';
 import { parseOpenAIResponse, validateStrainData } from './validation.ts';
 import { getDeterministicTHCRange } from './thcGenerator.ts';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -33,19 +35,39 @@ serve(async (req) => {
     console.log('Processing strain analysis request:', {
       hasImage: !!imageData,
       hasText: !!textQuery,
+      hasPerplexity: !!perplexityApiKey,
       userId: userId || 'anonymous'
     });
 
     let strainName = textQuery || "Mystery Strain";
     let initialMessages;
     let thcRange: [number, number];
+    let webInfo = '';
 
     if (textQuery) {
       // For text queries, we need to clean the name first to get consistent THC
       const cleanedName = textQuery.replace(/[^\w\s]/g, '').trim();
       strainName = cleanedName || "Mystery Strain";
       thcRange = getDeterministicTHCRange(strainName);
-      initialMessages = createTextAnalysisMessages(textQuery, thcRange);
+
+      // Get web information if Perplexity is available
+      if (perplexityApiKey) {
+        try {
+          console.log('Fetching web information for strain:', strainName);
+          webInfo = await getStrainInfoWithPerplexity(strainName, perplexityApiKey);
+          console.log('Web info retrieved:', webInfo ? 'Yes' : 'No');
+        } catch (error) {
+          console.error('Perplexity search failed:', error);
+          webInfo = '';
+        }
+      }
+
+      // Use web-informed messages if we have web info
+      if (webInfo) {
+        initialMessages = createWebInformedTextAnalysisMessages(textQuery, thcRange, webInfo);
+      } else {
+        initialMessages = createTextAnalysisMessages(textQuery, thcRange);
+      }
     } else {
       // For image analysis, use a default name initially, we'll update after getting the real name
       thcRange = getDeterministicTHCRange("Mystery Strain");
@@ -53,6 +75,7 @@ serve(async (req) => {
     }
 
     console.log('Using THC range for', strainName, ':', thcRange);
+    console.log('Using web-enhanced analysis:', !!webInfo);
 
     // Get initial strain analysis from OpenAI
     const analysisResponse = await callOpenAI(initialMessages, openAIApiKey);
@@ -82,7 +105,8 @@ serve(async (req) => {
     console.log('Validated strain data with consistent THC:', {
       name: validatedData.name,
       thc: validatedData.thc,
-      thcRange: thcRange
+      thcRange: thcRange,
+      hasWebInfo: !!webInfo
     });
 
     // Generate enhanced effect profiles
@@ -142,7 +166,7 @@ serve(async (req) => {
       flavorProfiles: flavorProfiles,
       terpenes: validatedData.terpenes || [],
       description: validatedData.description,
-      confidence: validatedData.confidence
+      confidence: webInfo ? 95 : validatedData.confidence // Higher confidence with web data
     };
 
     console.log('Final strain object created:', {
@@ -150,7 +174,8 @@ serve(async (req) => {
       thc: finalStrain.thc,
       thcRange: thcRange,
       effectsCount: finalStrain.effectProfiles.length,
-      flavorsCount: finalStrain.flavorProfiles.length
+      flavorsCount: finalStrain.flavorProfiles.length,
+      webEnhanced: !!webInfo
     });
 
     // Save to database if userId is provided
