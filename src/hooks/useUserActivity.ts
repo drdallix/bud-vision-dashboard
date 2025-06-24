@@ -24,25 +24,10 @@ export const useUserActivity = () => {
     return activityRef.current.filter(activity => activity.timestamp > cutoff);
   }, []);
 
-  const shouldSkipDelay = useCallback(() => {
-    const recentScans = getRecentActivity(5).filter(a => a.type === 'scan');
-    return recentScans.length >= 2;
-  }, [getRecentActivity]);
+  // No more artificial delays - always return 0
+  const shouldSkipDelay = useCallback(() => true, []);
 
-  const getOptimalDelay = useCallback(() => {
-    if (shouldSkipDelay()) {
-      return 0; // No delay for active users
-    }
-    
-    const recentActivity = getRecentActivity(5);
-    if (recentActivity.length === 0) {
-      return 125; // Maximum delay for first-time users
-    }
-    
-    // Reduce delay based on activity (25ms to 125ms range)
-    const activityFactor = Math.min(recentActivity.length / 5, 1);
-    return Math.round(125 - (activityFactor * 100) + 25);
-  }, [shouldSkipDelay, getRecentActivity]);
+  const getOptimalDelay = useCallback(() => 0, []);
 
   return {
     recordActivity,

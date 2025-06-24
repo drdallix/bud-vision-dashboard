@@ -6,12 +6,11 @@ import { useStrainData } from '@/data/hooks/useStrainData';
 import { useUserActivity } from '@/hooks/useUserActivity';
 import { Strain } from '@/types/strain';
 
-const generationSteps = [
-  "Scanning cannabis databases...",
-  "Cross-referencing strain genetics...",
-  "Analyzing terpene profiles...",
-  "Compiling lab results...",
-  "Finalizing strain profile..."
+const processingStates = [
+  "Connecting to AI...",
+  "Analyzing strain data...",
+  "Processing response...",
+  "Finalizing profile..."
 ];
 
 interface UseGenerationLogicProps {
@@ -30,23 +29,20 @@ export const useGenerationLogic = ({
   setUploadedImage
 }: UseGenerationLogicProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generationStep, setGenerationStep] = useState(0);
+  const [currentState, setCurrentState] = useState(0);
   const [progress, setProgress] = useState(0);
   const [currentStepText, setCurrentStepText] = useState('');
   const { user } = useAuth();
   const { addStrainToCache } = useStrainData(false);
-  const { recordActivity, getOptimalDelay } = useUserActivity();
+  const { recordActivity } = useUserActivity();
 
-  // Optimized typing animation with dynamic delay
+  // Real-time typing animation - no artificial delays
   useEffect(() => {
     if (!isGenerating) return;
 
-    const stepText = generationSteps[generationStep];
+    const stepText = processingStates[currentState];
     let charIndex = 0;
     setCurrentStepText('');
-
-    const optimalDelay = getOptimalDelay();
-    const typeDelay = Math.max(optimalDelay, 25); // Minimum 25ms for readability
 
     const typeWriter = setInterval(() => {
       if (charIndex <= stepText.length) {
@@ -54,40 +50,44 @@ export const useGenerationLogic = ({
         charIndex++;
       } else {
         clearInterval(typeWriter);
-        
-        // Reduced step advancement delay
-        setTimeout(() => {
-          if (generationStep < generationSteps.length - 1) {
-            setGenerationStep(prev => prev + 1);
-            setProgress(prev => Math.min(prev + (100 / generationSteps.length), 95));
-          }
-        }, 150); // Reduced from 200ms
       }
-    }, typeDelay);
+    }, 15); // Fast typing for responsiveness
 
     return () => clearInterval(typeWriter);
-  }, [generationStep, isGenerating, getOptimalDelay]);
+  }, [currentState, isGenerating]);
 
   const handleGenerate = useCallback(async () => {
     if (!user) return;
     if (!searchTerm.trim() && !uploadedImage) return;
 
-    // Record the scan activity
     recordActivity('scan');
 
     setIsGenerating(true);
-    setGenerationStep(0);
-    setProgress(10);
+    setCurrentState(0);
+    setProgress(5);
     setCurrentStepText('');
 
     try {
-      // Start AI request immediately, don't wait for animations
+      // State 1: Connecting to AI
+      setCurrentState(0);
+      setProgress(15);
+      
+      // State 2: Start AI analysis (no delay)
+      setCurrentState(1);
+      setProgress(30);
+      
+      // Start the actual AI request
       const aiPromise = analyzeStrainWithAI(uploadedImage, searchTerm.trim(), user.id);
       
-      // Reduced initial wait time
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // State 3: Processing (while AI is working)
+      setCurrentState(2);
+      setProgress(60);
       
       const result = await aiPromise;
+      
+      // State 4: Finalizing
+      setCurrentState(3);
+      setProgress(90);
       
       const strain: Strain = {
         ...result,
@@ -97,37 +97,45 @@ export const useGenerationLogic = ({
         userId: user.id
       };
 
-      // Complete progress quickly
+      // Complete immediately
       setProgress(100);
-      setCurrentStepText('Database search complete!');
-      
-      // Brief pause before finishing
-      await new Promise(resolve => setTimeout(resolve, 100));
+      setCurrentStepText('Profile generated successfully!');
 
       addStrainToCache(strain);
       onStrainGenerated(strain);
       onSearchChange('');
       setUploadedImage(null);
+      
     } catch (error) {
       console.error('Generation failed:', error);
-      setCurrentStepText('Database search failed. Please try again.');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } finally {
+      setCurrentStepText('Generation failed. Please try again.');
+      // Brief error display then reset
+      setTimeout(() => {
+        setIsGenerating(false);
+        setCurrentState(0);
+        setProgress(0);
+        setCurrentStepText('');
+      }, 1500);
+      return;
+    }
+
+    // Quick completion
+    setTimeout(() => {
       setIsGenerating(false);
-      setGenerationStep(0);
+      setCurrentState(0);
       setProgress(0);
       setCurrentStepText('');
-    }
+    }, 200);
   }, [user, searchTerm, uploadedImage, addStrainToCache, onStrainGenerated, onSearchChange, setUploadedImage, recordActivity]);
 
   const canGenerate = user && (searchTerm.trim() || uploadedImage) && !isGenerating;
 
   return {
     isGenerating,
-    generationStep,
+    generationStep: currentState,
     progress,
     currentStepText,
-    generationSteps,
+    generationSteps: processingStates,
     handleGenerate,
     canGenerate
   };
