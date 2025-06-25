@@ -58,17 +58,21 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
       // The AI analysis now handles database saving and returns the complete strain with database ID
       const aiResult = await analyzeStrainWithAI(selectedImage, undefined, user.id);
       
-      // Create strain object using the database ID from the AI result
+      // CRITICAL FIX: Ensure we have a valid database ID before proceeding
+      if (!aiResult.id) {
+        throw new Error('No database ID returned from strain analysis');
+      }
+      
+      // Create strain object using ONLY the database ID from the AI result
       const identifiedStrain: Strain = {
         ...aiResult,
-        // Use the database ID if available, otherwise fall back to timestamp
-        id: aiResult.id || Date.now().toString(),
+        id: aiResult.id, // Use ONLY the database ID - no fallback
         scannedAt: new Date().toISOString(),
         inStock: true,
         userId: user.id
       };
       
-      console.log('Scanner - strain analyzed with database ID:', identifiedStrain.id);
+      console.log('Scanner - strain analyzed with verified database ID:', identifiedStrain.id);
       
       // Save to local cache as backup
       CacheService.saveScanToCache(identifiedStrain, 'synced');
@@ -95,7 +99,7 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
       
       toast({
         title: "Package scan failed",
-        description: "Unable to read package information. Please ensure good lighting and clear text visibility.",
+        description: error.message || "Unable to read package information. Please ensure good lighting and clear text visibility.",
         variant: "destructive",
       });
     }

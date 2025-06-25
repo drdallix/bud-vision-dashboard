@@ -32,11 +32,22 @@ serve(async (req) => {
       });
     }
 
+    if (!userId) {
+      console.error('User ID is required for database operations');
+      return new Response(JSON.stringify({ 
+        error: 'User authentication required',
+        fallbackStrain: null
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     console.log('Processing strain analysis request:', {
       hasImage: !!imageData,
       hasText: !!textQuery,
       hasPerplexity: !!perplexityApiKey,
-      userId: userId || 'anonymous'
+      userId: userId
     });
 
     let strainName = textQuery || "Mystery Strain";
@@ -163,48 +174,42 @@ serve(async (req) => {
       }
     }
 
-    // Save to database first if userId is provided
-    let databaseId = null;
-    if (userId) {
-      try {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        
-        const scanData = {
-          user_id: userId,
-          strain_name: validatedData.name,
-          strain_type: validatedData.type,
-          thc: thcRange[0],
-          cbd: validatedData.cbd || 1,
-          effects: validatedData.effects || [],
-          flavors: validatedData.flavors || [],
-          terpenes: validatedData.terpenes || [],
-          medical_uses: validatedData.medicalUses || [],
-          description: validatedData.description,
-          confidence: webInfo ? 95 : validatedData.confidence,
-          scanned_at: new Date().toISOString(),
-          in_stock: true
-        };
+    // CRITICAL: Save to database FIRST and ensure we get a valid ID
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const scanData = {
+      user_id: userId,
+      strain_name: validatedData.name,
+      strain_type: validatedData.type,
+      thc: thcRange[0],
+      cbd: validatedData.cbd || 1,
+      effects: validatedData.effects || [],
+      flavors: validatedData.flavors || [],
+      terpenes: validatedData.terpenes || [],
+      medical_uses: validatedData.medicalUses || [],
+      description: validatedData.description,
+      confidence: webInfo ? 95 : validatedData.confidence,
+      scanned_at: new Date().toISOString(),
+      in_stock: true
+    };
 
-        const { data, error } = await supabase
-          .from('scans')
-          .insert(scanData)
-          .select()
-          .single();
+    const { data, error } = await supabase
+      .from('scans')
+      .insert(scanData)
+      .select()
+      .single();
 
-        if (error) {
-          console.error('Database save error:', error);
-        } else {
-          databaseId = data.id;
-          console.log('Strain saved to database with ID:', databaseId);
-        }
-      } catch (dbError) {
-        console.error('Database operation failed:', dbError);
-      }
+    if (error || !data || !data.id) {
+      console.error('CRITICAL: Database save failed:', error);
+      throw new Error('Failed to save strain to database');
     }
+
+    const databaseId = data.id;
+    console.log('Strain saved to database with ID:', databaseId);
 
     // Create the final strain object with the database ID
     const finalStrain = {
-      id: databaseId, // Include the database ID in the response
+      id: databaseId, // CRITICAL: Always include the database ID
       name: validatedData.name,
       type: validatedData.type,
       thc: thcRange[0],
@@ -215,7 +220,7 @@ serve(async (req) => {
       confidence: webInfo ? 95 : validatedData.confidence
     };
 
-    console.log('Final strain object created with database ID:', {
+    console.log('Final strain object created with verified database ID:', {
       id: finalStrain.id,
       name: finalStrain.name,
       thc: finalStrain.thc,
@@ -233,7 +238,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Edge function error:', error);
     return new Response(JSON.stringify({ 
-      error: 'Internal server error',
+      error: 'Internal server error: ' + error.message,
       fallbackStrain: null
     }), {
       status: 500,

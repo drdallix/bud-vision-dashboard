@@ -89,17 +89,20 @@ export const useGenerationLogic = ({
       setCurrentState(3);
       setProgress(90);
       
-      // Use the database ID from the AI result instead of generating a new one
+      // CRITICAL FIX: Only use the database ID from the AI result - no fallback to timestamp
+      if (!result.id) {
+        throw new Error('No database ID returned from strain generation');
+      }
+
       const strain: Strain = {
         ...result,
-        // Use the database ID returned from the edge function
-        id: result.id || Date.now().toString(),
+        id: result.id, // Use ONLY the database ID from the edge function
         scannedAt: new Date().toISOString(),
         inStock: true,
         userId: user.id
       };
 
-      console.log('Generated strain with database ID:', strain.id);
+      console.log('Generated strain with verified database ID:', strain.id);
 
       // Complete immediately
       setProgress(100);
