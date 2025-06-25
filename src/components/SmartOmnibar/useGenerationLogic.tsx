@@ -89,13 +89,17 @@ export const useGenerationLogic = ({
       setCurrentState(3);
       setProgress(90);
       
+      // Use the database ID from the AI result instead of generating a new one
       const strain: Strain = {
         ...result,
-        id: Date.now().toString(),
+        // Use the database ID returned from the edge function
+        id: result.id || Date.now().toString(),
         scannedAt: new Date().toISOString(),
         inStock: true,
         userId: user.id
       };
+
+      console.log('Generated strain with database ID:', strain.id);
 
       // Complete immediately
       setProgress(100);

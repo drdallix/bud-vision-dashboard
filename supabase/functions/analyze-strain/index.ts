@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
@@ -162,45 +163,24 @@ serve(async (req) => {
       }
     }
 
-    // Create the final strain object with consistent THC
-    const finalStrain = {
-      name: validatedData.name,
-      type: validatedData.type,
-      thc: thcRange[0], // Always use our deterministic calculation
-      effectProfiles: effectProfiles,
-      flavorProfiles: flavorProfiles,
-      terpenes: validatedData.terpenes || [],
-      description: validatedData.description,
-      confidence: webInfo ? 95 : validatedData.confidence // Higher confidence with web data
-    };
-
-    console.log('Final strain object created:', {
-      name: finalStrain.name,
-      thc: finalStrain.thc,
-      thcRange: thcRange,
-      effectsCount: finalStrain.effectProfiles.length,
-      flavorsCount: finalStrain.flavorProfiles.length,
-      webEnhanced: !!webInfo,
-      sourcesIncluded: sources.length
-    });
-
-    // Save to database if userId is provided
+    // Save to database first if userId is provided
+    let databaseId = null;
     if (userId) {
       try {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
         
         const scanData = {
           user_id: userId,
-          strain_name: finalStrain.name,
-          strain_type: finalStrain.type,
-          thc: finalStrain.thc,
+          strain_name: validatedData.name,
+          strain_type: validatedData.type,
+          thc: thcRange[0],
           cbd: validatedData.cbd || 1,
           effects: validatedData.effects || [],
           flavors: validatedData.flavors || [],
-          terpenes: finalStrain.terpenes,
+          terpenes: validatedData.terpenes || [],
           medical_uses: validatedData.medicalUses || [],
-          description: finalStrain.description,
-          confidence: finalStrain.confidence,
+          description: validatedData.description,
+          confidence: webInfo ? 95 : validatedData.confidence,
           scanned_at: new Date().toISOString(),
           in_stock: true
         };
@@ -214,12 +194,37 @@ serve(async (req) => {
         if (error) {
           console.error('Database save error:', error);
         } else {
-          console.log('Strain saved to database with ID:', data.id);
+          databaseId = data.id;
+          console.log('Strain saved to database with ID:', databaseId);
         }
       } catch (dbError) {
         console.error('Database operation failed:', dbError);
       }
     }
+
+    // Create the final strain object with the database ID
+    const finalStrain = {
+      id: databaseId, // Include the database ID in the response
+      name: validatedData.name,
+      type: validatedData.type,
+      thc: thcRange[0],
+      effectProfiles: effectProfiles,
+      flavorProfiles: flavorProfiles,
+      terpenes: validatedData.terpenes || [],
+      description: validatedData.description,
+      confidence: webInfo ? 95 : validatedData.confidence
+    };
+
+    console.log('Final strain object created with database ID:', {
+      id: finalStrain.id,
+      name: finalStrain.name,
+      thc: finalStrain.thc,
+      thcRange: thcRange,
+      effectsCount: finalStrain.effectProfiles.length,
+      flavorsCount: finalStrain.flavorProfiles.length,
+      webEnhanced: !!webInfo,
+      sourcesIncluded: sources.length
+    });
 
     return new Response(JSON.stringify(finalStrain), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

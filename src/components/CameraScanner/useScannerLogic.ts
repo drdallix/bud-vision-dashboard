@@ -13,7 +13,7 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'failed' | 'cached'>('idle');
   const { toast } = useToast();
   const { user } = useAuth();
-  const { addStrainToCache } = useStrainData(false); // Get user-specific strain cache functions
+  const { addStrainToCache } = useStrainData(false);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -55,18 +55,20 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         description: "DoobieDB is reading package information for customer recommendations.",
       });
 
-      // The AI analysis now handles database saving when userId is provided
+      // The AI analysis now handles database saving and returns the complete strain with database ID
       const aiResult = await analyzeStrainWithAI(selectedImage, undefined, user.id);
       
+      // Create strain object using the database ID from the AI result
       const identifiedStrain: Strain = {
         ...aiResult,
-        id: Date.now().toString(),
+        // Use the database ID if available, otherwise fall back to timestamp
+        id: aiResult.id || Date.now().toString(),
         scannedAt: new Date().toISOString(),
         inStock: true,
         userId: user.id
       };
       
-      console.log('Scanner - strain analyzed and saved to database:', identifiedStrain);
+      console.log('Scanner - strain analyzed with database ID:', identifiedStrain.id);
       
       // Save to local cache as backup
       CacheService.saveScanToCache(identifiedStrain, 'synced');
@@ -84,7 +86,7 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         description: `Saved: ${identifiedStrain.name} (${identifiedStrain.confidence}% confidence)`,
       });
 
-      console.log('Scan complete - strain should now appear in inventory');
+      console.log('Scan complete - strain with proper database ID should now be editable');
       
     } catch (error) {
       console.error('Scan error:', error);
