@@ -9,6 +9,35 @@ interface PerplexityResponse {
   sources: string[];
 }
 
+const extractSiteName = (url: string): string => {
+  try {
+    const hostname = new URL(url).hostname;
+    // Remove 'www.' prefix and get the main domain
+    const domain = hostname.replace(/^www\./, '');
+    
+    // Map common cannabis sites to cleaner names
+    const siteNameMap: { [key: string]: string } = {
+      'leafly.com': 'Leafly',
+      'allbud.com': 'AllBud',
+      'weedmaps.com': 'Weedmaps',
+      'cannabis.wiki': 'CannaWiki',
+      'cannabisculture.com': 'Cannabis Culture',
+      'herb.co': 'Herb',
+      'budzu.com': 'Budzu',
+      'marijuanabreak.com': 'Marijuana Break',
+      'royalqueenseeds.com': 'Royal Queen Seeds',
+      'seedsman.com': 'Seedsman',
+      'barneysfarm.com': 'Barney\'s Farm'
+    };
+    
+    // Return mapped name or capitalize the domain
+    return siteNameMap[domain] || domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+  } catch {
+    // If URL parsing fails, return the original string cleaned up
+    return url.replace(/https?:\/\/(www\.)?/, '').split('/')[0];
+  }
+};
+
 export const getStrainInfoWithPerplexity = async (
   strainName: string,
   perplexityApiKey: string
@@ -53,12 +82,19 @@ export const getStrainInfoWithPerplexity = async (
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || '';
   
-  // Extract citations from Perplexity response
-  const sources = data.citations || [];
+  // Extract and clean citations from Perplexity response
+  const rawSources = data.citations || [];
+  const cleanSources = rawSources
+    .map((citation: any) => {
+      const url = citation.url || citation.title || citation;
+      return typeof url === 'string' ? extractSiteName(url) : url;
+    })
+    .filter(Boolean)
+    .filter((source: string, index: number, arr: string[]) => arr.indexOf(source) === index); // Remove duplicates
   
   return {
     description: content,
-    sources: sources.map((citation: any) => citation.url || citation.title || citation).filter(Boolean)
+    sources: cleanSources
   };
 };
 
@@ -94,8 +130,8 @@ CRITICAL REQUIREMENT - THC VALUE:
 ${sources && sources.length ? `
 IMPORTANT - SOURCE CITATIONS:
 - At the end of your description, add a "Sources:" section
-- List the provided source URLs as a simple bulleted list
-- Format: "Sources: • [URL1] • [URL2] • [URL3]"
+- List the provided source names as a simple bulleted list
+- Format: "Sources: • ${sources.join(' • ')}"
 - Keep the source list concise and readable
 ` : ''}
 
