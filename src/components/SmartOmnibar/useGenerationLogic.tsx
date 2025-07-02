@@ -6,11 +6,13 @@ import { useStrainData } from '@/data/hooks/useStrainData';
 import { useUserActivity } from '@/hooks/useUserActivity';
 import { Strain } from '@/types/strain';
 
-const processingStates = [
-  "Connecting to AI...",
-  "Analyzing strain data...",
-  "Processing response...",
-  "Finalizing profile..."
+const processingSteps = [
+  "Initializing DoobieDB AI analyzer...",
+  "Processing strain information with GPT-4...",
+  "Analyzing effects and terpene profiles...",
+  "Cross-referencing cannabis database...",
+  "Generating detailed strain profile...",
+  "Finalizing recommendation data..."
 ];
 
 interface UseGenerationLogicProps {
@@ -29,32 +31,24 @@ export const useGenerationLogic = ({
   setUploadedImage
 }: UseGenerationLogicProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [currentState, setCurrentState] = useState(0);
+  const [generationStep, setGenerationStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [currentStepText, setCurrentStepText] = useState('');
   const { user } = useAuth();
   const { addStrainToCache } = useStrainData(false);
   const { recordActivity } = useUserActivity();
 
-  // Real-time typing animation - no artificial delays
-  useEffect(() => {
-    if (!isGenerating) return;
-
-    const stepText = processingStates[currentState];
-    let charIndex = 0;
-    setCurrentStepText('');
-
-    const typeWriter = setInterval(() => {
-      if (charIndex <= stepText.length) {
-        setCurrentStepText(stepText.slice(0, charIndex));
-        charIndex++;
-      } else {
-        clearInterval(typeWriter);
-      }
-    }, 15); // Fast typing for responsiveness
-
-    return () => clearInterval(typeWriter);
-  }, [currentState, isGenerating]);
+  const animateGenerationSteps = async () => {
+    for (let i = 0; i < processingSteps.length; i++) {
+      setGenerationStep(i);
+      setCurrentStepText(processingSteps[i]);
+      setProgress(((i + 1) / processingSteps.length) * 100);
+      
+      // Realistic timing for each step
+      const stepDuration = i === 0 ? 600 : i === processingSteps.length - 1 ? 400 : 900;
+      await new Promise(resolve => setTimeout(resolve, stepDuration));
+    }
+  };
 
   const handleGenerate = useCallback(async () => {
     if (!user) return;
@@ -63,31 +57,17 @@ export const useGenerationLogic = ({
     recordActivity('scan');
 
     setIsGenerating(true);
-    setCurrentState(0);
-    setProgress(5);
+    setGenerationStep(0);
+    setProgress(0);
     setCurrentStepText('');
 
     try {
-      // State 1: Connecting to AI
-      setCurrentState(0);
-      setProgress(15);
-      
-      // State 2: Start AI analysis (no delay)
-      setCurrentState(1);
-      setProgress(30);
-      
-      // Start the actual AI request
+      // Start animation sequence alongside AI analysis
+      const animationPromise = animateGenerationSteps();
       const aiPromise = analyzeStrainWithAI(uploadedImage, searchTerm.trim(), user.id);
       
-      // State 3: Processing (while AI is working)
-      setCurrentState(2);
-      setProgress(60);
-      
-      const result = await aiPromise;
-      
-      // State 4: Finalizing
-      setCurrentState(3);
-      setProgress(90);
+      // Wait for both animation and AI analysis to complete
+      const [, result] = await Promise.all([animationPromise, aiPromise]);
       
       // CRITICAL FIX: Only use the database ID from the AI result - no fallback to timestamp
       if (!result.id) {
@@ -119,7 +99,7 @@ export const useGenerationLogic = ({
       // Brief error display then reset
       setTimeout(() => {
         setIsGenerating(false);
-        setCurrentState(0);
+        setGenerationStep(0);
         setProgress(0);
         setCurrentStepText('');
       }, 1500);
@@ -129,7 +109,7 @@ export const useGenerationLogic = ({
     // Quick completion
     setTimeout(() => {
       setIsGenerating(false);
-      setCurrentState(0);
+      setGenerationStep(0);
       setProgress(0);
       setCurrentStepText('');
     }, 200);
@@ -139,10 +119,10 @@ export const useGenerationLogic = ({
 
   return {
     isGenerating,
-    generationStep: currentState,
+    generationStep,
     progress,
     currentStepText,
-    generationSteps: processingStates,
+    generationSteps: processingSteps,
     handleGenerate,
     canGenerate
   };
