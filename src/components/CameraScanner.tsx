@@ -19,6 +19,10 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
   const {
     selectedImage,
     saveStatus,
+    scanStep,
+    scanProgress,
+    currentScanText,
+    scanSteps,
     handleImageUpload,
     handleScan
   } = useScannerLogic(onScanComplete);
@@ -43,7 +47,11 @@ const CameraScanner = ({ onScanComplete, isScanning, setIsScanning }: CameraScan
         <CardContent className="space-y-6">
           <ImagePreview 
             selectedImage={selectedImage} 
-            isScanning={isScanning} 
+            isScanning={isScanning}
+            scanStep={scanStep}
+            scanProgress={scanProgress}
+            currentScanText={currentScanText}
+            scanSteps={scanSteps}
           />
 
           <CameraCaptureControls

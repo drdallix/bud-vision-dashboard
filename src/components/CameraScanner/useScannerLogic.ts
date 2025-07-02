@@ -11,6 +11,9 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'failed' | 'cached'>('idle');
+  const [scanStep, setScanStep] = useState(0);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [currentScanText, setCurrentScanText] = useState('');
   const { toast } = useToast();
   const { user } = useAuth();
   const { addStrainToCache } = useStrainData(false);
@@ -24,6 +27,27 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         setSelectedImage(imageUrl);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const scanSteps = [
+    "Initializing DoobieDB scanner...",
+    "Analyzing package image quality...",
+    "Reading strain information...", 
+    "Extracting lab data and effects...",
+    "Processing cannabinoid profiles...",
+    "Finalizing strain profile..."
+  ];
+
+  const animateScanSteps = async () => {
+    for (let i = 0; i < scanSteps.length; i++) {
+      setScanStep(i);
+      setCurrentScanText(scanSteps[i]);
+      setScanProgress(((i + 1) / scanSteps.length) * 100);
+      
+      // Realistic timing for each step
+      const stepDuration = i === 0 ? 800 : i === scanSteps.length - 1 ? 500 : 1200;
+      await new Promise(resolve => setTimeout(resolve, stepDuration));
     }
   };
 
@@ -48,6 +72,9 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
     
     setIsScanning(true);
     setSaveStatus('saving');
+    setScanStep(0);
+    setScanProgress(0);
+    setCurrentScanText('');
     
     try {
       toast({
@@ -55,8 +82,12 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
         description: "DoobieDB is reading package information for customer recommendations.",
       });
 
-      // The AI analysis now handles database saving and returns the complete strain with database ID
-      const aiResult = await analyzeStrainWithAI(selectedImage, undefined, user.id);
+      // Start animation sequence alongside AI analysis
+      const animationPromise = animateScanSteps();
+      const aiPromise = analyzeStrainWithAI(selectedImage, undefined, user.id);
+      
+      // Wait for both animation and AI analysis to complete
+      const [, aiResult] = await Promise.all([animationPromise, aiPromise]);
       
       // CRITICAL FIX: Ensure we have a valid database ID before proceeding
       if (!aiResult.id) {
@@ -109,6 +140,10 @@ export const useScannerLogic = (onScanComplete: (strain: Strain) => void) => {
     selectedImage,
     isScanning,
     saveStatus,
+    scanStep,
+    scanProgress,
+    currentScanText,
+    scanSteps,
     handleImageUpload,
     handleScan,
     setIsScanning
