@@ -8,11 +8,13 @@ import { Strain } from '@/types/strain';
 
 const processingSteps = [
   "Initializing DoobieDB AI analyzer...",
+  "Connecting to cannabis knowledge base...",
   "Processing strain information with GPT-4...",
-  "Analyzing effects and terpene profiles...",
-  "Cross-referencing cannabis database...",
-  "Generating detailed strain profile...",
-  "Finalizing recommendation data..."
+  "Analyzing cannabinoid profiles...",
+  "Cross-referencing terpene data...",
+  "Evaluating effects and flavors...",
+  "Finalizing strain profile...",
+  "Saving to your collection..."
 ];
 
 interface UseGenerationLogicProps {
@@ -38,16 +40,53 @@ export const useGenerationLogic = ({
   const { addStrainToCache } = useStrainData(false);
   const { recordActivity } = useUserActivity();
 
-  const animateGenerationSteps = async () => {
-    for (let i = 0; i < processingSteps.length; i++) {
-      setGenerationStep(i);
-      setCurrentStepText(processingSteps[i]);
-      setProgress(((i + 1) / processingSteps.length) * 100);
+  const animateGenerationSteps = async (onEarlyComplete?: () => void) => {
+    let completed = false;
+    
+    const runStep = async (stepIndex: number) => {
+      if (completed || stepIndex >= processingSteps.length) return;
       
-      // Realistic timing for each step
-      const stepDuration = i === 0 ? 600 : i === processingSteps.length - 1 ? 400 : 900;
-      await new Promise(resolve => setTimeout(resolve, stepDuration));
-    }
+      setGenerationStep(stepIndex);
+      setCurrentStepText(processingSteps[stepIndex]);
+      
+      // Progressive animation for each step
+      const stepProgress = (stepIndex / processingSteps.length) * 100;
+      const nextStepProgress = ((stepIndex + 1) / processingSteps.length) * 100;
+      
+      // Animate progress within the step
+      const stepDuration = stepIndex === 0 ? 800 : 
+                          stepIndex === processingSteps.length - 1 ? 400 : 
+                          600 + Math.random() * 400; // Vary timing realistically
+      
+      const startTime = Date.now();
+      const animateStepProgress = () => {
+        if (completed) return;
+        
+        const elapsed = Date.now() - startTime;
+        const stepCompletion = Math.min(elapsed / stepDuration, 1);
+        const currentProgress = stepProgress + (nextStepProgress - stepProgress) * stepCompletion;
+        
+        setProgress(currentProgress);
+        
+        if (stepCompletion < 1) {
+          requestAnimationFrame(animateStepProgress);
+        } else {
+          setTimeout(() => runStep(stepIndex + 1), 100);
+        }
+      };
+      
+      animateStepProgress();
+    };
+    
+    runStep(0);
+    
+    return {
+      complete: () => {
+        completed = true;
+        setProgress(100);
+        if (onEarlyComplete) onEarlyComplete();
+      }
+    };
   };
 
   const handleGenerate = useCallback(async () => {
@@ -62,12 +101,13 @@ export const useGenerationLogic = ({
     setCurrentStepText('');
 
     try {
-      // Start animation sequence alongside AI analysis
-      const animationPromise = animateGenerationSteps();
+      // Start animation sequence and AI analysis
+      const animationController = await animateGenerationSteps();
       const aiPromise = analyzeStrainWithAI(uploadedImage, searchTerm.trim(), user.id);
       
-      // Wait for both animation and AI analysis to complete
-      const [, result] = await Promise.all([animationPromise, aiPromise]);
+      // Wait for AI result and complete animation early if needed
+      const result = await aiPromise;
+      animationController.complete();
       
       // CRITICAL FIX: Only use the database ID from the AI result - no fallback to timestamp
       if (!result.id) {

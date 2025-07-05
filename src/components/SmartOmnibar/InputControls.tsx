@@ -1,21 +1,23 @@
 
 import { Button } from '@/components/ui/button';
-import { Mic, Camera, Sparkles } from 'lucide-react';
+import { Mic, Camera, Sparkles, Scan } from 'lucide-react';
 
 interface InputControlsProps {
   isGenerating: boolean;
   canGenerate: boolean;
   onVoiceClick: () => void;
   onCameraClick: () => void;
+  onRealTimeScanClick: () => void;
   onGenerate: () => void;
 }
 
-const InputControls = ({
-  isGenerating,
-  canGenerate,
-  onVoiceClick,
-  onCameraClick,
-  onGenerate
+const InputControls = ({ 
+  isGenerating, 
+  canGenerate, 
+  onVoiceClick, 
+  onCameraClick, 
+  onRealTimeScanClick,
+  onGenerate 
 }: InputControlsProps) => {
   return (
     <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
@@ -37,6 +39,17 @@ const InputControls = ({
         className="h-7 w-7 p-0 hover:bg-muted"
       >
         <Camera className="h-3.5 w-3.5" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRealTimeScanClick}
+        disabled={isGenerating}
+        className="h-7 w-7 p-0 hover:bg-muted text-green-600"
+        title="Real-time scan"
+      >
+        <Scan className="h-3.5 w-3.5" />
       </Button>
 
       <Button
