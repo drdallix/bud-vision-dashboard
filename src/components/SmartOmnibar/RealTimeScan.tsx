@@ -240,16 +240,16 @@ const RealTimeScan = ({ open, onClose, onStrainGenerated }: RealTimeScanProps) =
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black p-0 overflow-hidden">
+      <DialogContent className="fixed top-4 left-4 z-50 w-96 h-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] p-0 border-2 border-primary/20 bg-background/95 backdrop-blur-sm">
         <DialogTitle className="sr-only">Real-Time Package Scanner</DialogTitle>
         <DialogDescription className="sr-only">
           AI-powered real-time package scanning for strain identification
         </DialogDescription>
 
-        <div className="relative w-screen h-screen flex items-center justify-center bg-black">
+        <div className="relative w-full h-full flex flex-col bg-black rounded-lg overflow-hidden">
           <video
             ref={videoRef}
-            className="w-full h-full object-cover absolute inset-0"
+            className="w-full h-full object-cover"
             playsInline
             muted
             autoPlay
@@ -260,92 +260,84 @@ const RealTimeScan = ({ open, onClose, onStrainGenerated }: RealTimeScanProps) =
           {/* Scan overlay */}
           <div className="absolute inset-0 pointer-events-none">
             {/* Scanning frame */}
-            <div className="absolute inset-8 border-2 border-green-400 rounded-lg shadow-lg">
-              <div className="absolute inset-0 bg-green-400/10 animate-pulse rounded-lg" />
+            <div className="absolute inset-2 border border-green-400 rounded-md">
+              <div className="absolute inset-0 bg-green-400/10 animate-pulse rounded-md" />
               {isScanning && (
                 <>
-                  <div className="absolute top-0 left-0 w-full h-1 bg-green-400 animate-pulse" />
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-green-400 animate-pulse" />
-                  <div className="absolute left-0 top-0 w-1 h-full bg-green-400 animate-pulse" />
-                  <div className="absolute right-0 top-0 w-1 h-full bg-green-400 animate-pulse" />
+                  <div className="absolute top-0 left-0 w-full h-0.5 bg-green-400 animate-pulse" />
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-green-400 animate-pulse" />
+                  <div className="absolute left-0 top-0 w-0.5 h-full bg-green-400 animate-pulse" />
+                  <div className="absolute right-0 top-0 w-0.5 h-full bg-green-400 animate-pulse" />
                 </>
               )}
             </div>
             
             {/* Corner indicators */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 border-green-400" />
-            <div className="absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 border-green-400" />
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 border-green-400" />
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 border-green-400" />
+            <div className="absolute top-1 left-1 w-4 h-4 border-l-2 border-t-2 border-green-400" />
+            <div className="absolute top-1 right-1 w-4 h-4 border-r-2 border-t-2 border-green-400" />
+            <div className="absolute bottom-1 left-1 w-4 h-4 border-l-2 border-b-2 border-green-400" />
+            <div className="absolute bottom-1 right-1 w-4 h-4 border-r-2 border-b-2 border-green-400" />
           </div>
 
-          {/* Controls */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center space-y-4 z-10">
+          {/* Header with controls */}
+          <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-2 z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  {getCurrentIcon()}
+                  {isScanning && <div className="absolute -inset-1 border border-white/20 rounded-full animate-ping" />}
+                </div>
+                <span className="text-white text-sm font-medium">Live Scanner</span>
+              </div>
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                size="sm"
+                className="bg-black/50 hover:bg-black/70 text-white h-6 w-6 p-0"
+              >
+                ×
+              </Button>
+            </div>
+          </div>
+
+          {/* Bottom controls */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 z-10">
             {!isScanning && cameraReady && (
               <Button
                 onClick={startRealTimeScan}
-                className="cannabis-gradient text-white px-8 py-3 text-lg font-semibold"
+                className="w-full cannabis-gradient text-white py-2 text-sm font-semibold"
                 disabled={!user}
               >
-                <Scan className="h-5 w-5 mr-2" />
-                Start Real-Time Scan
+                <Scan className="h-4 w-4 mr-2" />
+                Start Scan
               </Button>
             )}
 
+            {isScanning && (
+              <div className="space-y-2">
+                <Progress value={progress} className="h-1.5 bg-white/20" />
+                <div className="text-xs text-white/90 text-center">
+                  {SCAN_STEPS[currentStep]?.text || 'Processing...'}
+                </div>
+                <div className="flex justify-between text-xs text-white/60">
+                  <span>{callCountRef.current}/10</span>
+                  <span>{scanTime}s</span>
+                </div>
+              </div>
+            )}
+
             {error && (
-              <div className="bg-red-500/90 text-white px-4 py-2 rounded-lg text-center">
+              <div className="bg-red-500/90 text-white px-3 py-2 rounded text-xs text-center">
                 {error}
               </div>
             )}
 
             {!user && (
-              <div className="bg-yellow-500/90 text-white px-4 py-2 rounded-lg text-center">
-                Sign in required for scanning
+              <div className="bg-yellow-500/90 text-white px-3 py-2 rounded text-xs text-center">
+                Sign in required
               </div>
             )}
           </div>
-
-          {/* Progress overlay */}
-          {isScanning && (
-            <div className="absolute top-8 left-1/2 transform -translate-x-1/2 w-80 z-10">
-              <div className="bg-black/80 backdrop-blur-sm rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    {getCurrentIcon()}
-                    <div className="absolute -inset-2 border border-white/20 rounded-full animate-ping" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">Real-Time AI Scan</span>
-                    <div className="text-xs text-green-400 bg-green-400/20 px-2 py-1 rounded-full">
-                      {Math.round(progress)}%
-                    </div>
-                  </div>
-                </div>
-                
-                <Progress value={progress} className="h-2 bg-white/20" />
-                
-                <div className="text-sm text-white/90 min-h-[20px]">
-                  {SCAN_STEPS[currentStep]?.text || 'Processing...'}
-                  <span className="animate-pulse text-green-400 ml-1">▋</span>
-                </div>
-                
-                <div className="flex justify-between text-xs text-white/60">
-                  <span>Attempt {callCountRef.current}/10</span>
-                  <span>{scanTime}s elapsed</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Close button */}
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white"
-          >
-            <Camera className="h-4 w-4" />
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
