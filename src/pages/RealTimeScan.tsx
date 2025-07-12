@@ -50,6 +50,8 @@ const RealTimeScan = () => {
   const [result, setResult] = useState<Strain | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [detectionStrength, setDetectionStrength] = useState(0);
   
   const { user } = useAuth();
 
@@ -58,6 +60,13 @@ const RealTimeScan = () => {
     startCamera();
     return () => cleanup();
   }, []);
+
+  // Auto-start scanning when camera is ready and user is authenticated
+  useEffect(() => {
+    if (cameraReady && user && !isScanning) {
+      startRealTimeScan();
+    }
+  }, [cameraReady, user]);
 
   const startCamera = async () => {
     try {
@@ -173,16 +182,25 @@ const RealTimeScan = () => {
       if (callCountRef.current >= 10 || result) {
         clearInterval(scanIntervalRef.current!);
         clearInterval(scanTimer);
+        if (!result) {
+          setError('Scan timeout - no strain detected clearly');
+        }
         return;
       }
       
       try {
+        setIsProcessing(true);
         const imageData = cropAndScaleImage(canvasRef.current!, videoRef.current!);
         callCountRef.current++;
         
         console.log(`Real-time scan attempt ${callCountRef.current}/10`);
         
         const aiResult = await analyzeStrainWithAI(imageData, undefined, user.id);
+        
+        // Update detection strength based on confidence for visual feedback
+        if (aiResult?.confidence) {
+          setDetectionStrength(aiResult.confidence);
+        }
         
         if (aiResult && aiResult.confidence > 70) {
           const strain: Strain = {
@@ -204,6 +222,8 @@ const RealTimeScan = () => {
         }
       } catch (error) {
         console.error('Scan attempt failed:', error);
+      } finally {
+        setIsProcessing(false);
       }
     };
     
@@ -257,24 +277,77 @@ const RealTimeScan = () => {
         
         {/* Scan overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Scanning frame */}
-          <div className="absolute inset-8 border-2 border-green-400 rounded-lg shadow-lg">
-            <div className="absolute inset-0 bg-green-400/10 animate-pulse rounded-lg" />
+          {/* Scanning frame with dynamic detection strength */}
+          <div className={`absolute inset-8 border-2 rounded-lg shadow-lg transition-all duration-300 ${
+            detectionStrength > 50 ? 'border-yellow-400' : 
+            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+          }`}>
+            <div className={`absolute inset-0 rounded-lg transition-all duration-300 ${
+              detectionStrength > 50 ? 'bg-yellow-400/20 animate-pulse' : 
+              detectionStrength > 30 ? 'bg-blue-400/15 animate-pulse' : 'bg-green-400/10 animate-pulse'
+            }`} />
             {isScanning && (
               <>
-                <div className="absolute top-0 left-0 w-full h-1 bg-green-400 animate-pulse" />
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-green-400 animate-pulse" />
-                <div className="absolute left-0 top-0 w-1 h-full bg-green-400 animate-pulse" />
-                <div className="absolute right-0 top-0 w-1 h-full bg-green-400 animate-pulse" />
+                <div className={`absolute top-0 left-0 w-full h-1 animate-pulse transition-colors duration-300 ${
+                  detectionStrength > 50 ? 'bg-yellow-400' : 
+                  detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
+                }`} />
+                <div className={`absolute bottom-0 left-0 w-full h-1 animate-pulse transition-colors duration-300 ${
+                  detectionStrength > 50 ? 'bg-yellow-400' : 
+                  detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
+                }`} />
+                <div className={`absolute left-0 top-0 w-1 h-full animate-pulse transition-colors duration-300 ${
+                  detectionStrength > 50 ? 'bg-yellow-400' : 
+                  detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
+                }`} />
+                <div className={`absolute right-0 top-0 w-1 h-full animate-pulse transition-colors duration-300 ${
+                  detectionStrength > 50 ? 'bg-yellow-400' : 
+                  detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
+                }`} />
               </>
+            )}
+            
+            {/* Processing indicator */}
+            {isProcessing && (
+              <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-ping" />
             )}
           </div>
           
-          {/* Corner indicators */}
-          <div className="absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 border-green-400" />
-          <div className="absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 border-green-400" />
-          <div className="absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 border-green-400" />
-          <div className="absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 border-green-400" />
+          {/* Corner indicators with detection feedback */}
+          <div className={`absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 transition-colors duration-300 ${
+            detectionStrength > 50 ? 'border-yellow-400' : 
+            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+          }`} />
+          <div className={`absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 transition-colors duration-300 ${
+            detectionStrength > 50 ? 'border-yellow-400' : 
+            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+          }`} />
+          <div className={`absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 transition-colors duration-300 ${
+            detectionStrength > 50 ? 'border-yellow-400' : 
+            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+          }`} />
+          <div className={`absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 transition-colors duration-300 ${
+            detectionStrength > 50 ? 'border-yellow-400' : 
+            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+          }`} />
+          
+          {/* Detection strength indicator */}
+          {isScanning && detectionStrength > 0 && (
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+              <div className="bg-black/80 backdrop-blur-sm rounded-lg px-4 py-2">
+                <div className="text-white text-sm font-medium mb-1">Detection: {detectionStrength}%</div>
+                <div className="w-32 h-1 bg-white/20 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-300 ${
+                      detectionStrength > 50 ? 'bg-yellow-400' : 
+                      detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
+                    }`}
+                    style={{ width: `${detectionStrength}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Progress overlay */}
