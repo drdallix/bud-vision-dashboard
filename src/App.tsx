@@ -12,6 +12,7 @@ const Index = lazy(() => import('./pages/Index'));
 const Auth = lazy(() => import('./pages/Auth'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const StrainPage = lazy(() => import('./pages/StrainPage'));
+const RealTimeScan = lazy(() => import('./pages/RealTimeScan'));
 const StrainApiEndpoint = lazy(() => import('./pages/api/StrainApi').then(module => ({ default: module.StrainApiEndpoint })));
 const QRApiEndpoint = lazy(() => import('./pages/api/StrainApi').then(module => ({ default: module.QRApiEndpoint })));
 
@@ -40,6 +41,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/scan" element={<RealTimeScan />} />
                     <Route path="/strain/:strainName" element={<StrainPage />} />
                     
                     {/* API Endpoints */}

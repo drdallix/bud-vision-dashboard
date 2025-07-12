@@ -1,5 +1,6 @@
 
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +9,6 @@ import ImageUpload from './ImageUpload';
 import GenerationProgress from './GenerationProgress';
 import StatusRow from './StatusRow';
 import InputControls from './InputControls';
-import RealTimeScan from './RealTimeScan';
 import { useGenerationLogic } from './useGenerationLogic';
 import { Strain } from '@/types/strain';
 
@@ -20,9 +20,9 @@ interface SmartOmnibarProps {
 }
 
 const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResults }: SmartOmnibarProps) => {
+  const navigate = useNavigate();
   const [showVoiceInput, setShowVoiceInput] = useState(false);
   const [showImageUpload, setShowImageUpload] = useState(false);
-  const [showRealTimeScan, setShowRealTimeScan] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -67,6 +67,10 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
     }
   };
 
+  const handleRealTimeScan = () => {
+    navigate('/scan');
+  };
+
   return (
     <div className="space-y-2">
       {/* Main omnibar input */}
@@ -87,7 +91,7 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
           canGenerate={canGenerate}
           onVoiceClick={() => setShowVoiceInput(true)}
           onCameraClick={() => fileInputRef.current?.click()}
-          onRealTimeScanClick={() => setShowRealTimeScan(true)}
+          onRealTimeScanClick={handleRealTimeScan}
           onGenerate={handleGenerate}
         />
 
@@ -128,11 +132,6 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
         onUpload={setUploadedImage}
       />
 
-      <RealTimeScan
-        open={showRealTimeScan}
-        onClose={() => setShowRealTimeScan(false)}
-        onStrainGenerated={onStrainGenerated}
-      />
     </div>
   );
 };
