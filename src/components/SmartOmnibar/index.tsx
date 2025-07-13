@@ -67,10 +67,6 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
     }
   };
 
-  const handleRealTimeScan = () => {
-    navigate('/scan');
-  };
-
   return (
     <div className="space-y-2">
       {/* Main omnibar input */}
@@ -91,7 +87,6 @@ const SmartOmnibar = ({ searchTerm, onSearchChange, onStrainGenerated, hasResult
           canGenerate={canGenerate}
           onVoiceClick={() => setShowVoiceInput(true)}
           onCameraClick={() => fileInputRef.current?.click()}
-          onRealTimeScanClick={handleRealTimeScan}
           onGenerate={handleGenerate}
         />
 

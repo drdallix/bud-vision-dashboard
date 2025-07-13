@@ -1,6 +1,6 @@
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, FileText, Eye } from 'lucide-react';
+import { Search, Scan, FileText, Eye } from 'lucide-react';
 
 interface MobileNavigationProps {
   activeTab: string;
@@ -16,9 +16,9 @@ const MobileNavigation = ({ activeTab, onTabChange }: MobileNavigationProps) => 
             <Search className="h-4 w-4" />
             <span className="text-xs">Browse</span>
           </TabsTrigger>
-          <TabsTrigger value="bulk" className="flex flex-col items-center gap-1 h-full">
-            <Plus className="h-4 w-4" />
-            <span className="text-xs">Bulk Add</span>
+          <TabsTrigger value="scan" className="flex flex-col items-center gap-1 h-full">
+            <Scan className="h-4 w-4 text-green-600" />
+            <span className="text-xs">Scan</span>
           </TabsTrigger>
           <TabsTrigger value="details" className="flex flex-col items-center gap-1 h-full">
             <FileText className="h-4 w-4" />

@@ -1,5 +1,5 @@
 
-import { Menu, Database } from 'lucide-react';
+import { Menu, Database, Scan } from 'lucide-react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,7 +12,7 @@ const Navigation = ({ showSettings }: NavigationProps) => {
 
   return (
     <div className="hidden md:block">
-      <TabsList className="grid w-full grid-cols-3 lg:w-fit lg:mx-auto">
+      <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:mx-auto">
         <TabsTrigger value="browse" className="flex items-center gap-2">
           <Menu className="h-4 w-4" />
           {user ? 'Smart Inventory Scanner' : 'Menu Board'}
@@ -20,6 +20,10 @@ const Navigation = ({ showSettings }: NavigationProps) => {
         <TabsTrigger value="details" className="flex items-center gap-2">
           <Database className="h-4 w-4" />
           Strain Information
+        </TabsTrigger>
+        <TabsTrigger value="scan" className="flex items-center gap-2">
+          <Scan className="h-4 w-4 text-green-600" />
+          Real-Time Scan
         </TabsTrigger>
         <TabsTrigger value="showcase" className="flex items-center gap-2">
           <span className="h-4 w-4 text-green-600">🎬</span>

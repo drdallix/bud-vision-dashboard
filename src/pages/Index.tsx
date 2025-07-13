@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScans } from '@/hooks/useScans';
@@ -15,6 +16,7 @@ import StrainShowcase from '@/components/StrainShowcase';
 import { Strain } from '@/types/strain';
 
 const Index = () => {
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { scans, addScan } = useScans();
   
@@ -70,6 +72,14 @@ const Index = () => {
     setActiveTab('details');
   };
 
+  const handleTabChange = (tab: string) => {
+    if (tab === 'scan') {
+      navigate('/scan');
+      return;
+    }
+    setActiveTab(tab);
+  };
+
   // Show loading state but still render the full component structure
   if (authLoading) {
     return (
@@ -87,14 +97,17 @@ const Index = () => {
       <div className="container mx-auto px-4 py-6 pb-20">
         <Header onSettingsClick={handleSettingsClick} />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           {user && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <TabsList className="h-auto p-1">
                 <TabsTrigger value="browse" className="w-full">Browse</TabsTrigger>
               </TabsList>
               <TabsList className="h-auto p-1">
                 <TabsTrigger value="details" disabled={!currentStrain} className="w-full">Details</TabsTrigger>
+              </TabsList>
+              <TabsList className="h-auto p-1">
+                <TabsTrigger value="scan" className="w-full">Scan</TabsTrigger>
               </TabsList>
               <TabsList className="h-auto p-1">
                 <TabsTrigger value="showcase" className="w-full">Showcase</TabsTrigger>
@@ -121,7 +134,7 @@ const Index = () => {
       {user && (
         <MobileNavigation 
           activeTab={activeTab} 
-          onTabChange={setActiveTab} 
+          onTabChange={handleTabChange} 
         />
       )}
 
