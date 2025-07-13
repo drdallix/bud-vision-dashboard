@@ -52,6 +52,8 @@ const RealTimeScan = () => {
   const [cameraReady, setCameraReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [detectionStrength, setDetectionStrength] = useState(0);
+  const [lastScannedStrainName, setLastScannedStrainName] = useState<string | null>(null);
+  const [scanningActive, setScanningActive] = useState(false);
   
   const { user } = useAuth();
 
@@ -102,12 +104,14 @@ const RealTimeScan = () => {
       clearTimeout(timeoutRef.current);
     }
     setIsScanning(false);
+    setScanningActive(false);
     setProgress(0);
     setCurrentStep(0);
     setScanTime(0);
     setResult(null);
     setError(null);
     setCameraReady(false);
+    setLastScannedStrainName(null);
     callCountRef.current = 0;
   };
 
@@ -178,13 +182,11 @@ const RealTimeScan = () => {
     }, 1000);
     
     // Real-time scanning logic
+    setScanningActive(true);
     const performScan = async () => {
-      if (callCountRef.current >= 10 || result) {
+      if (!scanningActive || result) {
         clearInterval(scanIntervalRef.current!);
         clearInterval(scanTimer);
-        if (!result) {
-          setError('Scan timeout - no strain detected clearly');
-        }
         return;
       }
       
@@ -193,7 +195,7 @@ const RealTimeScan = () => {
         const imageData = cropAndScaleImage(canvasRef.current!, videoRef.current!);
         callCountRef.current++;
         
-        console.log(`Real-time scan attempt ${callCountRef.current}/10`);
+        console.log(`Real-time scan attempt ${callCountRef.current} - every 7s`);
         
         const aiResult = await analyzeStrainWithAI(imageData, undefined, user.id);
         
@@ -203,6 +205,12 @@ const RealTimeScan = () => {
         }
         
         if (aiResult && aiResult.confidence > 70) {
+          // Check for duplicate scans
+          if (lastScannedStrainName && lastScannedStrainName.toLowerCase() === aiResult.name?.toLowerCase()) {
+            console.log('Duplicate strain detected, skipping...');
+            return;
+          }
+          
           const strain: Strain = {
             ...aiResult,
             id: aiResult.id || Date.now().toString(),
@@ -211,13 +219,17 @@ const RealTimeScan = () => {
             userId: user.id
           };
           
+          // Stop scanning immediately when result is found
+          setScanningActive(false);
+          setLastScannedStrainName(strain.name);
           setResult(strain);
           setProgress(100);
           clearInterval(scanIntervalRef.current!);
           clearInterval(scanTimer);
           
+          // Navigate to strain details immediately after generation
           setTimeout(() => {
-            navigate('/', { state: { newStrain: strain } });
+            navigate('/', { state: { newStrain: strain, selectStrain: strain } });
           }, 2000);
         }
       } catch (error) {
@@ -227,17 +239,18 @@ const RealTimeScan = () => {
       }
     };
     
-    // Start scanning every second
-    scanIntervalRef.current = setInterval(performScan, 1000);
+    // Start scanning every 7 seconds
+    scanIntervalRef.current = setInterval(performScan, 7000);
     
-    // Auto-timeout after 10 seconds
+    // Auto-timeout after 60 seconds (since we scan every 7s, give more time)
     timeoutRef.current = setTimeout(() => {
-      if (!result) {
+      if (!result && scanningActive) {
+        setScanningActive(false);
         clearInterval(scanIntervalRef.current!);
         clearInterval(scanTimer);
         setError('Scan timeout - package not detected clearly');
       }
-    }, 10000);
+    }, 60000);
   };
 
   const getCurrentIcon = () => {
@@ -375,7 +388,7 @@ const RealTimeScan = () => {
               </div>
               
               <div className="flex justify-between text-xs text-white/60">
-                <span>Attempt {callCountRef.current}/10</span>
+                <span>Scanning every 7s</span>
                 <span>{scanTime}s elapsed</span>
               </div>
             </div>
