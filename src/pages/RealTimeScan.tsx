@@ -1,37 +1,48 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Camera, Scan, LoaderCircle, ArrowLeft } from 'lucide-react';
+import { Camera, Scan, LoaderCircle, ArrowLeft, Eye, Search, Zap } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { analyzeStrainWithAI } from '@/components/SmartOmnibar/AIAnalysis';
 import { useAuth } from '@/contexts/AuthContext';
 import { Strain } from '@/types/strain';
+import { supabase } from '@/integrations/supabase/client';
+// @ts-ignore
+import Tesseract from 'tesseract.js';
 
-const SCAN_STEPS = [
-  { icon: Camera, text: "Initializing real-time scanner...", duration: 800, color: "text-blue-500" },
-  { icon: Scan, text: "Detecting package in frame...", duration: 1000, color: "text-green-500" },
-  { icon: LoaderCircle, text: "Processing visual information...", duration: 1200, color: "text-purple-500" },
-  { icon: Camera, text: "Cross-referencing strain database...", duration: 1000, color: "text-yellow-500" },
-  { icon: Scan, text: "Analyzing cannabinoid profiles...", duration: 800, color: "text-orange-500" },
-  { icon: LoaderCircle, text: "Finalizing strain identification...", duration: 600, color: "text-green-600" }
+const SCAN_PHASES = [
+  { icon: Eye, text: "Scanning for text...", color: "text-blue-400" },
+  { icon: Search, text: "Reading package text...", color: "text-green-400" },
+  { icon: Scan, text: "Identifying strain...", color: "text-purple-400" },
+  { icon: Zap, text: "Generating profile...", color: "text-yellow-400" }
 ];
 
-// Image processing utilities
-const cropAndScaleImage = (canvas: HTMLCanvasElement, video: HTMLVideoElement): string => {
+// OCR processing utilities
+const captureFrame = (canvas: HTMLCanvasElement, video: HTMLVideoElement): ImageData => {
   const ctx = canvas.getContext('2d')!;
   const { videoWidth: vw, videoHeight: vh } = video;
   
-  // Crop to center square for better OCR
-  const size = Math.min(vw, vh);
-  const cropX = (vw - size) / 2;
-  const cropY = (vh - size) / 2;
+  // Full frame capture for better OCR
+  canvas.width = vw;
+  canvas.height = vh;
   
-  // Scale down to 512x512 for optimal OCR and bandwidth
-  canvas.width = 512;
-  canvas.height = 512;
+  ctx.drawImage(video, 0, 0, vw, vh);
+  return ctx.getImageData(0, 0, vw, vh);
+};
+
+const preprocessImageForOCR = (canvas: HTMLCanvasElement, imageData: ImageData): void => {
+  const ctx = canvas.getContext('2d')!;
+  canvas.width = imageData.width;
+  canvas.height = imageData.height;
   
-  ctx.drawImage(video, cropX, cropY, size, size, 0, 0, 512, 512);
-  return canvas.toDataURL('image/jpeg', 0.8);
+  // Apply contrast enhancement for better OCR
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    const enhanced = gray > 128 ? 255 : 0; // High contrast
+    data[i] = data[i + 1] = data[i + 2] = enhanced;
+  }
+  
+  ctx.putImageData(imageData, 0, 0);
 };
 
 const RealTimeScan = () => {
@@ -44,16 +55,15 @@ const RealTimeScan = () => {
   const callCountRef = useRef(0);
   
   const [isScanning, setIsScanning] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [scanTime, setScanTime] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState(0);
+  const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
+  const [detectedText, setDetectedText] = useState<string>('');
+  const [ocrConfidence, setOcrConfidence] = useState(0);
   const [result, setResult] = useState<Strain | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [detectionStrength, setDetectionStrength] = useState(0);
-  const [lastScannedStrainName, setLastScannedStrainName] = useState<string | null>(null);
-  const [scanningActive, setScanningActive] = useState(false);
+  const [scanCount, setScanCount] = useState(0);
+  const [lastDetectedStrain, setLastDetectedStrain] = useState<string | null>(null);
   
   const { user } = useAuth();
 
@@ -66,7 +76,7 @@ const RealTimeScan = () => {
   // Auto-start scanning when camera is ready and user is authenticated
   useEffect(() => {
     if (cameraReady && user && !isScanning) {
-      startRealTimeScan();
+      startContinuousScanning();
     }
   }, [cameraReady, user]);
 
@@ -104,159 +114,144 @@ const RealTimeScan = () => {
       clearTimeout(timeoutRef.current);
     }
     setIsScanning(false);
-    setScanningActive(false);
-    setProgress(0);
-    setCurrentStep(0);
-    setScanTime(0);
+    setCurrentPhase(0);
+    setFrozenFrame(null);
+    setDetectedText('');
+    setOcrConfidence(0);
     setResult(null);
     setError(null);
     setCameraReady(false);
-    setLastScannedStrainName(null);
-    callCountRef.current = 0;
+    setScanCount(0);
+    setLastDetectedStrain(null);
   };
 
-  const runAnimationSequence = async (onComplete: () => void) => {
-    let stepIndex = 0;
-    let totalProgress = 0;
-    
-    const runStep = () => {
-      if (stepIndex >= SCAN_STEPS.length) {
-        onComplete();
-        return;
-      }
+  const performOCR = async (canvas: HTMLCanvasElement): Promise<string> => {
+    try {
+      const { data: { text, confidence } } = await Tesseract.recognize(canvas, 'eng', {
+        logger: () => {} // Suppress logs
+      });
       
-      const step = SCAN_STEPS[stepIndex];
-      setCurrentStep(stepIndex);
-      
-      const stepProgress = 100 / SCAN_STEPS.length;
-      const startProgress = totalProgress;
-      const endProgress = totalProgress + stepProgress;
-      
-      // Animate progress for this step
-      const duration = step.duration;
-      const startTime = Date.now();
-      
-      const animateProgress = () => {
-        const elapsed = Date.now() - startTime;
-        const stepCompletion = Math.min(elapsed / duration, 1);
-        const currentProgress = startProgress + (stepProgress * stepCompletion);
-        
-        setProgress(currentProgress);
-        
-        if (stepCompletion < 1 && !result) {
-          requestAnimationFrame(animateProgress);
-        } else {
-          totalProgress = endProgress;
-          stepIndex++;
-          setTimeout(runStep, 50);
-        }
-      };
-      
-      animateProgress();
-    };
-    
-    runStep();
+      setOcrConfidence(confidence);
+      return text.trim();
+    } catch (error) {
+      console.error('OCR failed:', error);
+      return '';
+    }
   };
 
-  const startRealTimeScan = async () => {
-    if (!user || !cameraReady || !videoRef.current || !canvasRef.current) return;
-    
+  const analyzeStrainFromText = async (text: string): Promise<Strain | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('ocr-strain-analysis', {
+        body: { detectedText: text }
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Strain analysis failed:', error);
+      return null;
+    }
+  };
+
+  const performSingleScan = async (): Promise<void> => {
+    if (!videoRef.current || !canvasRef.current || !user) return;
+
     setIsScanning(true);
-    setError(null);
-    callCountRef.current = 0;
-    setScanTime(0);
+    setCurrentPhase(0);
     
-    // Start animation sequence
-    runAnimationSequence(() => {
-      if (!result) {
-        setProgress(100);
-        setTimeout(() => {
-          setError('Scan timeout - please try again with better lighting');
-        }, 500);
-      }
-    });
-    
-    // Start scan timer
-    const scanTimer = setInterval(() => {
-      setScanTime(prev => prev + 1);
-    }, 1000);
-    
-    // Real-time scanning logic
-    setScanningActive(true);
-    const performScan = async () => {
-      if (!scanningActive || result) {
-        clearInterval(scanIntervalRef.current!);
-        clearInterval(scanTimer);
-        return;
-      }
+    try {
+      // Phase 1: Freeze frame
+      const imageData = captureFrame(canvasRef.current, videoRef.current);
+      const frozenCanvas = document.createElement('canvas');
+      frozenCanvas.width = imageData.width;
+      frozenCanvas.height = imageData.height;
+      frozenCanvas.getContext('2d')!.putImageData(imageData, 0, 0);
+      setFrozenFrame(frozenCanvas.toDataURL());
       
-      try {
-        setIsProcessing(true);
-        const imageData = cropAndScaleImage(canvasRef.current!, videoRef.current!);
-        callCountRef.current++;
-        
-        console.log(`Real-time scan attempt ${callCountRef.current} - every 7s`);
-        
-        const aiResult = await analyzeStrainWithAI(imageData, undefined, user.id);
-        
-        // Update detection strength based on confidence for visual feedback
-        if (aiResult?.confidence) {
-          setDetectionStrength(aiResult.confidence);
-        }
-        
-        if (aiResult && aiResult.confidence > 70) {
-          // Check for duplicate scans
-          if (lastScannedStrainName && lastScannedStrainName.toLowerCase() === aiResult.name?.toLowerCase()) {
-            console.log('Duplicate strain detected, skipping...');
-            return;
-          }
-          
-          const strain: Strain = {
-            ...aiResult,
-            id: aiResult.id || Date.now().toString(),
-            scannedAt: new Date().toISOString(),
-            inStock: true,
-            userId: user.id
-          };
-          
-          // Stop scanning immediately when result is found
-          setScanningActive(false);
-          setLastScannedStrainName(strain.name);
-          setResult(strain);
-          setProgress(100);
-          clearInterval(scanIntervalRef.current!);
-          clearInterval(scanTimer);
-          
-          // Navigate to strain details immediately after generation
-          setTimeout(() => {
-            navigate('/', { state: { newStrain: strain, selectStrain: strain } });
-          }, 2000);
-        }
-      } catch (error) {
-        console.error('Scan attempt failed:', error);
-      } finally {
-        setIsProcessing(false);
+      // Phase 2: OCR text detection
+      setCurrentPhase(1);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      preprocessImageForOCR(canvasRef.current, imageData);
+      const text = await performOCR(canvasRef.current);
+      setDetectedText(text);
+      
+      if (!text || text.length < 3) {
+        throw new Error('No text detected in image');
       }
-    };
-    
-    // Start scanning every 7 seconds
-    scanIntervalRef.current = setInterval(performScan, 7000);
-    
-    // Auto-timeout after 60 seconds (since we scan every 7s, give more time)
-    timeoutRef.current = setTimeout(() => {
-      if (!result && scanningActive) {
-        setScanningActive(false);
-        clearInterval(scanIntervalRef.current!);
-        clearInterval(scanTimer);
-        setError('Scan timeout - package not detected clearly');
+
+      // Phase 3: Strain identification
+      setCurrentPhase(2);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const strainData = await analyzeStrainFromText(text);
+      
+      if (!strainData || strainData.confidence < 60) {
+        throw new Error('No valid strain identified');
       }
-    }, 60000);
+
+      // Phase 4: Finalize
+      setCurrentPhase(3);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Check for duplicates
+      if (lastDetectedStrain && lastDetectedStrain.toLowerCase() === strainData.name.toLowerCase()) {
+        throw new Error('Duplicate strain detected');
+      }
+
+      const strain: Strain = {
+        ...strainData,
+        scannedAt: new Date().toISOString(),
+        inStock: true,
+        userId: user.id
+      };
+
+      setLastDetectedStrain(strain.name);
+      setResult(strain);
+      
+      // Navigate after success
+      setTimeout(() => {
+        navigate('/', { state: { newStrain: strain, selectStrain: strain } });
+      }, 2000);
+
+    } catch (error) {
+      console.error('Scan failed:', error);
+      setError(error instanceof Error ? error.message : 'Scan failed');
+      
+      // Reset for next scan
+      setTimeout(() => {
+        setIsScanning(false);
+        setFrozenFrame(null);
+        setError(null);
+        setDetectedText('');
+        setOcrConfidence(0);
+      }, 3000);
+    }
   };
 
-  const getCurrentIcon = () => {
-    const step = SCAN_STEPS[currentStep];
-    const IconComponent = step?.icon || Camera;
-    return <IconComponent className={`h-6 w-6 animate-pulse ${step?.color || 'text-blue-500'}`} />;
+  const startContinuousScanning = () => {
+    if (!user || !cameraReady || isScanning) return;
+    
+    setScanCount(0);
+    
+    // Scan every 5 seconds, but stop if strain is found
+    scanIntervalRef.current = setInterval(() => {
+      if (!isScanning && !result) {
+        setScanCount(prev => prev + 1);
+        performSingleScan();
+      }
+    }, 5000);
+  };
+
+  const triggerManualScan = () => {
+    if (!isScanning && !result) {
+      performSingleScan();
+    }
+  };
+
+  const getCurrentPhaseInfo = () => {
+    const phase = SCAN_PHASES[currentPhase];
+    return phase || SCAN_PHASES[0];
   };
 
   return (
@@ -278,118 +273,103 @@ const RealTimeScan = () => {
 
       {/* Camera viewport */}
       <div className="flex-1 relative">
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          playsInline
-          muted
-          autoPlay
-        />
+        {/* Show frozen frame during scanning, live video otherwise */}
+        {frozenFrame && isScanning ? (
+          <img
+            src={frozenFrame}
+            className="w-full h-full object-cover"
+            alt="Frozen scan frame"
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            playsInline
+            muted
+            autoPlay
+          />
+        )}
         
         <canvas ref={canvasRef} className="hidden" />
         
         {/* Scan overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Scanning frame with dynamic detection strength */}
-          <div className={`absolute inset-8 border-2 rounded-lg shadow-lg transition-all duration-300 ${
-            detectionStrength > 50 ? 'border-yellow-400' : 
-            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+          {/* OCR scanning frame */}
+          <div className={`absolute inset-8 border-2 rounded-lg transition-all duration-300 ${
+            isScanning ? 'border-green-400 shadow-lg shadow-green-400/20' : 'border-white/30'
           }`}>
-            <div className={`absolute inset-0 rounded-lg transition-all duration-300 ${
-              detectionStrength > 50 ? 'bg-yellow-400/20 animate-pulse' : 
-              detectionStrength > 30 ? 'bg-blue-400/15 animate-pulse' : 'bg-green-400/10 animate-pulse'
-            }`} />
             {isScanning && (
-              <>
-                <div className={`absolute top-0 left-0 w-full h-1 animate-pulse transition-colors duration-300 ${
-                  detectionStrength > 50 ? 'bg-yellow-400' : 
-                  detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
-                }`} />
-                <div className={`absolute bottom-0 left-0 w-full h-1 animate-pulse transition-colors duration-300 ${
-                  detectionStrength > 50 ? 'bg-yellow-400' : 
-                  detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
-                }`} />
-                <div className={`absolute left-0 top-0 w-1 h-full animate-pulse transition-colors duration-300 ${
-                  detectionStrength > 50 ? 'bg-yellow-400' : 
-                  detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
-                }`} />
-                <div className={`absolute right-0 top-0 w-1 h-full animate-pulse transition-colors duration-300 ${
-                  detectionStrength > 50 ? 'bg-yellow-400' : 
-                  detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
-                }`} />
-              </>
+              <div className="absolute inset-0 bg-green-400/10 animate-pulse rounded-lg" />
             )}
             
-            {/* Processing indicator */}
-            {isProcessing && (
-              <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+            {/* Scanning lines */}
+            {isScanning && (
+              <>
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-green-400 animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-green-400 animate-pulse" />
+                <div className="absolute left-0 top-0 w-0.5 h-full bg-green-400 animate-pulse" />
+                <div className="absolute right-0 top-0 w-0.5 h-full bg-green-400 animate-pulse" />
+              </>
             )}
           </div>
           
-          {/* Corner indicators with detection feedback */}
+          {/* Corner indicators */}
           <div className={`absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 transition-colors duration-300 ${
-            detectionStrength > 50 ? 'border-yellow-400' : 
-            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+            isScanning ? 'border-green-400' : 'border-white/50'
           }`} />
           <div className={`absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 transition-colors duration-300 ${
-            detectionStrength > 50 ? 'border-yellow-400' : 
-            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+            isScanning ? 'border-green-400' : 'border-white/50'
           }`} />
           <div className={`absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 transition-colors duration-300 ${
-            detectionStrength > 50 ? 'border-yellow-400' : 
-            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+            isScanning ? 'border-green-400' : 'border-white/50'
           }`} />
           <div className={`absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 transition-colors duration-300 ${
-            detectionStrength > 50 ? 'border-yellow-400' : 
-            detectionStrength > 30 ? 'border-blue-400' : 'border-green-400'
+            isScanning ? 'border-green-400' : 'border-white/50'
           }`} />
           
-          {/* Detection strength indicator */}
-          {isScanning && detectionStrength > 0 && (
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+          {/* OCR confidence indicator */}
+          {ocrConfidence > 0 && (
+            <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
+              <div className="bg-black/80 backdrop-blur-sm rounded-lg px-3 py-1">
+                <div className="text-white text-xs">OCR: {ocrConfidence}%</div>
+              </div>
+            </div>
+          )}
+          
+          {/* Detected text display */}
+          {detectedText && (
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 max-w-xs">
               <div className="bg-black/80 backdrop-blur-sm rounded-lg px-4 py-2">
-                <div className="text-white text-sm font-medium mb-1">Detection: {detectionStrength}%</div>
-                <div className="w-32 h-1 bg-white/20 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-300 ${
-                      detectionStrength > 50 ? 'bg-yellow-400' : 
-                      detectionStrength > 30 ? 'bg-blue-400' : 'bg-green-400'
-                    }`}
-                    style={{ width: `${detectionStrength}%` }}
-                  />
-                </div>
+                <div className="text-white text-sm font-medium mb-1">Detected Text:</div>
+                <div className="text-green-400 text-xs font-mono">{detectedText}</div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Progress overlay */}
+        {/* Scanning progress overlay */}
         {isScanning && (
           <div className="absolute top-8 left-1/2 transform -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] z-10">
-            <div className="bg-black/80 backdrop-blur-sm rounded-lg p-4 space-y-3">
+            <div className="bg-black/90 backdrop-blur-sm rounded-lg p-4 space-y-3 border border-green-400/30">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  {getCurrentIcon()}
+                  {(() => {
+                    const IconComponent = getCurrentPhaseInfo().icon;
+                    return <IconComponent className={`h-6 w-6 animate-spin ${getCurrentPhaseInfo().color}`} />;
+                  })()}
                   <div className="absolute -inset-2 border border-white/20 rounded-full animate-ping" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-medium">Real-Time AI Scan</span>
+                  <span className="text-white font-medium">OCR Scanner</span>
                   <div className="text-xs text-green-400 bg-green-400/20 px-2 py-1 rounded-full">
-                    {Math.round(progress)}%
+                    Phase {currentPhase + 1}/4
                   </div>
                 </div>
               </div>
               
-              <Progress value={progress} className="h-2 bg-white/20" />
-              
-              <div className="text-sm text-white/90 min-h-[20px]">
-                {SCAN_STEPS[currentStep]?.text || 'Processing...'}
+              <div className="text-sm text-white/90">
+                {getCurrentPhaseInfo().text}
                 <span className="animate-pulse text-green-400 ml-1">▋</span>
-              </div>
-              
-              <div className="flex justify-between text-xs text-white/60">
-                <span>Scanning every 7s</span>
-                <span>{scanTime}s elapsed</span>
               </div>
             </div>
           </div>
@@ -409,20 +389,27 @@ const RealTimeScan = () => {
       </div>
 
       {/* Bottom controls */}
-      <div className="p-4 bg-black/90 backdrop-blur-sm border-t border-white/10">
+      <div className="p-4 bg-black/90 backdrop-blur-sm border-t border-white/10 space-y-3">
+        {/* Status info */}
+        <div className="flex justify-between text-sm text-white/70">
+          <span>Auto-scan: {cameraReady && user ? 'Active' : 'Inactive'}</span>
+          <span>Scans: {scanCount}</span>
+        </div>
+
+        {/* Manual scan trigger */}
         {!isScanning && cameraReady && (
           <Button
-            onClick={startRealTimeScan}
+            onClick={triggerManualScan}
             className="w-full cannabis-gradient text-white py-4 text-lg font-semibold"
             disabled={!user}
           >
             <Scan className="h-5 w-5 mr-2" />
-            Start Real-Time Scan
+            Scan Now
           </Button>
         )}
 
         {error && (
-          <div className="bg-red-500/90 text-white px-4 py-3 rounded-lg text-center mb-4">
+          <div className="bg-red-500/90 text-white px-4 py-3 rounded-lg text-center">
             {error}
           </div>
         )}
