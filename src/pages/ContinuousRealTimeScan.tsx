@@ -130,6 +130,9 @@ const ContinuousRealTimeScan = () => {
       // Capture frames
       const frames = captureFrames();
       
+      // Immediately restart camera to ensure live feed continues
+      ensureCameraIsActive();
+      
       const response = await fetch('https://dqymhupheqkwasfrkcqs.functions.supabase.co/realtime-vision-scan', {
         method: 'POST',
         headers: {
@@ -167,6 +170,26 @@ const ContinuousRealTimeScan = () => {
       console.warn('Scan error:', error);
     } finally {
       setIsGenerating(false);
+      // Ensure camera stays active after processing
+      ensureCameraIsActive();
+    }
+  };
+
+  const ensureCameraIsActive = async () => {
+    if (!videoRef.current || !streamRef.current) {
+      // Restart camera if it's not active
+      await startCamera();
+      return;
+    }
+    
+    // Check if video is playing
+    if (videoRef.current.paused || videoRef.current.ended) {
+      try {
+        await videoRef.current.play();
+      } catch (error) {
+        console.warn('Failed to restart video:', error);
+        await startCamera();
+      }
     }
   };
 
