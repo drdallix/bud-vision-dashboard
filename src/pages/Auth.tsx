@@ -141,7 +141,7 @@ const Auth = () => {
           </Button>
 
           <div className="text-xs text-muted-foreground text-center">
-            Anonymous mode: 3 scans per 15 minutes • Limited features
+            Anonymous mode: 10 scans per hour • Limited features
           </div>
 
           {error && (

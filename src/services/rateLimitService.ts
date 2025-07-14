@@ -6,9 +6,9 @@ interface RateLimitEntry {
 
 class RateLimitService {
   private limits = new Map<string, RateLimitEntry>();
-  private readonly WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-  private readonly MAX_REQUESTS = 10; // 10 requests per 15 minutes for unauthenticated
-  private readonly ANON_MAX_REQUESTS = 3; // 3 requests per 15 minutes for anonymous users
+  private readonly WINDOW_MS = 60 * 60 * 1000; // 1 hour
+  private readonly MAX_REQUESTS = 50; // 50 requests per hour for authenticated
+  private readonly ANON_MAX_REQUESTS = 10; // 10 requests per hour for anonymous users
 
   private getClientKey(): string {
     // Use combination of IP-like identifier and user agent
