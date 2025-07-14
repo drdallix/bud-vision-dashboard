@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface StrainRating {
+  id: string;
+  user_id: string;
   strain_id: string;
   rating: 'like' | 'dislike';
   created_at: string;
@@ -53,7 +55,7 @@ const SwipeStrains = () => {
         .eq('user_id', user.id);
       
       if (error) throw error;
-      setRatings(data || []);
+      setRatings((data || []) as StrainRating[]);
       
       // Calculate daily streak
       const today = new Date().toDateString();
@@ -84,6 +86,8 @@ const SwipeStrains = () => {
       setRatings(prev => [
         ...prev.filter(r => r.strain_id !== currentStrain.id),
         {
+          id: `temp_${Date.now()}`,
+          user_id: user.id,
           strain_id: currentStrain.id,
           rating,
           created_at: new Date().toISOString()
@@ -161,7 +165,8 @@ const SwipeStrains = () => {
   };
 
   const getOverlayOpacity = (direction: 'like' | 'dislike') => {
-    if (swipeDirection === direction) return 1;
+    const swipeType = swipeDirection === 'left' ? 'dislike' : swipeDirection === 'right' ? 'like' : null;
+    if (swipeType === direction) return 1;
     if (direction === 'like' && dragOffset.x > 50) return dragOffset.x / 150;
     if (direction === 'dislike' && dragOffset.x < -50) return Math.abs(dragOffset.x) / 150;
     return 0;

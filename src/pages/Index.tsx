@@ -77,6 +77,14 @@ const Index = () => {
       navigate('/scan');
       return;
     }
+    if (tab === 'continuous-scan') {
+      navigate('/continuous-scan');
+      return;
+    }
+    if (tab === 'swipe') {
+      navigate('/swipe');
+      return;
+    }
     setActiveTab(tab);
   };
 

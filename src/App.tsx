@@ -13,6 +13,8 @@ const Auth = lazy(() => import('./pages/Auth'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const StrainPage = lazy(() => import('./pages/StrainPage'));
 const RealTimeScan = lazy(() => import('./pages/RealTimeScan'));
+const ContinuousRealTimeScan = lazy(() => import('./pages/ContinuousRealTimeScan'));
+const SwipeStrains = lazy(() => import('./pages/SwipeStrains'));
 const StrainApiEndpoint = lazy(() => import('./pages/api/StrainApi').then(module => ({ default: module.StrainApiEndpoint })));
 const QRApiEndpoint = lazy(() => import('./pages/api/StrainApi').then(module => ({ default: module.QRApiEndpoint })));
 
@@ -38,18 +40,20 @@ function App() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                   </div>
                 }>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/scan" element={<RealTimeScan />} />
-                    <Route path="/strain/:strainName" element={<StrainPage />} />
-                    
-                    {/* API Endpoints */}
-                    <Route path="/api/strains/:id" element={<StrainApiEndpoint />} />
-                    <Route path="/api/qr/:action" element={<QRApiEndpoint />} />
-                    
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                   <Routes>
+                     <Route path="/" element={<Index />} />
+                     <Route path="/auth" element={<Auth />} />
+                     <Route path="/scan" element={<RealTimeScan />} />
+                     <Route path="/continuous-scan" element={<ContinuousRealTimeScan />} />
+                     <Route path="/swipe" element={<SwipeStrains />} />
+                     <Route path="/strain/:strainName" element={<StrainPage />} />
+                     
+                     {/* API Endpoints */}
+                     <Route path="/api/strains/:id" element={<StrainApiEndpoint />} />
+                     <Route path="/api/qr/:action" element={<QRApiEndpoint />} />
+                     
+                     <Route path="*" element={<NotFound />} />
+                   </Routes>
                 </Suspense>
               </div>
             </Router>
