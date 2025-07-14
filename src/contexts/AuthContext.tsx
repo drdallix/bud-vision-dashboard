@@ -39,11 +39,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsAnonymous(session?.user?.is_anonymous || false);
+    // THEN check for existing session and auto-sign in anonymously if needed
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsAnonymous(session?.user?.is_anonymous || false);
+      } else {
+        // Auto-sign in anonymously if no session exists
+        const { error } = await supabase.auth.signInAnonymously();
+        if (error) {
+          console.error('Auto anonymous sign-in failed:', error);
+        }
+      }
       setLoading(false);
     });
 

@@ -126,12 +126,10 @@ const Index = () => {
         {user && <QuickStats scans={scans} />}
       </div>
 
-      {user && (
-        <MobileNavigation 
-          activeTab={activeTab} 
-          onTabChange={handleTabChange} 
-        />
-      )}
+      <MobileNavigation 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange} 
+      />
 
       {user && (
         <SettingsDialog

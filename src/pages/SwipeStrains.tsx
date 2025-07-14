@@ -174,7 +174,7 @@ const SwipeStrains = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="p-6 text-center">
           <h2 className="text-xl font-bold mb-4">Sign in Required</h2>
           <p className="text-muted-foreground mb-4">Please sign in to rate strains</p>
@@ -186,16 +186,16 @@ const SwipeStrains = () => {
 
   if (!currentStrain) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="p-8 text-center max-w-md">
-          <Sparkles className="h-16 w-16 mx-auto mb-4 text-green-600" />
+          <Sparkles className="h-16 w-16 mx-auto mb-4 text-primary" />
           <h2 className="text-2xl font-bold mb-4">🎉 All Done!</h2>
           <p className="text-muted-foreground mb-6">
             You've rated all available strains! Check back later for new ones.
           </p>
           <div className="space-y-2 mb-6">
             <div className="text-lg font-semibold">Today's Progress</div>
-            <div className="text-3xl font-bold text-green-600">{dailyStreak}</div>
+            <div className="text-3xl font-bold text-primary">{dailyStreak}</div>
             <div className="text-sm text-muted-foreground">strains rated</div>
           </div>
           <Button onClick={() => navigate('/')} className="w-full">
@@ -207,9 +207,9 @@ const SwipeStrains = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm border-b">
+      <div className="flex items-center justify-between p-4 bg-card border-b border-border">
         <Button
           onClick={() => navigate('/')}
           variant="ghost"
@@ -219,7 +219,7 @@ const SwipeStrains = () => {
           Back
         </Button>
         <div className="text-center">
-          <div className="font-semibold">🌿 Strain Swipe</div>
+          <div className="font-semibold text-foreground">🌿 Strain Swipe</div>
           <div className="text-sm text-muted-foreground">
             {unratedStrains.length - currentIndex} left • {dailyStreak} rated today
           </div>
@@ -329,23 +329,23 @@ const SwipeStrains = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-center space-x-8 p-6 bg-white/80 backdrop-blur-sm">
+      <div className="flex justify-center space-x-8 p-6 bg-card/80 backdrop-blur-sm border-t border-border">
         <Button
           onClick={() => handleSwipe('left')}
           variant="outline"
           size="lg"
-          className="w-16 h-16 rounded-full border-red-200 hover:bg-red-50"
+          className="w-16 h-16 rounded-full border-destructive/20 hover:bg-destructive/5"
         >
-          <X className="h-6 w-6 text-red-600" />
+          <X className="h-6 w-6 text-destructive" />
         </Button>
         
         <Button
           onClick={() => handleSwipe('right')}
           variant="outline"
           size="lg"
-          className="w-16 h-16 rounded-full border-green-200 hover:bg-green-50"
+          className="w-16 h-16 rounded-full border-primary/20 hover:bg-primary/5"
         >
-          <Heart className="h-6 w-6 text-green-600" />
+          <Heart className="h-6 w-6 text-primary" />
         </Button>
       </div>
     </div>
