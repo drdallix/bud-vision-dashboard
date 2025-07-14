@@ -43,9 +43,13 @@ const RealTimeScan = () => {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const shaderCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoScanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   
   const [isScanning, setIsScanning] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0);
@@ -58,31 +62,57 @@ const RealTimeScan = () => {
   const [scanCount, setScanCount] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [isDuplicate, setIsDuplicate] = useState(false);
+  const [autoScanCountdown, setAutoScanCountdown] = useState(0);
+  const [navigationInProgress, setNavigationInProgress] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Initialize camera and WebSocket on mount
+  // Initialize camera and start auto-scan countdown
   useEffect(() => {
     startCamera();
-    initWebSocket();
-    return () => cleanup();
+    
+    // Handle page navigation - close camera after 5 seconds
+    const handleBeforeUnload = () => {
+      navigationTimeoutRef.current = setTimeout(() => {
+        closeCameraStream();
+      }, 5000);
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      cleanup();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
-  // Auto-start scanning when camera is ready and user is authenticated
+  // Auto-start countdown when camera is ready
   useEffect(() => {
-    if (cameraReady && user) {
-      startContinuousScanning();
+    if (cameraReady && user && !isScanning && !result) {
+      startAutoScanCountdown();
     }
   }, [cameraReady, user]);
+
+  // Shader effects animation loop
+  useEffect(() => {
+    if (cameraReady && shaderCanvasRef.current && videoRef.current) {
+      startShaderEffects();
+    }
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [cameraReady, isScanning]);
 
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         }
       });
       
@@ -93,6 +123,13 @@ const RealTimeScan = () => {
         await videoRef.current.play();
         setCameraReady(true);
         console.log('Camera initialized successfully');
+        
+        // Setup shader canvas
+        if (shaderCanvasRef.current && videoRef.current) {
+          const video = videoRef.current;
+          shaderCanvasRef.current.width = video.videoWidth;
+          shaderCanvasRef.current.height = video.videoHeight;
+        }
       }
     } catch (err) {
       setError('Camera access denied. Please allow camera permission.');
@@ -100,12 +137,128 @@ const RealTimeScan = () => {
     }
   };
 
-  const initWebSocket = () => {
-    if (!user) return;
+  const closeCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      setCameraReady(false);
+      console.log('Camera stream closed');
+    }
+  };
+
+  const startShaderEffects = () => {
+    const animate = () => {
+      if (!shaderCanvasRef.current || !videoRef.current) return;
+      
+      const canvas = shaderCanvasRef.current;
+      const ctx = canvas.getContext('2d')!;
+      const video = videoRef.current;
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw video frame
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Apply shader effects based on scanning state
+      if (isScanning) {
+        // Scanning effects
+        applyScanningEffects(ctx, canvas);
+      } else {
+        // Idle effects
+        applyIdleEffects(ctx, canvas);
+      }
+      
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
     
-    // For now, skip WebSocket and use HTTP fallback due to connection issues
-    console.log('WebSocket temporarily disabled, using HTTP fallback');
-    return;
+    animate();
+  };
+
+  const applyScanningEffects = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
+    const time = Date.now() * 0.005;
+    
+    // Pulse effect
+    ctx.globalCompositeOperation = 'overlay';
+    const gradient = ctx.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, 0,
+      canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) / 2
+    );
+    const pulseIntensity = (Math.sin(time * 3) + 1) * 0.5;
+    gradient.addColorStop(0, `rgba(0, 255, 100, ${pulseIntensity * 0.3})`);
+    gradient.addColorStop(1, 'rgba(0, 255, 100, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Scan lines
+    ctx.globalCompositeOperation = 'screen';
+    ctx.strokeStyle = `rgba(0, 255, 100, ${0.8 + Math.sin(time * 4) * 0.2})`;
+    ctx.lineWidth = 2;
+    
+    const scanLine = (time * 100) % canvas.height;
+    ctx.beginPath();
+    ctx.moveTo(0, scanLine);
+    ctx.lineTo(canvas.width, scanLine);
+    ctx.stroke();
+    
+    // Grid overlay
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.strokeStyle = `rgba(0, 255, 100, 0.1)`;
+    ctx.lineWidth = 1;
+    
+    const gridSize = 50;
+    for (let x = 0; x < canvas.width; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    
+    for (let y = 0; y < canvas.height; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+    
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
+  const applyIdleEffects = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
+    const time = Date.now() * 0.002;
+    
+    // Subtle glow effect
+    ctx.globalCompositeOperation = 'overlay';
+    const glow = ctx.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, 0,
+      canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) / 3
+    );
+    const glowIntensity = (Math.sin(time) + 1) * 0.5 * 0.1;
+    glow.addColorStop(0, `rgba(100, 200, 255, ${glowIntensity})`);
+    glow.addColorStop(1, 'rgba(100, 200, 255, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
+  const startAutoScanCountdown = () => {
+    setAutoScanCountdown(3);
+    setStatusMessage('Auto-scan starting in 3 seconds...');
+    
+    const countdown = setInterval(() => {
+      setAutoScanCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdown);
+          if (!isScanning && !result) {
+            performBurstScan();
+          }
+          return 0;
+        }
+        setStatusMessage(`Auto-scan starting in ${prev - 1} seconds...`);
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const performHTTPScan = async (frames: string[]): Promise<any> => {
@@ -162,10 +315,7 @@ const RealTimeScan = () => {
             title: "Strain Found",
             description: `${strain.name} already exists in your collection`,
           });
-          // Navigate to existing strain
-          setTimeout(() => {
-            navigate('/', { state: { selectStrain: strain } });
-          }, 2000);
+          navigateToStrain(strain);
         } else {
           setIsDuplicate(false);
           setResult(data.strain);
@@ -173,10 +323,7 @@ const RealTimeScan = () => {
             title: "New Strain Generated",
             description: `${data.strain.name} has been added to your collection`,
           });
-          // Navigate to new strain
-          setTimeout(() => {
-            navigate('/', { state: { newStrain: data.strain, selectStrain: data.strain } });
-          }, 2000);
+          navigateToStrain(data.strain);
         }
         break;
         
@@ -187,11 +334,44 @@ const RealTimeScan = () => {
     }
   }, [navigate, toast]);
 
+  const navigateToStrain = useCallback((strain: Strain) => {
+    setNavigationInProgress(true);
+    setStatusMessage('Navigation in progress...');
+    
+    // Convert strain name to URL-friendly format
+    const urlFriendlyName = strain.name
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
+    
+    // Wait a moment for any final database operations
+    setTimeout(() => {
+      console.log('Navigating to strain page:', `/strain/${urlFriendlyName}`);
+      navigate(`/strain/${urlFriendlyName}`);
+      
+      // Close camera after navigation
+      setTimeout(() => {
+        closeCameraStream();
+      }, 5000);
+    }, 1500);
+  }, [navigate]);
+
   const cleanup = () => {
-    // Keep camera stream open - only close on page navigation
+    // Clean up intervals and timeouts
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
     }
+    if (autoScanTimeoutRef.current) {
+      clearTimeout(autoScanTimeoutRef.current);
+    }
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    // Close WebSocket if exists
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
@@ -206,11 +386,12 @@ const RealTimeScan = () => {
     setConfidence(0);
     setStatusMessage('');
     setError(null);
+    setAutoScanCountdown(0);
     
     // Auto-retry after 3 seconds
     setTimeout(() => {
-      if (cameraReady && user && !result) {
-        startContinuousScanning();
+      if (cameraReady && user && !result && !navigationInProgress) {
+        startAutoScanCountdown();
       }
     }, 3000);
   };
@@ -234,7 +415,7 @@ const RealTimeScan = () => {
       // Phase 1: Capture complete
       setCurrentPhase(1);
       setStatusMessage('Analyzing frames with AI Vision...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       // Use HTTP fallback since WebSocket is failing
       const result = await performHTTPScan(frames);
@@ -243,7 +424,17 @@ const RealTimeScan = () => {
         throw new Error(result.error);
       }
       
-      // Handle the response similar to WebSocket
+      // Phase 2: Analysis complete
+      setCurrentPhase(2);
+      setStatusMessage('Processing results...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Phase 3: Database operations
+      setCurrentPhase(3);
+      setStatusMessage('Saving to database...');
+      await new Promise(resolve => setTimeout(resolve, 700));
+      
+      // Handle the response
       if (result.duplicate) {
         const strain = convertDatabaseScanToStrain(result.strain);
         setIsDuplicate(true);
@@ -252,9 +443,7 @@ const RealTimeScan = () => {
           title: "Strain Found",
           description: `${strain.name} already exists in your collection`,
         });
-        setTimeout(() => {
-          navigate('/', { state: { selectStrain: strain } });
-        }, 2000);
+        navigateToStrain(strain);
       } else {
         setIsDuplicate(false);
         setResult(result.strain);
@@ -262,9 +451,7 @@ const RealTimeScan = () => {
           title: "New Strain Generated", 
           description: `${result.strain.name} has been added to your collection`,
         });
-        setTimeout(() => {
-          navigate('/', { state: { newStrain: result.strain, selectStrain: result.strain } });
-        }, 2000);
+        navigateToStrain(result.strain);
       }
       
     } catch (error) {
@@ -272,29 +459,21 @@ const RealTimeScan = () => {
       setError('Scan failed. Retrying...');
       resetScanState();
     }
-  }, [user, performHTTPScan, navigate, toast]);
+  }, [user, performHTTPScan, navigateToStrain, toast]);
 
   const startContinuousScanning = useCallback(() => {
-    if (!user || !cameraReady || isScanning || result) return;
-    
-    setScanCount(0);
-    console.log('Starting continuous scanning with HTTP fallback...');
-    
-    // Scan every 7 seconds (as originally requested)
-    scanIntervalRef.current = setInterval(() => {
-      if (!isScanning && !result) {
-        setScanCount(prev => prev + 1);
-        performBurstScan();
-      }
-    }, 7000);
-  }, [user, cameraReady, isScanning, result, performBurstScan]);
+    // Disabled continuous scanning, now using auto-countdown approach
+    console.log('Continuous scanning disabled, using countdown approach');
+  }, []);
 
   const triggerManualScan = useCallback(() => {
-    if (!isScanning && !result) {
+    if (!isScanning && !result && !navigationInProgress) {
       clearInterval(scanIntervalRef.current!);
+      clearTimeout(autoScanTimeoutRef.current!);
+      setAutoScanCountdown(0);
       performBurstScan();
     }
-  }, [isScanning, result, performBurstScan]);
+  }, [isScanning, result, navigationInProgress, performBurstScan]);
 
   const getCurrentPhaseInfo = () => {
     const phase = SCAN_PHASES[currentPhase];
@@ -318,72 +497,104 @@ const RealTimeScan = () => {
         <div className="w-16" /> {/* Spacer for centering */}
       </div>
 
-      {/* Camera viewport */}
-      <div className="flex-1 relative">
-        {/* Show frozen frame during scanning, live video otherwise */}
-        {frozenFrame && isScanning ? (
+      {/* Camera viewport with shader effects */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* Live video feed */}
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          playsInline
+          muted
+          autoPlay
+          style={{ opacity: frozenFrame && isScanning ? 0 : 1 }}
+        />
+        
+        {/* Shader effects canvas */}
+        <canvas
+          ref={shaderCanvasRef}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          style={{ 
+            mixBlendMode: 'overlay',
+            opacity: cameraReady ? 0.8 : 0,
+            transition: 'opacity 0.5s ease'
+          }}
+        />
+        
+        {/* Frozen frame during scanning */}
+        {frozenFrame && isScanning && (
           <img
             src={frozenFrame}
-            className="w-full h-full object-cover"
-            alt="Frozen scan frame"
-          />
-        ) : (
-          <video
-            ref={videoRef}
-            className="w-full h-full object-cover"
-            playsInline
-            muted
-            autoPlay
+            className="absolute inset-0 w-full h-full object-cover animate-pulse"
+            alt="Analyzing frame..."
           />
         )}
         
         <canvas ref={canvasRef} className="hidden" />
         
-        {/* Scan overlay */}
+        {/* Advanced scan overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Vision scanning frame */}
-          <div className={`absolute inset-8 border-2 rounded-lg transition-all duration-500 ${
-            isScanning ? 'border-green-400 shadow-lg shadow-green-400/20' : 'border-white/30'
+          {/* Dynamic scanning frame */}
+          <div className={`absolute inset-8 border-2 rounded-lg transition-all duration-700 ${
+            isScanning 
+              ? 'border-green-400 shadow-lg shadow-green-400/30 scale-105' 
+              : autoScanCountdown > 0
+                ? 'border-yellow-400 shadow-lg shadow-yellow-400/20'
+                : 'border-white/30'
           }`}>
-            {isScanning && (
-              <div className="absolute inset-0 bg-green-400/10 animate-pulse rounded-lg" />
-            )}
-            
-            {/* Dynamic scanning indicators */}
-            {isScanning && (
+            {(isScanning || autoScanCountdown > 0) && (
               <>
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-pulse" />
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-pulse" />
-                <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-transparent via-green-400 to-transparent animate-pulse" />
-                <div className="absolute right-0 top-0 w-1 h-full bg-gradient-to-b from-transparent via-green-400 to-transparent animate-pulse" />
+                <div className="absolute inset-0 bg-gradient-to-r from-green-400/10 via-blue-400/10 to-purple-400/10 animate-pulse rounded-lg" />
                 
-                {/* Burst indicator */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-4 h-4 bg-green-400 rounded-full animate-ping" />
+                {/* Animated corner brackets */}
+                <div className="absolute -top-1 -left-1 w-8 h-8 border-l-4 border-t-4 border-green-400 animate-pulse" />
+                <div className="absolute -top-1 -right-1 w-8 h-8 border-r-4 border-t-4 border-green-400 animate-pulse" />
+                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-l-4 border-b-4 border-green-400 animate-pulse" />
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-r-4 border-b-4 border-green-400 animate-pulse" />
+                
+                {/* Energy particles */}
+                <div className="absolute inset-0 overflow-hidden rounded-lg">
+                  {[...Array(6)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute w-2 h-2 bg-green-400 rounded-full animate-ping"
+                      style={{
+                        left: `${20 + i * 15}%`,
+                        top: `${10 + (i % 2) * 80}%`,
+                        animationDelay: `${i * 0.2}s`,
+                        animationDuration: '2s'
+                      }}
+                    />
+                  ))}
                 </div>
               </>
             )}
           </div>
           
-          {/* Corner indicators */}
-          <div className={`absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 transition-all duration-300 ${
-            isScanning ? 'border-green-400 scale-110' : 'border-white/50'
-          }`} />
-          <div className={`absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 transition-all duration-300 ${
-            isScanning ? 'border-green-400 scale-110' : 'border-white/50'
-          }`} />
-          <div className={`absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 transition-all duration-300 ${
-            isScanning ? 'border-green-400 scale-110' : 'border-white/50'
-          }`} />
-          <div className={`absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 transition-all duration-300 ${
-            isScanning ? 'border-green-400 scale-110' : 'border-white/50'
-          }`} />
+          {/* Countdown overlay */}
+          {autoScanCountdown > 0 && (
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className="text-center">
+                <div className="text-6xl font-bold text-yellow-400 animate-bounce mb-2">
+                  {autoScanCountdown}
+                </div>
+                <div className="text-white text-lg font-medium">
+                  Auto-scan starting...
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Detection confidence */}
           {confidence > 0 && (
             <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
-              <div className="bg-black/80 backdrop-blur-sm rounded-lg px-3 py-1">
-                <div className="text-white text-xs">Confidence: {confidence}%</div>
+              <div className="bg-black/80 backdrop-blur-sm rounded-lg px-4 py-2 border border-green-400/30">
+                <div className="text-green-400 text-sm font-bold">Confidence: {confidence}%</div>
+                <div className="w-24 h-2 bg-white/20 rounded-full mt-1">
+                  <div 
+                    className="h-2 bg-gradient-to-r from-green-400 to-blue-400 rounded-full transition-all duration-500"
+                    style={{ width: `${confidence}%` }}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -391,63 +602,84 @@ const RealTimeScan = () => {
           {/* Detected strain display */}
           {detectedStrain && (
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 max-w-xs">
-              <div className="bg-black/80 backdrop-blur-sm rounded-lg px-4 py-2">
+              <div className="bg-black/90 backdrop-blur-sm rounded-lg px-6 py-3 border border-green-400/30">
                 <div className="text-white text-sm font-medium mb-1">Detected Strain:</div>
-                <div className="text-green-400 text-lg font-bold">{detectedStrain}</div>
+                <div className="text-green-400 text-xl font-bold animate-pulse">{detectedStrain}</div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Scanning progress overlay */}
+        {/* Enhanced scanning progress overlay */}
         {isScanning && (
           <div className="absolute top-8 left-1/2 transform -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] z-10">
-            <div className="bg-black/90 backdrop-blur-sm rounded-lg p-4 space-y-3 border border-green-400/30">
-              <div className="flex items-center gap-3">
+            <div className="bg-black/95 backdrop-blur-sm rounded-xl p-6 space-y-4 border border-green-400/30 shadow-2xl">
+              <div className="flex items-center gap-4">
                 <div className="relative">
                   {(() => {
                     const IconComponent = getCurrentPhaseInfo().icon;
-                    return <IconComponent className={`h-6 w-6 animate-spin ${getCurrentPhaseInfo().color}`} />;
+                    return (
+                      <div className="relative">
+                        <IconComponent className={`h-8 w-8 animate-spin ${getCurrentPhaseInfo().color}`} />
+                        <div className="absolute -inset-3 border-2 border-white/20 rounded-full animate-ping" />
+                        <div className="absolute -inset-1 bg-gradient-to-r from-green-400/20 to-blue-400/20 rounded-full animate-pulse" />
+                      </div>
+                    );
                   })()}
-                  <div className="absolute -inset-2 border border-white/20 rounded-full animate-ping" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-white font-medium">AI Vision Scanner</span>
-                  <div className="text-xs text-green-400 bg-green-400/20 px-2 py-1 rounded-full">
-                    Phase {currentPhase + 1}/4
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-white font-bold text-lg">AI Vision Scanner</span>
+                    <div className="text-xs text-green-400 bg-green-400/20 px-3 py-1 rounded-full font-bold">
+                      Phase {currentPhase + 1}/4
+                    </div>
+                  </div>
+                  <div className="text-sm text-white/90 font-medium">
+                    {statusMessage || getCurrentPhaseInfo().text}
+                    <span className="animate-pulse text-green-400 ml-1 text-lg">▋</span>
                   </div>
                 </div>
               </div>
               
-              <div className="text-sm text-white/90">
-                {statusMessage || getCurrentPhaseInfo().text}
-                <span className="animate-pulse text-green-400 ml-1">▋</span>
-              </div>
-              
-              {/* Progress bar */}
-              <div className="w-full bg-white/10 rounded-full h-2">
-                <div 
-                  className="bg-green-400 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentPhase + 1) / 4) * 100}%` }}
-                />
+              {/* Enhanced progress bar */}
+              <div className="space-y-2">
+                <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="h-3 bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 rounded-full transition-all duration-700 ease-out relative"
+                    style={{ width: `${((currentPhase + 1) / 4) * 100}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full" />
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs text-white/60">
+                  <span>Capture</span>
+                  <span>Analyze</span>
+                  <span>Process</span>
+                  <span>Save</span>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Success message */}
+        {/* Epic success message */}
         {result && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20">
-            <div className={`${isDuplicate ? 'bg-blue-500/90' : 'bg-green-500/90'} text-white p-6 rounded-lg text-center max-w-sm animate-scale-in`}>
-              <div className="text-3xl mb-3">
+          <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-20">
+            <div className={`${
+              isDuplicate ? 'bg-gradient-to-br from-blue-500/90 to-purple-500/90' : 'bg-gradient-to-br from-green-500/90 to-emerald-500/90'
+            } text-white p-8 rounded-2xl text-center max-w-sm animate-scale-in shadow-2xl border border-white/20`}>
+              <div className="text-6xl mb-4 animate-bounce">
                 {isDuplicate ? '🔍' : '✨'}
               </div>
-              <div className="font-bold text-lg mb-2">
-                {isDuplicate ? 'Strain Found!' : 'New Strain Generated!'}
+              <div className="font-bold text-2xl mb-3">
+                {isDuplicate ? 'Strain Found!' : 'New Strain Created!'}
               </div>
-              <div className="text-sm opacity-90 mb-4 font-medium">{result.name}</div>
-              <div className="text-xs">
-                {isDuplicate ? 'Opening existing strain...' : 'Adding to your collection...'}
+              <div className="text-lg opacity-90 mb-6 font-semibold">{result.name}</div>
+              <div className="text-sm opacity-80">
+                {isDuplicate ? 'Opening existing strain page...' : 'Adding to your collection...'}
+              </div>
+              <div className="mt-4 w-full bg-white/20 rounded-full h-2">
+                <div className="bg-white h-2 rounded-full animate-pulse w-full" />
               </div>
             </div>
           </div>
@@ -456,21 +688,24 @@ const RealTimeScan = () => {
 
       {/* Bottom controls */}
       <div className="p-4 bg-black/90 backdrop-blur-sm border-t border-white/10 space-y-3">
-        {/* Status info */}
-        <div className="flex justify-between text-sm text-white/70">
-          <span>Scanner: {cameraReady && user ? 'Ready (HTTP)' : 'Initializing'}</span>
+        {/* Enhanced status info */}
+        <div className="flex justify-between items-center text-sm text-white/70 mb-4">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${cameraReady && user ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+            <span>Scanner: {cameraReady && user ? 'Ready' : 'Initializing'}</span>
+          </div>
           <span>Scans: {scanCount}</span>
         </div>
 
         {/* Manual scan trigger */}
-        {!isScanning && cameraReady && !result && (
+        {!isScanning && cameraReady && !result && !navigationInProgress && (
           <Button
             onClick={triggerManualScan}
-            className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white py-4 text-lg font-semibold disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 text-white py-6 text-xl font-bold disabled:opacity-50 shadow-lg border border-white/20"
             disabled={!user}
           >
-            <Camera className="h-5 w-5 mr-2" />
-            Burst Scan
+            <Camera className="h-6 w-6 mr-3" />
+            {autoScanCountdown > 0 ? `Auto-scan in ${autoScanCountdown}s` : 'Instant Scan'}
           </Button>
         )}
 
