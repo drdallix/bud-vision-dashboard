@@ -124,8 +124,10 @@ const SwipeStrains = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsDragging(true);
     const startX = e.clientX;
+    const startTime = Date.now();
     
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
@@ -137,6 +139,14 @@ const SwipeStrains = () => {
     const handleMouseUp = () => {
       setIsDragging(false);
       const threshold = 100;
+      const tapThreshold = 200; // milliseconds for tap vs drag
+      const timeElapsed = Date.now() - startTime;
+      
+      // If it's a quick tap with minimal movement, navigate to details
+      if (timeElapsed < tapThreshold && Math.abs(dragOffset.x) < 10) {
+        navigate('/', { state: { selectedStrain: currentStrain, activeTab: 'details' } });
+        return;
+      }
       
       if (Math.abs(dragOffset.x) > threshold) {
         handleSwipe(dragOffset.x > 0 ? 'right' : 'left');
@@ -238,10 +248,10 @@ const SwipeStrains = () => {
         <div className="relative w-full max-w-sm">
           {/* Next card (background) */}
           {unratedStrains[currentIndex + 1] && (
-            <Card className="absolute inset-0 bg-white/90 transform scale-95 -rotate-1">
-              <CardContent className="p-6 h-full flex flex-col items-center justify-center">
-                <div className="text-center opacity-50">
-                  <h3 className="font-bold text-lg mb-2">
+            <Card className="absolute inset-0 bg-card/90 border-border transform scale-95 -rotate-1 select-none">
+              <CardContent className="p-6 h-full flex flex-col items-center justify-center select-none pointer-events-none">
+                <div className="text-center opacity-50 select-none">
+                  <h3 className="font-bold text-lg mb-2 text-foreground select-none">
                     {unratedStrains[currentIndex + 1].name}
                   </h3>
                 </div>
@@ -252,76 +262,98 @@ const SwipeStrains = () => {
           {/* Current card */}
           <Card 
             ref={cardRef}
-            className="relative bg-white shadow-2xl cursor-grab active:cursor-grabbing h-96 overflow-hidden"
+            className="relative bg-card border-border shadow-xl cursor-grab active:cursor-grabbing h-96 overflow-hidden select-none"
             style={getCardStyle()}
             onMouseDown={handleMouseDown}
           >
             {/* Like overlay */}
             <div 
-              className="absolute inset-0 bg-green-500/90 flex items-center justify-center z-10 pointer-events-none"
+              className="absolute inset-0 bg-primary/90 flex items-center justify-center z-10 pointer-events-none select-none"
               style={{ opacity: getOverlayOpacity('like') }}
             >
-              <div className="text-white text-6xl font-bold transform -rotate-12">
+              <div className="text-primary-foreground text-6xl font-bold transform -rotate-12 select-none">
                 LIKE 💚
               </div>
             </div>
 
             {/* Dislike overlay */}
             <div 
-              className="absolute inset-0 bg-red-500/90 flex items-center justify-center z-10 pointer-events-none"
+              className="absolute inset-0 bg-destructive/90 flex items-center justify-center z-10 pointer-events-none select-none"
               style={{ opacity: getOverlayOpacity('dislike') }}
             >
-              <div className="text-white text-6xl font-bold transform rotate-12">
+              <div className="text-destructive-foreground text-6xl font-bold transform rotate-12 select-none">
                 PASS ❌
               </div>
             </div>
 
-            <CardContent className="p-6 h-full flex flex-col">
+            <CardContent className="p-6 h-full flex flex-col select-none pointer-events-none">
               {/* Strain Header */}
               <div className="text-center mb-4">
-                <h1 className="text-2xl font-bold mb-2">{currentStrain.name}</h1>
-                <Badge variant="outline" className="mb-2">
+                <h1 className="text-2xl font-bold mb-2 text-foreground select-none">{currentStrain.name}</h1>
+                <Badge variant="outline" className="mb-2 select-none">
                   {currentStrain.type}
                 </Badge>
-                <div className="flex justify-center space-x-2 text-sm text-muted-foreground">
+                <div className="flex justify-center space-x-2 text-sm text-muted-foreground select-none">
                   <span>THC: {currentStrain.thc}%</span>
                   <span>•</span>
                   <span>CBD: {currentStrain.cbd}%</span>
                 </div>
               </div>
 
-              {/* Effects */}
-              <div className="flex-1 space-y-3">
+              {/* Content - Show all in a scrollable area */}
+              <div className="flex-1 space-y-4 overflow-y-auto">
+                {/* Description - Full text */}
+                {currentStrain.description && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-foreground select-none">Description</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed select-none">
+                      {currentStrain.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Effects */}
                 <div>
-                  <h3 className="font-semibold mb-2">Effects</h3>
+                  <h3 className="font-semibold mb-2 text-foreground select-none">Effects</h3>
                   <div className="flex flex-wrap gap-1">
-                    {currentStrain.effectProfiles.slice(0, 3).map((effect, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
+                    {currentStrain.effectProfiles.map((effect, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs select-none">
                         {effect.emoji} {effect.name}
                       </Badge>
                     ))}
                   </div>
                 </div>
 
+                {/* Flavors */}
                 <div>
-                  <h3 className="font-semibold mb-2">Flavors</h3>
+                  <h3 className="font-semibold mb-2 text-foreground select-none">Flavors</h3>
                   <div className="flex flex-wrap gap-1">
-                    {currentStrain.flavorProfiles.slice(0, 3).map((flavor, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
+                    {currentStrain.flavorProfiles.map((flavor, index) => (
+                      <Badge key={index} variant="outline" className="text-xs select-none">
                         {flavor.emoji} {flavor.name}
                       </Badge>
                     ))}
                   </div>
                 </div>
 
-                {currentStrain.description && (
+                {/* Terpenes if available */}
+                {currentStrain.terpenes && currentStrain.terpenes.length > 0 && (
                   <div>
-                    <h3 className="font-semibold mb-2">Description</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {currentStrain.description}
-                    </p>
+                    <h3 className="font-semibold mb-2 text-foreground select-none">Terpenes</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {currentStrain.terpenes.slice(0, 4).map((terpene, index) => (
+                        <Badge key={index} variant="outline" className="text-xs select-none">
+                          {terpene.name}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
+              </div>
+
+              {/* Tap hint */}
+              <div className="text-center mt-4 text-xs text-muted-foreground select-none">
+                Tap for details • Swipe to rate
               </div>
             </CardContent>
           </Card>

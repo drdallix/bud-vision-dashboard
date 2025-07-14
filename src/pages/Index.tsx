@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScans } from '@/hooks/useScans';
@@ -17,6 +17,7 @@ import { Strain } from '@/types/strain';
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const { scans, addScan } = useScans();
   
@@ -24,6 +25,16 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState(user ? 'browse' : 'showcase');
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Handle navigation from swipe page with strain selection
+  useEffect(() => {
+    if (location.state?.selectedStrain && location.state?.activeTab) {
+      setCurrentStrain(location.state.selectedStrain);
+      setActiveTab(location.state.activeTab);
+      // Clear the location state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Update default tab based on auth status
   useEffect(() => {
