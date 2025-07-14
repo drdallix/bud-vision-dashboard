@@ -7,6 +7,7 @@ import StrainBasicInfoForm from './StrainBasicInfoForm';
 import StrainPricingForm from './StrainPricingForm';
 import StrainDescriptionForm from './StrainDescriptionForm';
 import StrainProfilesForm from './StrainProfilesForm';
+import StrainActions from './StrainActions';
 import { useStrainEditor } from './hooks/useStrainEditor';
 
 interface StrainEditModalProps {
@@ -14,9 +15,10 @@ interface StrainEditModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (updatedStrain: Strain) => void;
+  onDeleted?: () => void;
 }
 
-const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps) => {
+const StrainEditModal = ({ strain, open, onClose, onSave, onDeleted }: StrainEditModalProps) => {
   const [activeTab, setActiveTab] = useState('basic');
   
   const {
@@ -122,6 +124,8 @@ const StrainEditModal = ({ strain, open, onClose, onSave }: StrainEditModalProps
               </button>
             </div>
           </div>
+
+          <StrainActions strain={strain} onDeleted={onDeleted} />
         </div>
       </DialogContent>
     </Dialog>

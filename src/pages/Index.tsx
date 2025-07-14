@@ -99,20 +99,7 @@ const Index = () => {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           {user && (
-            <div className="grid grid-cols-4 gap-2">
-              <TabsList className="h-auto p-1">
-                <TabsTrigger value="browse" className="w-full">Browse</TabsTrigger>
-              </TabsList>
-              <TabsList className="h-auto p-1">
-                <TabsTrigger value="details" disabled={!currentStrain} className="w-full">Details</TabsTrigger>
-              </TabsList>
-              <TabsList className="h-auto p-1">
-                <TabsTrigger value="scan" className="w-full">Scan</TabsTrigger>
-              </TabsList>
-              <TabsList className="h-auto p-1">
-                <TabsTrigger value="showcase" className="w-full">Showcase</TabsTrigger>
-              </TabsList>
-            </div>
+            <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
           )}
 
           <TabsContent value="browse" className="space-y-6">

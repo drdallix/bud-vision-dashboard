@@ -5,13 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeStrainStore } from '@/stores/useRealtimeStrainStore';
 import { useStrainAPI } from '@/hooks/useStrainAPI';
 import StrainDashboard from '@/components/StrainDashboard';
-import StrainAPIControls from '@/components/StrainAPI/StrainAPIControls';
-import URLParameterHelper from '@/components/StrainAPI/URLParameterHelper';
-import Header from '@/components/Layout/Header';
+import DoobieSequence from '@/components/DoobieSequence';
 import { Strain } from '@/types/strain';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Settings } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Sparkles, Zap, Cannabis } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const StrainPage = () => {
@@ -20,12 +18,13 @@ const StrainPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { strains, isLoading } = useRealtimeStrainStore(true);
-  const { generateStrain, isGenerating, rateLimitInfo, isAuthenticated } = useStrainAPI();
+  const { generateStrain, isGenerating: apiGenerating, rateLimitInfo, isAuthenticated } = useStrainAPI();
   const { toast } = useToast();
   
   const [currentStrain, setCurrentStrain] = useState<Strain | null>(null);
   const [searchAttempted, setSearchAttempted] = useState(false);
-  const [activeTab, setActiveTab] = useState('strain');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showDoobieSequence, setShowDoobieSequence] = useState(false);
 
   // Convert URL-friendly name back to searchable format
   const urlToSearchTerm = (urlName: string): string => {
@@ -89,19 +88,29 @@ const StrainPage = () => {
     return found || null;
   };
 
-  // Generate strain with API parameters
+  // Generate strain with enhanced DoobieDB sequence
   const handleGenerateStrain = async (params: any = {}) => {
     if (!strainName) return;
+    
+    setIsGenerating(true);
+    setShowDoobieSequence(true);
     
     const searchTerm = urlToSearchTerm(strainName);
     const urlParams = parseURLParameters();
     const finalParams = { ...urlParams, ...params };
     
-    const strain = await generateStrain(searchTerm, finalParams);
-    if (strain) {
-      setCurrentStrain(strain);
-      setActiveTab('strain');
-    }
+    // Start the sequence animation
+    setTimeout(async () => {
+      const strain = await generateStrain(searchTerm, finalParams);
+      if (strain) {
+        setCurrentStrain(strain);
+      }
+      setIsGenerating(false);
+    }, 100);
+  };
+
+  const handleSequenceComplete = () => {
+    setShowDoobieSequence(false);
   };
 
   // Search for strain or auto-generate based on URL parameters
@@ -119,15 +128,13 @@ const StrainPage = () => {
     if (foundStrain && !urlParams?.force) {
       console.log('Found existing strain:', foundStrain.name);
       setCurrentStrain(foundStrain);
-      setActiveTab('strain');
     } else if (urlParams) {
       // Auto-generate with URL parameters
       console.log('Auto-generating strain with URL parameters');
       handleGenerateStrain(urlParams);
     } else {
-      // Show API controls for manual generation
-      console.log('Strain not found, showing API controls');
-      setActiveTab('api');
+      // Show generation interface
+      console.log('Strain not found, ready for generation');
     }
     
     setSearchAttempted(true);
@@ -159,67 +166,74 @@ const StrainPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-background to-emerald-50">
       <div className="container mx-auto px-4 py-6">
-        <Header onSettingsClick={() => {}} />
-        
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <Button 
             onClick={() => navigate('/')} 
             variant="outline" 
             size="sm"
-            className="mb-4"
+            className="animate-fade-in"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Browse
+            Back to DoobieDB
           </Button>
+          
+          <div className="text-center">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-2">
+              <Cannabis className="h-6 w-6 text-green-600" />
+              {urlToSearchTerm(strainName)}
+            </h1>
+            <p className="text-sm text-muted-foreground">Strain Analysis & Generation</p>
+          </div>
+          
+          <div className="w-24" /> {/* Spacer for centering */}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="strain" disabled={!currentStrain}>
-              Strain Details
-            </TabsTrigger>
-            <TabsTrigger value="api">
-              API Generator
-            </TabsTrigger>
-            <TabsTrigger value="docs">
-              API Documentation
-            </TabsTrigger>
-          </TabsList>
+        {showDoobieSequence && (
+          <div className="flex justify-center mb-8">
+            <DoobieSequence 
+              isActive={showDoobieSequence} 
+              onComplete={handleSequenceComplete}
+            />
+          </div>
+        )}
 
-          <TabsContent value="strain" className="space-y-6">
-            {currentStrain ? (
-              <StrainDashboard strain={currentStrain} />
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">
-                  No strain data available. Use the API Generator to create this strain.
+        {currentStrain ? (
+          <div className="animate-fade-in">
+            <StrainDashboard strain={currentStrain} />
+          </div>
+        ) : !showDoobieSequence ? (
+          <div className="flex justify-center">
+            <Card className="w-full max-w-md">
+              <CardHeader className="text-center">
+                <CardTitle className="flex items-center justify-center gap-2">
+                  <Sparkles className="h-5 w-5 text-green-600" />
+                  Generate Strain Profile
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-center text-muted-foreground">
+                  This strain hasn't been analyzed yet. Generate a comprehensive profile using DoobieDB AI.
                 </p>
-                <Button onClick={() => setActiveTab('api')}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Open API Generator
+                
+                <Button 
+                  onClick={() => handleGenerateStrain()}
+                  disabled={isGenerating}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  size="lg"
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Generate with DoobieDB AI
                 </Button>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="api" className="space-y-6">
-            <div className="flex justify-center">
-              <StrainAPIControls
-                strainName={urlToSearchTerm(strainName)}
-                onGenerate={handleGenerateStrain}
-                isGenerating={isGenerating}
-                isAuthenticated={isAuthenticated}
-                rateLimitInfo={rateLimitInfo}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="docs" className="space-y-6">
-            <URLParameterHelper strainName={strainName} />
-          </TabsContent>
-        </Tabs>
+                
+                <div className="text-xs text-center text-muted-foreground">
+                  Advanced cannabis genome analysis & strain profiling
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
       </div>
     </div>
   );

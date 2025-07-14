@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Strain } from '@/types/strain';
 import PrintManager from '@/components/PrintManager';
+import DatabaseCleanup from '@/components/DatabaseCleanup';
 
 interface SettingsProps {
   scanHistory: Strain[];
@@ -241,6 +242,9 @@ const Settings = ({ scanHistory, onDataRestore }: SettingsProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Database Maintenance */}
+      <DatabaseCleanup />
 
       {/* Privacy & Security */}
       <Card>
