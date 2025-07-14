@@ -1,48 +1,42 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Camera, Scan, LoaderCircle, ArrowLeft, Eye, Search, Zap } from 'lucide-react';
+import { Camera, Scan, ArrowLeft, Eye, Search, Zap, Target, Sparkles } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { Strain } from '@/types/strain';
-import { supabase } from '@/integrations/supabase/client';
-// @ts-ignore
-import Tesseract from 'tesseract.js';
+import { convertDatabaseScanToStrain } from '@/data/converters/strainConverters';
+import { useToast } from '@/hooks/use-toast';
 
 const SCAN_PHASES = [
-  { icon: Eye, text: "Scanning for text...", color: "text-blue-400" },
-  { icon: Search, text: "Reading package text...", color: "text-green-400" },
-  { icon: Scan, text: "Identifying strain...", color: "text-purple-400" },
-  { icon: Zap, text: "Generating profile...", color: "text-yellow-400" }
+  { icon: Target, text: "Capturing frames...", color: "text-blue-400" },
+  { icon: Eye, text: "Vision analysis...", color: "text-green-400" },
+  { icon: Search, text: "Checking duplicates...", color: "text-purple-400" },
+  { icon: Sparkles, text: "Generating profile...", color: "text-yellow-400" }
 ];
 
-// OCR processing utilities
-const captureFrame = (canvas: HTMLCanvasElement, video: HTMLVideoElement): ImageData => {
+// Vision processing utilities
+const captureFrame = (canvas: HTMLCanvasElement, video: HTMLVideoElement): string => {
   const ctx = canvas.getContext('2d')!;
   const { videoWidth: vw, videoHeight: vh } = video;
   
-  // Full frame capture for better OCR
+  // Set canvas to video dimensions
   canvas.width = vw;
   canvas.height = vh;
   
+  // Draw video frame to canvas
   ctx.drawImage(video, 0, 0, vw, vh);
-  return ctx.getImageData(0, 0, vw, vh);
+  
+  // Return as base64 JPEG for OpenAI Vision
+  return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 };
 
-const preprocessImageForOCR = (canvas: HTMLCanvasElement, imageData: ImageData): void => {
-  const ctx = canvas.getContext('2d')!;
-  canvas.width = imageData.width;
-  canvas.height = imageData.height;
-  
-  // Apply contrast enhancement for better OCR
-  const data = imageData.data;
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-    const enhanced = gray > 128 ? 255 : 0; // High contrast
-    data[i] = data[i + 1] = data[i + 2] = enhanced;
+const burstCapture = (canvas: HTMLCanvasElement, video: HTMLVideoElement, count: number = 3): string[] => {
+  const frames: string[] = [];
+  for (let i = 0; i < count; i++) {
+    frames.push(captureFrame(canvas, video));
   }
-  
-  ctx.putImageData(imageData, 0, 0);
+  return frames;
 };
 
 const RealTimeScan = () => {
@@ -50,32 +44,34 @@ const RealTimeScan = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const callCountRef = useRef(0);
   
   const [isScanning, setIsScanning] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0);
   const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
-  const [detectedText, setDetectedText] = useState<string>('');
-  const [ocrConfidence, setOcrConfidence] = useState(0);
+  const [detectedStrain, setDetectedStrain] = useState<string>('');
+  const [confidence, setConfidence] = useState(0);
   const [result, setResult] = useState<Strain | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [scanCount, setScanCount] = useState(0);
-  const [lastDetectedStrain, setLastDetectedStrain] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [isDuplicate, setIsDuplicate] = useState(false);
   
   const { user } = useAuth();
+  const { toast } = useToast();
 
-  // Initialize camera on mount
+  // Initialize camera and WebSocket on mount
   useEffect(() => {
     startCamera();
+    initWebSocket();
     return () => cleanup();
   }, []);
 
   // Auto-start scanning when camera is ready and user is authenticated
   useEffect(() => {
-    if (cameraReady && user && !isScanning) {
+    if (cameraReady && user) {
       startContinuousScanning();
     }
   }, [cameraReady, user]);
@@ -96,158 +92,175 @@ const RealTimeScan = () => {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         setCameraReady(true);
+        console.log('Camera initialized successfully');
       }
     } catch (err) {
       setError('Camera access denied. Please allow camera permission.');
+      console.error('Camera initialization failed:', err);
     }
   };
 
-  const cleanup = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+  const initWebSocket = () => {
+    if (!user) return;
+    
+    const wsUrl = `wss://dqymhupheqkwasfrkcqs.functions.supabase.co/realtime-vision-scan?stream=true`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected for realtime scanning');
+      wsRef.current = ws;
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      handleStreamingResponse(data);
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setError('Connection error. Retrying...');
+      // Retry connection after 3 seconds
+      setTimeout(initWebSocket, 3000);
+    };
+    
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      wsRef.current = null;
+    };
+  };
+
+  const handleStreamingResponse = useCallback((data: any) => {
+    switch (data.type) {
+      case 'progress':
+        setStatusMessage(data.message);
+        if (data.phase === 'capture') setCurrentPhase(0);
+        else if (data.phase === 'analysis') setCurrentPhase(1);
+        else if (data.phase === 'duplicate_check') setCurrentPhase(2);
+        break;
+        
+      case 'detection':
+        setDetectedStrain(data.strainName);
+        setConfidence(data.confidence);
+        setStatusMessage(data.message);
+        break;
+        
+      case 'generation':
+        setCurrentPhase(3);
+        setStatusMessage(data.message);
+        break;
+        
+      case 'complete':
+        if (data.duplicate) {
+          setIsDuplicate(true);
+          const strain = convertDatabaseScanToStrain(data.strain);
+          setResult(strain);
+          toast({
+            title: "Strain Found",
+            description: `${strain.name} already exists in your collection`,
+          });
+          // Navigate to existing strain
+          setTimeout(() => {
+            navigate('/', { state: { selectStrain: strain } });
+          }, 2000);
+        } else {
+          setIsDuplicate(false);
+          setResult(data.strain);
+          toast({
+            title: "New Strain Generated",
+            description: `${data.strain.name} has been added to your collection`,
+          });
+          // Navigate to new strain
+          setTimeout(() => {
+            navigate('/', { state: { newStrain: data.strain, selectStrain: data.strain } });
+          }, 2000);
+        }
+        break;
+        
+      case 'error':
+        setError(data.error);
+        resetScanState();
+        break;
     }
+  }, [navigate, toast]);
+
+  const cleanup = () => {
+    // Keep camera stream open - only close on page navigation
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
     }
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
     }
+  };
+
+  const resetScanState = () => {
     setIsScanning(false);
     setCurrentPhase(0);
     setFrozenFrame(null);
-    setDetectedText('');
-    setOcrConfidence(0);
-    setResult(null);
+    setDetectedStrain('');
+    setConfidence(0);
+    setStatusMessage('');
     setError(null);
-    setCameraReady(false);
-    setScanCount(0);
-    setLastDetectedStrain(null);
+    
+    // Auto-retry after 3 seconds
+    setTimeout(() => {
+      if (cameraReady && user && !result) {
+        startContinuousScanning();
+      }
+    }, 3000);
   };
 
-  const performOCR = async (canvas: HTMLCanvasElement): Promise<string> => {
-    try {
-      const { data: { text, confidence } } = await Tesseract.recognize(canvas, 'eng', {
-        logger: () => {} // Suppress logs
-      });
-      
-      setOcrConfidence(confidence);
-      return text.trim();
-    } catch (error) {
-      console.error('OCR failed:', error);
-      return '';
-    }
-  };
-
-  const analyzeStrainFromText = async (text: string): Promise<Strain | null> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('ocr-strain-analysis', {
-        body: { detectedText: text }
-      });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Strain analysis failed:', error);
-      return null;
-    }
-  };
-
-  const performSingleScan = async (): Promise<void> => {
-    if (!videoRef.current || !canvasRef.current || !user) return;
+  const performBurstScan = useCallback(async () => {
+    if (!videoRef.current || !canvasRef.current || !user || !wsRef.current) return;
 
     setIsScanning(true);
     setCurrentPhase(0);
+    setError(null);
+    setStatusMessage('Preparing burst capture...');
     
     try {
-      // Phase 1: Freeze frame
-      const imageData = captureFrame(canvasRef.current, videoRef.current);
-      const frozenCanvas = document.createElement('canvas');
-      frozenCanvas.width = imageData.width;
-      frozenCanvas.height = imageData.height;
-      frozenCanvas.getContext('2d')!.putImageData(imageData, 0, 0);
-      setFrozenFrame(frozenCanvas.toDataURL());
+      // Freeze frame for UI feedback
+      const frozenFrameData = captureFrame(canvasRef.current, videoRef.current);
+      setFrozenFrame(`data:image/jpeg;base64,${frozenFrameData}`);
       
-      // Phase 2: OCR text detection
-      setCurrentPhase(1);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Burst capture - take multiple frames for better analysis
+      const frames = burstCapture(canvasRef.current, videoRef.current, 3);
       
-      preprocessImageForOCR(canvasRef.current, imageData);
-      const text = await performOCR(canvasRef.current);
-      setDetectedText(text);
-      
-      if (!text || text.length < 3) {
-        throw new Error('No text detected in image');
-      }
-
-      // Phase 3: Strain identification
-      setCurrentPhase(2);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const strainData = await analyzeStrainFromText(text);
-      
-      if (!strainData || strainData.confidence < 60) {
-        throw new Error('No valid strain identified');
-      }
-
-      // Phase 4: Finalize
-      setCurrentPhase(3);
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Check for duplicates
-      if (lastDetectedStrain && lastDetectedStrain.toLowerCase() === strainData.name.toLowerCase()) {
-        throw new Error('Duplicate strain detected');
-      }
-
-      const strain: Strain = {
-        ...strainData,
-        scannedAt: new Date().toISOString(),
-        inStock: true,
+      // Send frames via WebSocket for streaming analysis
+      wsRef.current.send(JSON.stringify({
+        imageFrames: frames,
         userId: user.id
-      };
-
-      setLastDetectedStrain(strain.name);
-      setResult(strain);
+      }));
       
-      // Navigate after success
-      setTimeout(() => {
-        navigate('/', { state: { newStrain: strain, selectStrain: strain } });
-      }, 2000);
-
     } catch (error) {
-      console.error('Scan failed:', error);
-      setError(error instanceof Error ? error.message : 'Scan failed');
-      
-      // Reset for next scan
-      setTimeout(() => {
-        setIsScanning(false);
-        setFrozenFrame(null);
-        setError(null);
-        setDetectedText('');
-        setOcrConfidence(0);
-      }, 3000);
+      console.error('Burst scan failed:', error);
+      setError('Scan failed. Retrying...');
+      resetScanState();
     }
-  };
+  }, [user]);
 
-  const startContinuousScanning = () => {
-    if (!user || !cameraReady || isScanning) return;
+  const startContinuousScanning = useCallback(() => {
+    if (!user || !cameraReady || isScanning || result) return;
     
     setScanCount(0);
+    console.log('Starting continuous scanning...');
     
-    // Scan every 5 seconds, but stop if strain is found
+    // Scan every 5 seconds
     scanIntervalRef.current = setInterval(() => {
-      if (!isScanning && !result) {
+      if (!isScanning && !result && wsRef.current) {
         setScanCount(prev => prev + 1);
-        performSingleScan();
+        performBurstScan();
       }
     }, 5000);
-  };
+  }, [user, cameraReady, isScanning, result, performBurstScan]);
 
-  const triggerManualScan = () => {
-    if (!isScanning && !result) {
-      performSingleScan();
+  const triggerManualScan = useCallback(() => {
+    if (!isScanning && !result && wsRef.current) {
+      clearInterval(scanIntervalRef.current!);
+      performBurstScan();
     }
-  };
+  }, [isScanning, result, performBurstScan]);
 
   const getCurrentPhaseInfo = () => {
     const phase = SCAN_PHASES[currentPhase];
@@ -294,54 +307,59 @@ const RealTimeScan = () => {
         
         {/* Scan overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* OCR scanning frame */}
-          <div className={`absolute inset-8 border-2 rounded-lg transition-all duration-300 ${
+          {/* Vision scanning frame */}
+          <div className={`absolute inset-8 border-2 rounded-lg transition-all duration-500 ${
             isScanning ? 'border-green-400 shadow-lg shadow-green-400/20' : 'border-white/30'
           }`}>
             {isScanning && (
               <div className="absolute inset-0 bg-green-400/10 animate-pulse rounded-lg" />
             )}
             
-            {/* Scanning lines */}
+            {/* Dynamic scanning indicators */}
             {isScanning && (
               <>
-                <div className="absolute top-0 left-0 w-full h-0.5 bg-green-400 animate-pulse" />
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-green-400 animate-pulse" />
-                <div className="absolute left-0 top-0 w-0.5 h-full bg-green-400 animate-pulse" />
-                <div className="absolute right-0 top-0 w-0.5 h-full bg-green-400 animate-pulse" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-pulse" />
+                <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-transparent via-green-400 to-transparent animate-pulse" />
+                <div className="absolute right-0 top-0 w-1 h-full bg-gradient-to-b from-transparent via-green-400 to-transparent animate-pulse" />
+                
+                {/* Burst indicator */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-4 h-4 bg-green-400 rounded-full animate-ping" />
+                </div>
               </>
             )}
           </div>
           
           {/* Corner indicators */}
-          <div className={`absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 transition-colors duration-300 ${
-            isScanning ? 'border-green-400' : 'border-white/50'
+          <div className={`absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 transition-all duration-300 ${
+            isScanning ? 'border-green-400 scale-110' : 'border-white/50'
           }`} />
-          <div className={`absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 transition-colors duration-300 ${
-            isScanning ? 'border-green-400' : 'border-white/50'
+          <div className={`absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 transition-all duration-300 ${
+            isScanning ? 'border-green-400 scale-110' : 'border-white/50'
           }`} />
-          <div className={`absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 transition-colors duration-300 ${
-            isScanning ? 'border-green-400' : 'border-white/50'
+          <div className={`absolute bottom-4 left-4 w-8 h-8 border-l-4 border-b-4 transition-all duration-300 ${
+            isScanning ? 'border-green-400 scale-110' : 'border-white/50'
           }`} />
-          <div className={`absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 transition-colors duration-300 ${
-            isScanning ? 'border-green-400' : 'border-white/50'
+          <div className={`absolute bottom-4 right-4 w-8 h-8 border-r-4 border-b-4 transition-all duration-300 ${
+            isScanning ? 'border-green-400 scale-110' : 'border-white/50'
           }`} />
           
-          {/* OCR confidence indicator */}
-          {ocrConfidence > 0 && (
+          {/* Detection confidence */}
+          {confidence > 0 && (
             <div className="absolute top-8 left-1/2 transform -translate-x-1/2">
               <div className="bg-black/80 backdrop-blur-sm rounded-lg px-3 py-1">
-                <div className="text-white text-xs">OCR: {ocrConfidence}%</div>
+                <div className="text-white text-xs">Confidence: {confidence}%</div>
               </div>
             </div>
           )}
           
-          {/* Detected text display */}
-          {detectedText && (
+          {/* Detected strain display */}
+          {detectedStrain && (
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 max-w-xs">
               <div className="bg-black/80 backdrop-blur-sm rounded-lg px-4 py-2">
-                <div className="text-white text-sm font-medium mb-1">Detected Text:</div>
-                <div className="text-green-400 text-xs font-mono">{detectedText}</div>
+                <div className="text-white text-sm font-medium mb-1">Detected Strain:</div>
+                <div className="text-green-400 text-lg font-bold">{detectedStrain}</div>
               </div>
             </div>
           )}
@@ -360,7 +378,7 @@ const RealTimeScan = () => {
                   <div className="absolute -inset-2 border border-white/20 rounded-full animate-ping" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-medium">OCR Scanner</span>
+                  <span className="text-white font-medium">AI Vision Scanner</span>
                   <div className="text-xs text-green-400 bg-green-400/20 px-2 py-1 rounded-full">
                     Phase {currentPhase + 1}/4
                   </div>
@@ -368,8 +386,16 @@ const RealTimeScan = () => {
               </div>
               
               <div className="text-sm text-white/90">
-                {getCurrentPhaseInfo().text}
+                {statusMessage || getCurrentPhaseInfo().text}
                 <span className="animate-pulse text-green-400 ml-1">▋</span>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="w-full bg-white/10 rounded-full h-2">
+                <div 
+                  className="bg-green-400 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((currentPhase + 1) / 4) * 100}%` }}
+                />
               </div>
             </div>
           </div>
@@ -378,11 +404,17 @@ const RealTimeScan = () => {
         {/* Success message */}
         {result && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20">
-            <div className="bg-green-500/90 text-white p-6 rounded-lg text-center max-w-sm">
-              <div className="text-2xl mb-2">✓</div>
-              <div className="font-semibold mb-2">Strain Identified!</div>
-              <div className="text-sm opacity-90 mb-4">{result.name}</div>
-              <div className="text-xs">Redirecting to dashboard...</div>
+            <div className={`${isDuplicate ? 'bg-blue-500/90' : 'bg-green-500/90'} text-white p-6 rounded-lg text-center max-w-sm animate-scale-in`}>
+              <div className="text-3xl mb-3">
+                {isDuplicate ? '🔍' : '✨'}
+              </div>
+              <div className="font-bold text-lg mb-2">
+                {isDuplicate ? 'Strain Found!' : 'New Strain Generated!'}
+              </div>
+              <div className="text-sm opacity-90 mb-4 font-medium">{result.name}</div>
+              <div className="text-xs">
+                {isDuplicate ? 'Opening existing strain...' : 'Adding to your collection...'}
+              </div>
             </div>
           </div>
         )}
@@ -392,19 +424,19 @@ const RealTimeScan = () => {
       <div className="p-4 bg-black/90 backdrop-blur-sm border-t border-white/10 space-y-3">
         {/* Status info */}
         <div className="flex justify-between text-sm text-white/70">
-          <span>Auto-scan: {cameraReady && user ? 'Active' : 'Inactive'}</span>
+          <span>Scanner: {cameraReady && user && wsRef.current ? 'Online' : 'Offline'}</span>
           <span>Scans: {scanCount}</span>
         </div>
 
         {/* Manual scan trigger */}
-        {!isScanning && cameraReady && (
+        {!isScanning && cameraReady && !result && (
           <Button
             onClick={triggerManualScan}
-            className="w-full cannabis-gradient text-white py-4 text-lg font-semibold"
-            disabled={!user}
+            className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white py-4 text-lg font-semibold disabled:opacity-50"
+            disabled={!user || !wsRef.current}
           >
-            <Scan className="h-5 w-5 mr-2" />
-            Scan Now
+            <Camera className="h-5 w-5 mr-2" />
+            Burst Scan
           </Button>
         )}
 
