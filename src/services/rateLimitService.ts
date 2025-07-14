@@ -8,6 +8,7 @@ class RateLimitService {
   private limits = new Map<string, RateLimitEntry>();
   private readonly WINDOW_MS = 15 * 60 * 1000; // 15 minutes
   private readonly MAX_REQUESTS = 10; // 10 requests per 15 minutes for unauthenticated
+  private readonly ANON_MAX_REQUESTS = 3; // 3 requests per 15 minutes for anonymous users
 
   private getClientKey(): string {
     // Use combination of IP-like identifier and user agent
@@ -16,9 +17,10 @@ class RateLimitService {
     return btoa(`${userAgent}-${screen}`).slice(0, 32);
   }
 
-  checkLimit(): { allowed: boolean; remaining: number; resetTime: number } {
+  checkLimit(isAnonymous: boolean = false): { allowed: boolean; remaining: number; resetTime: number } {
     const key = this.getClientKey();
     const now = Date.now();
+    const maxRequests = isAnonymous ? this.ANON_MAX_REQUESTS : this.MAX_REQUESTS;
     
     let entry = this.limits.get(key);
     
@@ -34,10 +36,10 @@ class RateLimitService {
         resetTime: now + this.WINDOW_MS
       };
       this.limits.set(key, entry);
-      return { allowed: true, remaining: this.MAX_REQUESTS - 1, resetTime: entry.resetTime };
+      return { allowed: true, remaining: maxRequests - 1, resetTime: entry.resetTime };
     }
     
-    if (entry.count >= this.MAX_REQUESTS) {
+    if (entry.count >= maxRequests) {
       return { allowed: false, remaining: 0, resetTime: entry.resetTime };
     }
     
@@ -46,7 +48,7 @@ class RateLimitService {
     
     return { 
       allowed: true, 
-      remaining: this.MAX_REQUESTS - entry.count, 
+      remaining: maxRequests - entry.count, 
       resetTime: entry.resetTime 
     };
   }

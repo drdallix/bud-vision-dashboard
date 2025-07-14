@@ -414,7 +414,7 @@ const RealTimeScan = () => {
       
       // Phase 1: Capture complete
       setCurrentPhase(1);
-      setStatusMessage('Analyzing frames with AI Vision...');
+      setStatusMessage('🔬 DoobieDB analyzing strain data...');
       await new Promise(resolve => setTimeout(resolve, 800));
       
       // Use HTTP fallback since WebSocket is failing
@@ -493,7 +493,7 @@ const RealTimeScan = () => {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <h1 className="text-white font-semibold">Real-Time Scanner</h1>
+        <h1 className="text-white font-semibold">🔬 DoobieDB Realtime</h1>
         <div className="w-16" /> {/* Spacer for centering */}
       </div>
 

@@ -11,7 +11,14 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
 
     IMPORTANT TASKS:
     1. CORRECT SPELLING & GRAMMAR: Fix any spelling mistakes, punctuation errors, and grammatical issues in the provided text
-    2. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
+    2. PARSE VISUAL HINTS: Look for strain type hints in the text like:
+       - (H) or (h) = Hybrid
+       - (I) or (i) = Indica  
+       - (S) or (s) = Sativa
+       - (IH) or (ih) = Indica-Hybrid/Indica-Dominant
+       - (SH) or (sh) = Sativa-Hybrid/Sativa-Dominant
+       If these hints are present, use them to determine the strain type. Remove the hints from the final name.
+    3. GENERATE COMPREHENSIVE DATA: Use your cannabis knowledge to create complete strain information
 
     CRITICAL REQUIREMENT - THC VALUE:
     - You MUST use the exact value ${thcRangeHint ? `${thcRangeHint[0]}` : '21'} for the THC field in your response
@@ -32,7 +39,7 @@ export const createTextAnalysisMessages = (textQuery: string, thcRangeHint?: [nu
     
     Return a JSON object with this exact structure:
     {
-      "name": "corrected and properly formatted strain name",
+      "name": "corrected and properly formatted strain name (without type hints)",
       "type": "Indica" | "Sativa" | "Hybrid",
       "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
       "cbd": number (realistic for strain type, typically 0.1-5), 
@@ -66,6 +73,13 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
 
     Look for visible information:
     - Strain name on the package (most important)
+    - Visual strain type hints like:
+      * (H) or (h) = Hybrid
+      * (I) or (i) = Indica  
+      * (S) or (s) = Sativa
+      * (IH) or (ih) = Indica-Hybrid/Indica-Dominant
+      * (SH) or (sh) = Sativa-Hybrid/Sativa-Dominant
+      If these hints are visible, use them to determine strain type. Remove hints from final name.
     - Package text and labels
     - Visual characteristics of the product
     - Brand information
@@ -85,7 +99,7 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     
     Return a JSON object with this exact structure:
     {
-      "name": "strain name from package (if visible) or educated guess",
+      "name": "strain name from package (if visible) or educated guess (without type hints)",
       "type": "Indica" | "Sativa" | "Hybrid",
       "thc": ${thcRangeHint ? thcRangeHint[0] : 21},
       "cbd": number (realistic, typically 0.1-5), 
@@ -105,7 +119,7 @@ export const createImageAnalysisMessages = (imageData: string, strainNameHint?: 
     content: [
       {
         type: 'text',
-        text: 'Please analyze this cannabis package image and identify the strain. Generate unique effects and flavors that match the strain characteristics.'
+        text: 'Please analyze this cannabis package image and identify the strain. Look for visual type hints like (H), (I), (S), (IH), (SH) that indicate strain type. Generate unique effects and flavors that match the strain characteristics.'
       },
       {
         type: 'image_url',

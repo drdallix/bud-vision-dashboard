@@ -5,14 +5,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Cannabis } from 'lucide-react';
+import { Loader2, Cannabis, UserX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAnonLoading, setIsAnonLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { signInAnonymously } = useAuth();
   const { toast } = useToast();
 
   const handleGoogleSignIn = async () => {
@@ -47,6 +49,33 @@ const Auth = () => {
     }
   };
 
+  const handleAnonymousSignIn = async () => {
+    setIsAnonLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await signInAnonymously();
+
+      if (error) {
+        setError(error.message);
+        toast({
+          title: "Anonymous Sign In Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      setError(err.message);
+      toast({
+        title: "Anonymous Sign In Failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnonLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -64,7 +93,7 @@ const Auth = () => {
         <CardContent className="space-y-4">
           <Button
             onClick={handleGoogleSignIn}
-            disabled={isGoogleLoading}
+            disabled={isGoogleLoading || isAnonLoading}
             className="w-full"
             size="lg"
           >
@@ -89,6 +118,31 @@ const Auth = () => {
             </svg>
             Continue with Google
           </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleAnonymousSignIn}
+            disabled={isGoogleLoading || isAnonLoading}
+            variant="outline"
+            className="w-full"
+            size="lg"
+          >
+            {isAnonLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <UserX className="mr-2 h-4 w-4" />
+            Try Anonymously (Limited)
+          </Button>
+
+          <div className="text-xs text-muted-foreground text-center">
+            Anonymous mode: 3 scans per 15 minutes • Limited features
+          </div>
 
           {error && (
             <Alert className="mt-4" variant="destructive">

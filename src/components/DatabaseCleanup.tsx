@@ -109,7 +109,13 @@ const DatabaseCleanup = () => {
         description: scan.description || '',
         inStock: scan.in_stock,
         userId: scan.user_id,
-        terpenes: scan.terpenes || {},
+        terpenes: Array.isArray(scan.terpenes) 
+          ? scan.terpenes.map((terpene: any) => ({
+              name: terpene.name || '',
+              percentage: terpene.percentage || 0,
+              effects: terpene.effects || ''
+            }))
+          : [],
         medicalUses: scan.medical_uses || [],
         confidence: scan.confidence || 0,
         scannedAt: scan.scanned_at,
