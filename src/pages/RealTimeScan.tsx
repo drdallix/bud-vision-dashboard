@@ -103,30 +103,34 @@ const RealTimeScan = () => {
   const initWebSocket = () => {
     if (!user) return;
     
-    const wsUrl = `wss://dqymhupheqkwasfrkcqs.functions.supabase.co/realtime-vision-scan?stream=true`;
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      console.log('WebSocket connected for realtime scanning');
-      wsRef.current = ws;
-    };
-    
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      handleStreamingResponse(data);
-    };
-    
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setError('Connection error. Retrying...');
-      // Retry connection after 3 seconds
-      setTimeout(initWebSocket, 3000);
-    };
-    
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
-      wsRef.current = null;
-    };
+    // For now, skip WebSocket and use HTTP fallback due to connection issues
+    console.log('WebSocket temporarily disabled, using HTTP fallback');
+    return;
+  };
+
+  const performHTTPScan = async (frames: string[]): Promise<any> => {
+    try {
+      const response = await fetch('https://dqymhupheqkwasfrkcqs.functions.supabase.co/realtime-vision-scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxeW1odXBoZXFrd2FzZnJrY3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3ODQ0NzQsImV4cCI6MjA2NTM2MDQ3NH0.V47liXKGJg4a9rtA8q-I-SfQB1UlnDaBf8UKEuqj4C8'}`
+        },
+        body: JSON.stringify({
+          imageFrames: frames,
+          userId: user?.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP scan failed: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('HTTP scan error:', error);
+      throw error;
+    }
   };
 
   const handleStreamingResponse = useCallback((data: any) => {
@@ -212,7 +216,7 @@ const RealTimeScan = () => {
   };
 
   const performBurstScan = useCallback(async () => {
-    if (!videoRef.current || !canvasRef.current || !user || !wsRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !user) return;
 
     setIsScanning(true);
     setCurrentPhase(0);
@@ -227,36 +231,66 @@ const RealTimeScan = () => {
       // Burst capture - take multiple frames for better analysis
       const frames = burstCapture(canvasRef.current, videoRef.current, 3);
       
-      // Send frames via WebSocket for streaming analysis
-      wsRef.current.send(JSON.stringify({
-        imageFrames: frames,
-        userId: user.id
-      }));
+      // Phase 1: Capture complete
+      setCurrentPhase(1);
+      setStatusMessage('Analyzing frames with AI Vision...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Use HTTP fallback since WebSocket is failing
+      const result = await performHTTPScan(frames);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      // Handle the response similar to WebSocket
+      if (result.duplicate) {
+        const strain = convertDatabaseScanToStrain(result.strain);
+        setIsDuplicate(true);
+        setResult(strain);
+        toast({
+          title: "Strain Found",
+          description: `${strain.name} already exists in your collection`,
+        });
+        setTimeout(() => {
+          navigate('/', { state: { selectStrain: strain } });
+        }, 2000);
+      } else {
+        setIsDuplicate(false);
+        setResult(result.strain);
+        toast({
+          title: "New Strain Generated", 
+          description: `${result.strain.name} has been added to your collection`,
+        });
+        setTimeout(() => {
+          navigate('/', { state: { newStrain: result.strain, selectStrain: result.strain } });
+        }, 2000);
+      }
       
     } catch (error) {
       console.error('Burst scan failed:', error);
       setError('Scan failed. Retrying...');
       resetScanState();
     }
-  }, [user]);
+  }, [user, performHTTPScan, navigate, toast]);
 
   const startContinuousScanning = useCallback(() => {
     if (!user || !cameraReady || isScanning || result) return;
     
     setScanCount(0);
-    console.log('Starting continuous scanning...');
+    console.log('Starting continuous scanning with HTTP fallback...');
     
-    // Scan every 5 seconds
+    // Scan every 7 seconds (as originally requested)
     scanIntervalRef.current = setInterval(() => {
-      if (!isScanning && !result && wsRef.current) {
+      if (!isScanning && !result) {
         setScanCount(prev => prev + 1);
         performBurstScan();
       }
-    }, 5000);
+    }, 7000);
   }, [user, cameraReady, isScanning, result, performBurstScan]);
 
   const triggerManualScan = useCallback(() => {
-    if (!isScanning && !result && wsRef.current) {
+    if (!isScanning && !result) {
       clearInterval(scanIntervalRef.current!);
       performBurstScan();
     }
@@ -424,7 +458,7 @@ const RealTimeScan = () => {
       <div className="p-4 bg-black/90 backdrop-blur-sm border-t border-white/10 space-y-3">
         {/* Status info */}
         <div className="flex justify-between text-sm text-white/70">
-          <span>Scanner: {cameraReady && user && wsRef.current ? 'Online' : 'Offline'}</span>
+          <span>Scanner: {cameraReady && user ? 'Ready (HTTP)' : 'Initializing'}</span>
           <span>Scans: {scanCount}</span>
         </div>
 
@@ -433,7 +467,7 @@ const RealTimeScan = () => {
           <Button
             onClick={triggerManualScan}
             className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white py-4 text-lg font-semibold disabled:opacity-50"
-            disabled={!user || !wsRef.current}
+            disabled={!user}
           >
             <Camera className="h-5 w-5 mr-2" />
             Burst Scan

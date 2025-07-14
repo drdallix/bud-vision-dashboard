@@ -18,3 +18,12 @@ verify_jwt = false
 
 [functions.cannabis-chat]
 verify_jwt = false
+
+[functions.ocr-strain-analysis]
+verify_jwt = false
+
+[functions.regenerate-description]
+verify_jwt = false
+
+[functions.realtime-vision-scan]
+verify_jwt = false
